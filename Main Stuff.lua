@@ -160,13 +160,13 @@ _G.XeNOX = {}
 local tabs = {}
 local tabCount = 0
 
+-- Fixed this to actually find the Keybind button correctly
 local function UpdateKeybindDisplay(key)
     for _, tab in pairs(tabs) do
         for _, v in pairs(tab.Page:GetChildren()) do
-            if v:IsA("Frame") and v:FindFirstChild("TextButton") then
-                local lb = v:FindFirstChild("TextLabel")
-                if lb and lb.Text == "Menu Toggle" then
-                    v.TextButton.Text = key.Name
+            if v:IsA("Frame") and v:FindFirstChild("KeybindLabel") then
+                if v.KeybindLabel.Text == "Menu Toggle" then
+                    v.KeybindBtn.Text = key.Name
                 end
             end
         end
@@ -347,23 +347,32 @@ function _G.XeNOX:CreateTab(name)
         Instance.new("UICorner", l)
     end
 
+    -- FIXED KEYBIND FUNCTION
     function tabObj:CreateKeybind(text, default, callback)
         local kb = Instance.new("Frame")
         kb.Size = UDim2.new(1,-10,0,50)
         kb.BackgroundColor3 = Color3.new(0,0,0); kb.BackgroundTransparency = 0.5
         kb.Parent = page; Instance.new("UICorner", kb)
+        
         local lb = Instance.new("TextLabel")
+        lb.Name = "KeybindLabel"
         lb.Size = UDim2.new(1,-110,1,0); lb.Position = UDim2.new(0,15,0,0)
         lb.Text = text; lb.TextColor3 = Color3.new(1,1,1); lb.Font = Enum.Font.SourceSansBold
         lb.TextSize = LABEL_SIZE; lb.BackgroundTransparency = 1; lb.TextXAlignment = Enum.TextXAlignment.Left; lb.Parent = kb
+        
         local btn = Instance.new("TextButton")
+        btn.Name = "KeybindBtn"
         btn.Size = UDim2.new(0,100,0,30); btn.Position = UDim2.new(1,-110,0.5,-15)
-        btn.Text = menuKey.Name; btn.Parent = kb; Instance.new("UICorner", btn)
+        btn.Text = default.Name; btn.Parent = kb; Instance.new("UICorner", btn)
+        
         btn.MouseButton1Click:Connect(function()
             btn.Text = "..."
-            local c; c = uis.InputBegan:Connect(function(i)
-                if i.UserInputType == Enum.UserInputType.Keyboard then
-                    menuKey = i.KeyCode; btn.Text = i.KeyCode.Name; c:Disconnect(); callback(i.KeyCode)
+            local connection
+            connection = uis.InputBegan:Connect(function(input)
+                if input.UserInputType == Enum.UserInputType.Keyboard then
+                    btn.Text = input.KeyCode.Name
+                    connection:Disconnect()
+                    callback(input.KeyCode)
                 end
             end)
         end)
