@@ -151,6 +151,9 @@ function _G.XeNOX:CreateTab(name)
         b.Parent = page
         Instance.new("UICorner", b)
         b.MouseButton1Click:Connect(callback)
+
+print("the thing loaded")
+        
     end
     return tabObj
 end
