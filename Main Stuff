@@ -9,7 +9,7 @@ screenGui.Parent = pGui
 local mainFrame = Instance.new("Frame")
 mainFrame.Name = "MainFrame"
 mainFrame.Size = UDim2.new(0, 1000, 0, 750)
-mainFrame.Position = UDim2.new(0.5, -500, 0.5, -375) -- Centered for the new 1000x750 size
+mainFrame.Position = UDim2.new(0.5, -500, 0.5, -375)
 mainFrame.BackgroundColor3 = Color3.fromRGB(0, 255, 255)
 mainFrame.BackgroundTransparency = 0.3
 mainFrame.BorderSizePixel = 5
@@ -61,7 +61,6 @@ title.Font = Enum.Font.SourceSansBold
 title.ZIndex = 20
 title.Parent = mainFrame
 
--- THE LIBRARY MODULE
 local XeNOX = {}
 local tabs = {}
 local tabCount = 0
@@ -82,7 +81,7 @@ function XeNOX:CreateTab(name)
     Instance.new("UICorner", tabBtn).CornerRadius = UDim.new(0, 4)
 
     local contentFrame = Instance.new("Frame")
-    contentFrame.Size = UDim2.new(0, 800, 0, 680) -- Adjusted to fit the larger frame
+    contentFrame.Size = UDim2.new(0, 800, 0, 680)
     contentFrame.Position = UDim2.new(0, 165, 0, 45)
     contentFrame.BackgroundTransparency = 1
     contentFrame.Visible = (tabID == 1)
@@ -99,7 +98,7 @@ function XeNOX:CreateTab(name)
     function tabObj:CreateButton(text, callback)
         tabObj.Count = tabObj.Count + 1
         local b = Instance.new("TextButton")
-        b.Size = UDim2.new(0, 780, 0, 40) -- Made buttons wider for the 1000px frame
+        b.Size = UDim2.new(0, 780, 0, 40)
         b.Position = UDim2.new(0, 0, 0, (tabObj.Count - 1) * 45)
         b.BackgroundColor3 = Color3.fromRGB(25, 55, 95)
         b.Text = text
@@ -114,7 +113,6 @@ function XeNOX:CreateTab(name)
     return tabObj
 end
 
--- HOW TO USE IT
 local MyTab = XeNOX:CreateTab("General")
 
 MyTab:CreateButton("Button 1", function()
