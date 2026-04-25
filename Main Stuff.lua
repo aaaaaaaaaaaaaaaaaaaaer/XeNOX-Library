@@ -13,6 +13,10 @@ local blobColor = Color3.fromRGB(0, 20, 100)
 local outlineColor = Color3.fromRGB(0, 255, 255)
 local globalFont = Enum.Font.SourceSansBold
 
+local starsEnabled = false
+local trailsEnabled = false
+local blobsEnabled = false
+
 local TITLE_SIZE = 22
 local TAB_SIZE = 16
 local LABEL_SIZE = 18
@@ -84,7 +88,10 @@ local function SaveSettings(name)
         Shade = {shadeColor.R, shadeColor.G, shadeColor.B},
         Blob = {blobColor.R, blobColor.G, blobColor.B},
         Outline = {outlineColor.R, outlineColor.G, outlineColor.B},
-        Font = globalFont.Name
+        Font = globalFont.Name,
+        Stars = starsEnabled,
+        Trails = trailsEnabled,
+        Blobs = blobsEnabled
     }
     writefile(GetPath(name), HttpService:JSONEncode(data))
 end
@@ -92,47 +99,55 @@ end
 task.spawn(function()
     while task.wait(0.02) do 
         if not screenGui.Parent then break end
-        local star = Instance.new("Frame")
-        star.Size = UDim2.new(0, 1, 0, math.random(30, 80))
-        star.Position = UDim2.new(math.random(0, 100)/100, 0, -0.2, 0)
-        star.BackgroundColor3 = Color3.new(1,1,1)
-        star.ZIndex = 1
-        star.Parent = mainFrame
-        tweenService:Create(star, TweenInfo.new(0.6, Enum.EasingStyle.Linear), {Position = UDim2.new(star.Position.X.Scale, 0, 1.2, 0), BackgroundTransparency = 1}):Play()
-        game:GetService("Debris"):AddItem(star, 0.6)
+        if not mainFrame.Visible then continue end
 
-        local trail = Instance.new("Frame")
-        trail.Size = UDim2.new(0, 10, 0, 10)
-        trail.Position = UDim2.new(0, mouse.X - mainFrame.AbsolutePosition.X - 5, 0, mouse.Y - mainFrame.AbsolutePosition.Y - 5)
-        trail.BackgroundColor3 = mainTheme
-        trail.ZIndex = 2
-        trail.Parent = mainFrame
-        Instance.new("UICorner", trail).CornerRadius = UDim.new(1, 0)
-        tweenService:Create(trail, TweenInfo.new(0.4), {BackgroundTransparency = 1, Size = UDim2.new(0, 0, 0, 0)}):Play()
-        game:GetService("Debris"):AddItem(trail, 0.4)
+        if starsEnabled then
+            local star = Instance.new("Frame")
+            star.Size = UDim2.new(0, 1, 0, math.random(30, 80))
+            star.Position = UDim2.new(math.random(0, 100)/100, 0, -0.2, 0)
+            star.BackgroundColor3 = Color3.new(1,1,1)
+            star.ZIndex = 1
+            star.Parent = mainFrame
+            tweenService:Create(star, TweenInfo.new(0.6, Enum.EasingStyle.Linear), {Position = UDim2.new(star.Position.X.Scale, 0, 1.2, 0), BackgroundTransparency = 1}):Play()
+            game:GetService("Debris"):AddItem(star, 0.6)
+        end
 
-        local blob = Instance.new("ImageLabel")
-        blob.Size = UDim2.new(math.random(2,5)/10, 0, math.random(2,5)/10, 0)
-        blob.Position = UDim2.new(math.random(-1, 9)/10, 0, math.random(-1, 9)/10, 0)
-        blob.Image = "rbxassetid://232918622"
-        blob.ImageColor3 = blobColor
-        blob.BackgroundTransparency = 1
-        blob.ImageTransparency = 0.93
-        blob.ZIndex = 1
-        blob.Parent = mainFrame
-        task.spawn(function()
-            local start = tick()
-            while tick() - start < 3 do
-                if not blob or not blob.Parent then break end
-                local diff = (blob.AbsolutePosition + blob.AbsoluteSize/2) - Vector2.new(mouse.X, mouse.Y)
-                if diff.Magnitude < 250 then
-                    local push = diff.Unit * (1 - (diff.Magnitude / 250)) * 0.18
-                    blob.Position = blob.Position:Lerp(UDim2.new(blob.Position.X.Scale + push.X, 0, blob.Position.Y.Scale + push.Y, 0), 0.45)
+        if trailsEnabled then
+            local trail = Instance.new("Frame")
+            trail.Size = UDim2.new(0, 10, 0, 10)
+            trail.Position = UDim2.new(0, mouse.X - mainFrame.AbsolutePosition.X - 5, 0, mouse.Y - mainFrame.AbsolutePosition.Y - 5)
+            trail.BackgroundColor3 = mainTheme
+            trail.ZIndex = 2
+            trail.Parent = mainFrame
+            Instance.new("UICorner", trail).CornerRadius = UDim.new(1, 0)
+            tweenService:Create(trail, TweenInfo.new(0.4), {BackgroundTransparency = 1, Size = UDim2.new(0, 0, 0, 0)}):Play()
+            game:GetService("Debris"):AddItem(trail, 0.4)
+        end
+
+        if blobsEnabled then
+            local blob = Instance.new("ImageLabel")
+            blob.Size = UDim2.new(math.random(2,5)/10, 0, math.random(2,5)/10, 0)
+            blob.Position = UDim2.new(math.random(-1, 9)/10, 0, math.random(-1, 9)/10, 0)
+            blob.Image = "rbxassetid://232918622"
+            blob.ImageColor3 = blobColor
+            blob.BackgroundTransparency = 1
+            blob.ImageTransparency = 0.93
+            blob.ZIndex = 1
+            blob.Parent = mainFrame
+            task.spawn(function()
+                local start = tick()
+                while tick() - start < 3 do
+                    if not blob or not blob.Parent or not blobsEnabled then break end
+                    local diff = (blob.AbsolutePosition + blob.AbsoluteSize/2) - Vector2.new(mouse.X, mouse.Y)
+                    if diff.Magnitude < 250 then
+                        local push = diff.Unit * (1 - (diff.Magnitude / 250)) * 0.18
+                        blob.Position = blob.Position:Lerp(UDim2.new(blob.Position.X.Scale + push.X, 0, blob.Position.Y.Scale + push.Y, 0), 0.45)
+                    end
+                    task.wait()
                 end
-                task.wait()
-            end
-            if blob then blob:Destroy() end
-        end)
+                if blob then blob:Destroy() end
+            end)
+        end
     end
 end)
 
@@ -167,18 +182,6 @@ title.Parent = mainFrame
 _G.XeNOX = {}
 local tabs = {}
 local tabCount = 0
-
-local function UpdateKeybindDisplay(key)
-    for _, tab in pairs(tabs) do
-        for _, v in pairs(tab.Page:GetChildren()) do
-            if v:IsA("Frame") and v:FindFirstChild("KeybindLabel") then
-                if v.KeybindLabel.Text == "Menu Toggle" then
-                    v.KeybindBtn.Text = key.Name
-                end
-            end
-        end
-    end
-end
 
 function _G.XeNOX:CreateTab(name)
     tabCount = tabCount + 1
@@ -332,27 +335,23 @@ function _G.XeNOX:CreateTab(name)
 
         local lb = Instance.new("TextLabel")
         lb.Size = UDim2.new(1, -20, 0, 30); lb.Position = UDim2.new(0, 10, 0, 5)
-        lb.Text = text .. " (Current: " .. globalFont.Name .. ")"; lb.TextColor3 = Color3.new(1,1,1)
-        lb.Font = globalFont; lb.TextSize = LABEL_SIZE; lb.BackgroundTransparency = 1; lb.TextXAlignment = "Left"; lb.Parent = fp
+        lb.Text = text; lb.TextColor3 = Color3.new(1,1,1); lb.Font = globalFont
+        lb.TextSize = LABEL_SIZE; lb.BackgroundTransparency = 1; lb.TextXAlignment = "Left"; lb.Parent = fp
 
         local container = Instance.new("ScrollingFrame")
         container.Size = UDim2.new(1, -20, 0, 70); container.Position = UDim2.new(0, 10, 0, 40)
         container.BackgroundTransparency = 0.8; container.BackgroundColor3 = Color3.new(0,0,0)
         container.ScrollBarThickness = 4; container.CanvasSize = UDim2.new(2, 0, 0, 0); container.Parent = fp
+        local listLayout = Instance.new("UIListLayout", container)
+        listLayout.FillDirection = Enum.FillDirection.Horizontal
+        listLayout.Padding = UDim.new(0, 10)
 
-        local list = Instance.new("UIListLayout", container)
-        list.FillDirection = Enum.FillDirection.Horizontal; list.Padding = UDim.new(0, 10); list.VerticalAlignment = Enum.VerticalAlignment.Center
-
-        local fonts = {Enum.Font.SourceSansBold, Enum.Font.Roboto, Enum.Font.GothamBold, Enum.Font.Arcade, Enum.Font.SciFi, Enum.Font.Ubuntu, Enum.Font.SpecialElite}
-
+        local fonts = {Enum.Font.SourceSansBold, Enum.Font.Roboto, Enum.Font.GothamBold, Enum.Font.Arcade}
         for _, f in pairs(fonts) do
             local b = Instance.new("TextButton")
             b.Size = UDim2.new(0, 100, 0, 40); b.Text = f.Name; b.Font = f; b.BackgroundColor3 = shadeColor
             b.TextColor3 = Color3.new(1,1,1); b.Parent = container; Instance.new("UICorner", b)
-            b.MouseButton1Click:Connect(function()
-                lb.Text = text .. " (Current: " .. f.Name .. ")"
-                callback(f)
-            end)
+            b.MouseButton1Click:Connect(function() callback(f) end)
         end
     end
 
@@ -459,41 +458,47 @@ function _G.XeNOX:CreateTab(name)
                     if isfile(path) then
                         local data = HttpService:JSONDecode(readfile(path))
                         menuKey = Enum.KeyCode[data.Keybind]
-                        UpdateKeybindDisplay(menuKey)
                         UpdateUITheme(Color3.new(unpack(data.Theme)))
                         UpdateShadeTheme(Color3.new(unpack(data.Shade)))
                         blobColor = Color3.new(unpack(data.Blob))
                         if data.Outline then UpdateOutlineTheme(Color3.new(unpack(data.Outline))) end
                         if data.Font then UpdateGlobalFont(Enum.Font[data.Font]) end
+                        
+                        starsEnabled = data.Stars or false
+                        trailsEnabled = data.Trails or false
+                        blobsEnabled = data.Blobs or false
+                        
                         status.Text = "Status: Loaded " .. selectedConfig
                     end
                 elseif i == "Update" then
                     SaveSettings(selectedConfig); status.Text = "Status: Updated " .. selectedConfig
                 elseif i == "Delete" then
                     if isfile(path) then delfile(path) end
-                    status.Text = "Status: Deleted " .. selectedConfig; selectedConfig = ""; task.wait(0.1); refreshList()
+                    status.Text = "Status: Deleted " .. selectedConfig; selectedConfig = ""; refreshList()
                 end
             end)
         end
-
-        save.MouseButton1Click:Connect(function() 
-            if input.Text ~= "" then 
-                SaveSettings(input.Text); status.Text = "Status: Created " .. input.Text
-                input.Text = ""; task.wait(0.1); refreshList() 
-            end 
-        end)
+        save.MouseButton1Click:Connect(function() if input.Text ~= "" then SaveSettings(input.Text); input.Text = ""; refreshList() end end)
         refreshList()
     end
-
+    
     return tabObj
 end
 
 local m = _G.XeNOX:CreateTab("Main")
-m:CreateLabel("SYSTEM INITIALIZED")
+m:CreateLabel("")
+m:CreateLabel("Welcome to XeNOX Lib")
 
 local s = _G.XeNOX:CreateTab("Settings")
 s:CreateConfigManager()
 s:CreateKeybind("Menu Toggle", menuKey, function(k) menuKey = k end)
+
+s:CreateLabel("BACKGROUND EFFECTS")
+s:CreateToggle("Enable Rain", false, function(t) starsEnabled = t end)
+s:CreateToggle("Enable Mouse Trail", false, function(t) trailsEnabled = t end)
+s:CreateToggle("Enable Interactive Blobs", false, function(t) blobsEnabled = t end)
+
+s:CreateLabel("APPEARANCE")
 s:CreateFontPicker("Global Font", function(f) UpdateGlobalFont(f) end)
 s:CreateColorPicker("Main Theme", mainTheme, function(c) UpdateUITheme(c) end)
 s:CreateColorPicker("Outline Color", outlineColor, function(c) UpdateOutlineTheme(c) end)
