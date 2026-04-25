@@ -1,1 +1,1 @@
-the thing loaded
+print("the thing loaded")
