@@ -1,8 +1,9 @@
 local player = game.Players.LocalPlayer
+local mouse = player:GetMouse()
 local pGui = player:WaitForChild("PlayerGui")
 
 local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "XENOX_GUI"
+screenGui.Name = "XENOX_v4"
 screenGui.ResetOnSpawn = false
 screenGui.Parent = pGui
 
@@ -11,114 +12,121 @@ mainFrame.Name = "MainFrame"
 mainFrame.Size = UDim2.new(0, 1000, 0, 750)
 mainFrame.Position = UDim2.new(0.5, -500, 0.5, -375)
 mainFrame.BackgroundColor3 = Color3.fromRGB(0, 255, 255)
-mainFrame.BackgroundTransparency = 0.3
-mainFrame.BorderSizePixel = 5
+mainFrame.BackgroundTransparency = 0.4 -- More transparent main frame
 mainFrame.Active = true
 mainFrame.Draggable = true
 mainFrame.ClipsDescendants = true
 mainFrame.Parent = screenGui
+Instance.new("UICorner", mainFrame).CornerRadius = UDim.new(0, 8)
 
-local corner = Instance.new("UICorner")
-corner.CornerRadius = UDim.new(0, 8)
-corner.Parent = mainFrame
-
-local backContainer = Instance.new("Frame")
-backContainer.Name = "Background"
-backContainer.Size = UDim2.new(1, 0, 1, 0)
-backContainer.BackgroundTransparency = 1
-backContainer.ZIndex = 0
-backContainer.Parent = mainFrame
-
+-- ULTRA SENSITIVE REPULSION BLOBS
 task.spawn(function()
-    while true do
+    while task.wait(0.05) do -- Insanely fast spawn rate
         local blob = Instance.new("ImageLabel")
-        local size = math.random(6, 9) / 10
+        local size = math.random(3, 7) / 10
         blob.Size = UDim2.new(size, 0, size, 0)
-        blob.Position = UDim2.new(math.random(-2, 8) / 10, 0, math.random(-2, 8) / 10, 0)
-        blob.BackgroundTransparency = 1
+        blob.Position = UDim2.new(math.random(-1, 9)/10, 0, math.random(-1, 9)/10, 0)
         blob.Image = "rbxassetid://232918622"
         blob.ImageColor3 = Color3.fromRGB(0, 20, 100)
-        blob.ImageTransparency = 0.7
-        blob.Parent = backContainer
+        blob.BackgroundTransparency = 1
+        blob.ImageTransparency = 0.9 -- Very transparent
+        blob.ZIndex = 1
+        blob.Parent = mainFrame
 
-        local tween = game:GetService("TweenService"):Create(blob, TweenInfo.new(5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
-            Position = UDim2.new(blob.Position.X.Scale + (math.random(-1, 1)/10), 0, blob.Position.Y.Scale + (math.random(-1, 1)/10), 0),
-            ImageTransparency = 1
-        })
-        tween:Play()
-        game:GetService("Debris"):AddItem(blob, 6)
-        task.wait(1)
+        task.spawn(function()
+            local life = 5
+            local startTick = tick()
+            while tick() - startTick < life do
+                local blobPos = Vector2.new(blob.AbsolutePosition.X + (blob.AbsoluteSize.X/2), blob.AbsolutePosition.Y + (blob.AbsoluteSize.Y/2))
+                local mousePos = Vector2.new(mouse.X, mouse.Y)
+                local diff = blobPos - mousePos
+                local dist = diff.Magnitude
+                
+                -- Repulsion Logic: Move AWAY from mouse
+                if dist < 200 then
+                    local force = (1 - (dist / 200)) * 0.05 -- Stronger force the closer it is
+                    local pushDir = diff.Unit
+                    
+                    local newX = blob.Position.X.Scale + (pushDir.X * force)
+                    local newY = blob.Position.Y.Scale + (pushDir.Y * force)
+                    
+                    blob.Position = blob.Position:Lerp(UDim2.new(newX, 0, newY, 0), 0.2)
+                    blob.ImageTransparency = 0.95 -- Fade out even more when pushed
+                else
+                    blob.ImageTransparency = 0.9 -- Normal transparency
+                end
+                
+                task.wait()
+            end
+            blob:Destroy()
+        end)
     end
 end)
 
 local title = Instance.new("TextLabel")
-title.Size = UDim2.new(1, 0, 0, 30)
+title.Size = UDim2.new(1, 0, 0, 40)
 title.BackgroundTransparency = 1
 title.Text = "XeNOX Library"
 title.TextColor3 = Color3.fromRGB(25, 55, 95)
-title.TextSize = 18
+title.TextSize = 22
 title.Font = Enum.Font.SourceSansBold
-title.ZIndex = 20
+title.ZIndex = 10
 title.Parent = mainFrame
 
-local XeNOX = {}
+-- LIBRARY CORE
+_G.XeNOX = {}
 local tabs = {}
 local tabCount = 0
 
-function XeNOX:CreateTab(name)
+function _G.XeNOX:CreateTab(name)
     tabCount = tabCount + 1
     local tabID = tabCount
     
     local tabBtn = Instance.new("TextButton")
-    tabBtn.Size = UDim2.new(0, 140, 0, 40)
-    tabBtn.Position = UDim2.new(0, 10, 0, 40 + (tabCount - 1) * 45)
+    tabBtn.Size = UDim2.new(0, 160, 0, 45)
+    tabBtn.Position = UDim2.new(0, 15, 0, 50 + (tabCount - 1) * 50)
     tabBtn.BackgroundColor3 = Color3.fromRGB(25, 55, 95)
+    tabBtn.BackgroundTransparency = 0.2
     tabBtn.Text = name
     tabBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    tabBtn.TextSize = 16
     tabBtn.Font = Enum.Font.SourceSansBold
+    tabBtn.TextSize = 16
+    tabBtn.ZIndex = 10
     tabBtn.Parent = mainFrame
-    Instance.new("UICorner", tabBtn).CornerRadius = UDim.new(0, 4)
+    Instance.new("UICorner", tabBtn)
 
-    local contentFrame = Instance.new("Frame")
-    contentFrame.Size = UDim2.new(0, 800, 0, 680)
-    contentFrame.Position = UDim2.new(0, 165, 0, 45)
-    contentFrame.BackgroundTransparency = 1
-    contentFrame.Visible = (tabID == 1)
-    contentFrame.Parent = mainFrame
+    local page = Instance.new("ScrollingFrame")
+    page.Size = UDim2.new(0, 780, 0, 670)
+    page.Position = UDim2.new(0, 195, 0, 55)
+    page.BackgroundTransparency = 1
+    page.ScrollBarThickness = 0
+    page.Visible = (tabID == 1)
+    page.ZIndex = 5
+    page.Parent = mainFrame
     
-    local tabObj = {Frame = contentFrame, Btn = tabBtn, Count = 0}
-    tabs[tabID] = tabObj
+    Instance.new("UIListLayout", page).Padding = UDim.new(0, 8)
+    
+    tabs[tabID] = {Page = page, Btn = tabBtn}
 
     tabBtn.MouseButton1Click:Connect(function()
-        for _, v in pairs(tabs) do v.Frame.Visible = false end
-        contentFrame.Visible = true
+        for _, v in pairs(tabs) do v.Page.Visible = false end
+        page.Visible = true
     end)
 
+    local tabObj = {}
     function tabObj:CreateButton(text, callback)
-        tabObj.Count = tabObj.Count + 1
         local b = Instance.new("TextButton")
-        b.Size = UDim2.new(0, 780, 0, 40)
-        b.Position = UDim2.new(0, 0, 0, (tabObj.Count - 1) * 45)
+        b.Size = UDim2.new(1, -10, 0, 50)
         b.BackgroundColor3 = Color3.fromRGB(25, 55, 95)
+        b.BackgroundTransparency = 0.1
         b.Text = text
         b.TextColor3 = Color3.fromRGB(255, 255, 255)
-        b.TextSize = 16
         b.Font = Enum.Font.SourceSansBold
-        b.Parent = contentFrame
-        Instance.new("UICorner", b).CornerRadius = UDim.new(0, 4)
+        b.TextSize = 18
+        b.ZIndex = 10
+        b.Parent = page
+        Instance.new("UICorner", b)
         b.MouseButton1Click:Connect(callback)
     end
-
     return tabObj
 end
-
-local MyTab = XeNOX:CreateTab("General")
-
-MyTab:CreateButton("Button 1", function()
-    print("Action 1")
-end)
-
-MyTab:CreateButton("Button 2", function()
-    print("Action 2")
-end)
