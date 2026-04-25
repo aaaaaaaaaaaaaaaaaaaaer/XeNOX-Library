@@ -12,7 +12,6 @@ local shadeColor = Color3.fromRGB(25, 55, 95)
 local outlineColor = Color3.fromRGB(0, 255, 255)
 local globalFont = Enum.Font.SourceSansBold
 
--- Effect States
 local starsEnabled = false
 local trailsEnabled = false
 local blobsEnabled = false
@@ -21,7 +20,6 @@ local hexEnabled = false
 local plasmaEnabled = false
 local glitchEnabled = false
 
--- Effect Colors
 local rainCol = Color3.fromRGB(255, 255, 255)
 local trailCol = Color3.fromRGB(0, 255, 255)
 local blobCol = Color3.fromRGB(0, 20, 100)
@@ -57,7 +55,6 @@ uiStroke.Color = outlineColor
 uiStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 uiStroke.Parent = mainFrame
 
--- Title with Glow
 local title = Instance.new("TextLabel")
 title.Name = "Title"
 title.Size = UDim2.new(1, 0, 0, 40)
@@ -66,6 +63,7 @@ title.Text = "XeNOX Library"
 title.TextColor3 = mainTheme
 title.TextSize = TITLE_SIZE
 title.Font = Enum.Font.LuckiestGuy
+title.ZIndex = 5
 title.Parent = mainFrame
 
 local titleGlow = Instance.new("UIStroke")
@@ -75,7 +73,6 @@ titleGlow.Transparency = 1
 titleGlow.Enabled = false
 titleGlow.Parent = title
 
--- Pulsing Glow Logic for Minimized State
 task.spawn(function()
     while task.wait() do
         if titleGlow.Enabled then
@@ -121,7 +118,6 @@ if writefile and not isfolder(folderName) then makefolder(folderName) end
 local selectedConfig = ""
 local function GetPath(name) return folderName .. "/" .. name .. ".json" end
 
--- UPGRADED SAVE SYSTEM
 local function SaveSettings(name)
     if name == "" then return end
     local data = {
@@ -147,7 +143,6 @@ local function SaveSettings(name)
     writefile(GetPath(name), HttpService:JSONEncode(data))
 end
 
--- Background Effect Logic Loop
 task.spawn(function()
     local t = 0
     while task.wait(0.02) do 
@@ -275,7 +270,8 @@ local isMin = false
 closeBtn.MouseButton1Click:Connect(function()
     isMin = not isMin
     uiStroke.Enabled = not isMin
-    titleGlow.Enabled = isMin -- ACTIVATE GLOW WHEN MINIMIZED
+    titleGlow.Enabled = isMin
+    title.ZIndex = isMin and 25 or 5
     mainFrame:TweenSize(isMin and UDim2.new(0, 1000, 0, 50) or UDim2.new(0, 1000, 0, 750), "Out", "Quad", 0.3, true)
 end)
 
@@ -297,7 +293,7 @@ function _G.XeNOX:CreateTab(name)
     tabBtn.Font = globalFont
     tabBtn.TextSize = TAB_SIZE
     tabBtn.Parent = mainFrame
-    Instance.new("UICorner", tabBtn)
+    Instance.new("UICorner", tabBtn).CornerRadius = UDim.new(0, 8)
 
     local page = Instance.new("ScrollingFrame")
     page.Name = name .. "_Page"
@@ -336,7 +332,7 @@ function _G.XeNOX:CreateTab(name)
         l.Font = globalFont
         l.TextSize = LABEL_SIZE
         l.Parent = page
-        Instance.new("UICorner", l)
+        Instance.new("UICorner", l).CornerRadius = UDim.new(0, 8)
     end
 
     function tabObj:CreateToggle(text, default, callback)
@@ -344,7 +340,7 @@ function _G.XeNOX:CreateTab(name)
         local tgl = Instance.new("Frame")
         tgl.Size = UDim2.new(1, -20, 0, 50)
         tgl.BackgroundColor3 = Color3.new(0,0,0); tgl.BackgroundTransparency = 0.5
-        tgl.Parent = page; Instance.new("UICorner", tgl)
+        tgl.Parent = page; Instance.new("UICorner", tgl).CornerRadius = UDim.new(0, 8)
 
         local lb = Instance.new("TextLabel")
         lb.Size = UDim2.new(1, -60, 1, 0); lb.Position = UDim2.new(0, 15, 0, 0)
@@ -355,11 +351,11 @@ function _G.XeNOX:CreateTab(name)
         bg.Name = "ToggleBG"
         bg.Size = UDim2.new(0, 45, 0, 25); bg.Position = UDim2.new(1, -55, 0.5, -12)
         bg.BackgroundColor3 = enabled and mainTheme or shadeColor
-        bg.Text = ""; bg.Parent = tgl; Instance.new("UICorner", bg, {CornerRadius = UDim.new(1,0)})
+        bg.Text = ""; bg.Parent = tgl; Instance.new("UICorner", bg).CornerRadius = UDim.new(1,0)
 
         local ball = Instance.new("Frame")
         ball.Size = UDim2.new(0, 17, 0, 17); ball.Position = enabled and UDim2.new(1, -21, 0.5, -8) or UDim2.new(0, 4, 0.5, -8)
-        ball.BackgroundColor3 = Color3.new(1,1,1); ball.Parent = bg; Instance.new("UICorner", ball, {CornerRadius = UDim.new(1,0)})
+        ball.BackgroundColor3 = Color3.new(1,1,1); ball.Parent = bg; Instance.new("UICorner", ball).CornerRadius = UDim.new(1,0)
 
         bg.MouseButton1Click:Connect(function()
             enabled = not enabled
@@ -372,7 +368,7 @@ function _G.XeNOX:CreateTab(name)
     function tabObj:CreateFontPicker(text, callback)
         local fp = Instance.new("Frame")
         fp.Size = UDim2.new(1, -20, 0, 120); fp.BackgroundColor3 = Color3.new(0,0,0); fp.BackgroundTransparency = 0.5
-        fp.Parent = page; Instance.new("UICorner", fp)
+        fp.Parent = page; Instance.new("UICorner", fp).CornerRadius = UDim.new(0, 8)
 
         local lb = Instance.new("TextLabel")
         lb.Size = UDim2.new(1, -20, 0, 30); lb.Position = UDim2.new(0, 10, 0, 5)
@@ -391,7 +387,7 @@ function _G.XeNOX:CreateTab(name)
         for _, f in pairs(fonts) do
             local b = Instance.new("TextButton")
             b.Size = UDim2.new(0, 100, 0, 40); b.Text = f.Name; b.Font = f; b.BackgroundColor3 = shadeColor
-            b.TextColor3 = Color3.new(1,1,1); b.Parent = container; Instance.new("UICorner", b)
+            b.TextColor3 = Color3.new(1,1,1); b.Parent = container; Instance.new("UICorner", b).CornerRadius = UDim.new(0, 8)
             b.MouseButton1Click:Connect(function() callback(f) end)
         end
     end
@@ -399,7 +395,7 @@ function _G.XeNOX:CreateTab(name)
     function tabObj:CreateColorPicker(text, defaultColor, callback)
         local cp = Instance.new("Frame")
         cp.Size = UDim2.new(1,-20,0,180); cp.BackgroundColor3 = Color3.new(0,0,0); cp.BackgroundTransparency = 0.3
-        cp.Parent = page; Instance.new("UICorner", cp)
+        cp.Parent = page; Instance.new("UICorner", cp).CornerRadius = UDim.new(0, 8)
 
         local lb = Instance.new("TextLabel")
         lb.Size = UDim2.new(1,-10,0,30); lb.Position = UDim2.new(0,10,0,5)
@@ -416,7 +412,7 @@ function _G.XeNOX:CreateTab(name)
 
         local preview = Instance.new("Frame")
         preview.Size = UDim2.new(0, 30, 0, 30); preview.Position = UDim2.new(1, -40, 0, 5)
-        preview.BackgroundColor3 = defaultColor; preview.Parent = cp; Instance.new("UICorner", preview)
+        preview.BackgroundColor3 = defaultColor; preview.Parent = cp; Instance.new("UICorner", preview).CornerRadius = UDim.new(0, 8)
 
         local curH, curS, curV = defaultColor:ToHSV()
         local function upd()
@@ -442,7 +438,7 @@ function _G.XeNOX:CreateTab(name)
         local container = Instance.new("Frame")
         container.Size = UDim2.new(1, -20, 0, 340)
         container.BackgroundColor3 = Color3.new(0,0,0); container.BackgroundTransparency = 0.5
-        container.Parent = page; Instance.new("UICorner", container)
+        container.Parent = page; Instance.new("UICorner", container).CornerRadius = UDim.new(0, 8)
 
         local status = Instance.new("TextLabel")
         status.Size = UDim2.new(1, 0, 0, 20); status.Position = UDim2.new(0, 0, 1, -25)
@@ -452,13 +448,18 @@ function _G.XeNOX:CreateTab(name)
         local input = Instance.new("TextBox")
         input.Size = UDim2.new(0.6, 0, 0, 40); input.Position = UDim2.new(0, 10, 0, 10)
         input.PlaceholderText = "New Config Name..."; input.BackgroundColor3 = Color3.fromRGB(30,30,30)
-        input.TextColor3 = Color3.new(1,1,1); input.Font = globalFont; input.TextSize = LABEL_SIZE
-        input.Parent = container; Instance.new("UICorner", input)
+        input.TextColor3 = Color3.new(1,1,1); input.Font = globalFont
+        input.TextSize = 20
+        input.Parent = container; 
+        Instance.new("UICorner", input).CornerRadius = UDim.new(0, 2)
 
         local save = Instance.new("TextButton")
         save.Size = UDim2.new(0.35, -5, 0, 40); save.Position = UDim2.new(0.6, 15, 0, 10)
         save.Text = "CREATE"; save.BackgroundColor3 = shadeColor; save.TextColor3 = Color3.new(1,1,1)
-        save.Font = globalFont; save.Parent = container; Instance.new("UICorner", save)
+        save.Font = globalFont; 
+        save.TextSize = 20
+        save.Parent = container; 
+        Instance.new("UICorner", save).CornerRadius = UDim.new(0, 2)
 
         local list = Instance.new("ScrollingFrame")
         list.Size = UDim2.new(1, -20, 0, 130); list.Position = UDim2.new(0, 10, 0, 60)
@@ -474,7 +475,7 @@ function _G.XeNOX:CreateTab(name)
                     local b = Instance.new("TextButton")
                     b.Name = "ConfigBtn"; b.Size = UDim2.new(1, 0, 0, 35); b.Text = name
                     b.BackgroundColor3 = shadeColor; b.TextColor3 = Color3.new(1,1,1)
-                    b.Font = globalFont; b.Parent = list
+                    b.Font = globalFont; b.Parent = list; Instance.new("UICorner", b).CornerRadius = UDim.new(0, 8)
                     b.MouseButton1Click:Connect(function()
                         selectedConfig = name
                         for _, x in pairs(list:GetChildren()) do if x:IsA("TextButton") then x.BackgroundColor3 = shadeColor end end
@@ -495,7 +496,7 @@ function _G.XeNOX:CreateTab(name)
             local btn = Instance.new("TextButton")
             btn.Size = UDim2.new(0.3, 0, 0, 45); btn.Position = info.Pos; btn.Text = info.Text
             btn.BackgroundColor3 = info.Color or shadeColor; btn.TextColor3 = Color3.new(1,1,1)
-            btn.Font = globalFont; btn.Parent = container; Instance.new("UICorner", btn)
+            btn.Font = globalFont; btn.Parent = container; Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 8)
 
             btn.MouseButton1Click:Connect(function()
                 if selectedConfig == "" then status.Text = "Error: Select a config first!" return end
@@ -508,7 +509,6 @@ function _G.XeNOX:CreateTab(name)
                     UpdateOutlineTheme(Color3.new(unpack(data.Outline)))
                     UpdateGlobalFont(Enum.Font[data.Font])
                     
-                    -- Load States
                     starsEnabled = data.States.Rain
                     trailsEnabled = data.States.Trail
                     blobsEnabled = data.States.Blob
@@ -517,7 +517,6 @@ function _G.XeNOX:CreateTab(name)
                     plasmaEnabled = data.States.Plasma
                     glitchEnabled = data.States.Glitch
                     
-                    -- Load Colors
                     rainCol = Color3.new(unpack(data.Colors.Rain))
                     trailCol = Color3.new(unpack(data.Colors.Trail))
                     blobCol = Color3.new(unpack(data.Colors.Blob))
@@ -542,7 +541,6 @@ function _G.XeNOX:CreateTab(name)
     return tabObj
 end
 
--- SETUP UI
 local m = _G.XeNOX:CreateTab("Main")
 m:CreateLabel("")
 m:CreateLabel("Welcome to Xenox Library")
