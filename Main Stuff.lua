@@ -11,6 +11,7 @@ local mainTheme = Color3.fromRGB(0, 255, 255)
 local shadeColor = Color3.fromRGB(25, 55, 95)
 local blobColor = Color3.fromRGB(0, 20, 100)
 local outlineColor = Color3.fromRGB(0, 255, 255)
+local globalFont = Enum.Font.SourceSansBold
 
 local TITLE_SIZE = 22
 local TAB_SIZE = 16
@@ -38,6 +39,17 @@ uiStroke.Thickness = 2
 uiStroke.Color = outlineColor
 uiStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 uiStroke.Parent = mainFrame
+
+local function UpdateGlobalFont(newFont)
+    globalFont = newFont
+    for _, v in pairs(mainFrame:GetDescendants()) do
+        if v:IsA("TextLabel") or v:IsA("TextButton") or v:IsA("TextBox") then
+            if v.Name ~= "Title" then
+                v.Font = newFont
+            end
+        end
+    end
+end
 
 local function UpdateUITheme(color)
     mainTheme = color
@@ -73,7 +85,8 @@ local function SaveSettings(name)
         Theme = {mainTheme.R, mainTheme.G, mainTheme.B},
         Shade = {shadeColor.R, shadeColor.G, shadeColor.B},
         Blob = {blobColor.R, blobColor.G, blobColor.B},
-        Outline = {outlineColor.R, outlineColor.G, outlineColor.B}
+        Outline = {outlineColor.R, outlineColor.G, outlineColor.B},
+        Font = globalFont.Name
     }
     writefile(GetPath(name), HttpService:JSONEncode(data))
 end
@@ -150,7 +163,7 @@ title.BackgroundTransparency = 1
 title.Text = "XeNOX Library"
 title.TextColor3 = mainTheme
 title.TextSize = TITLE_SIZE
-title.Font = Enum.Font.SourceSansBold
+title.Font = Enum.Font.LuckiestGuy
 title.Parent = mainFrame
 
 _G.XeNOX = {}
@@ -180,7 +193,7 @@ function _G.XeNOX:CreateTab(name)
     tabBtn.BackgroundColor3 = shadeColor
     tabBtn.Text = name
     tabBtn.TextColor3 = Color3.new(1,1,1)
-    tabBtn.Font = Enum.Font.SourceSansBold
+    tabBtn.Font = globalFont
     tabBtn.TextSize = TAB_SIZE
     tabBtn.Parent = mainFrame
     Instance.new("UICorner", tabBtn)
@@ -219,7 +232,7 @@ function _G.XeNOX:CreateTab(name)
         l.BackgroundColor3 = shadeColor
         l.Text = text
         l.TextColor3 = Color3.new(1,1,1)
-        l.Font = Enum.Font.SourceSansBold
+        l.Font = globalFont
         l.TextSize = LABEL_SIZE
         l.Parent = page
         Instance.new("UICorner", l)
@@ -234,7 +247,7 @@ function _G.XeNOX:CreateTab(name)
 
         local lb = Instance.new("TextLabel")
         lb.Size = UDim2.new(1, -60, 1, 0); lb.Position = UDim2.new(0, 15, 0, 0)
-        lb.Text = text; lb.TextColor3 = Color3.new(1,1,1); lb.Font = Enum.Font.SourceSansBold
+        lb.Text = text; lb.TextColor3 = Color3.new(1,1,1); lb.Font = globalFont
         lb.TextSize = LABEL_SIZE; lb.BackgroundTransparency = 1; lb.TextXAlignment = "Left"; lb.Parent = tgl
 
         local bg = Instance.new("TextButton")
@@ -262,7 +275,7 @@ function _G.XeNOX:CreateTab(name)
 
         local lb = Instance.new("TextLabel")
         lb.Size = UDim2.new(1, -20, 0, 30); lb.Position = UDim2.new(0, 15, 0, 5)
-        lb.Text = text .. ": " .. default; lb.TextColor3 = Color3.new(1,1,1); lb.Font = Enum.Font.SourceSansBold
+        lb.Text = text .. ": " .. default; lb.TextColor3 = Color3.new(1,1,1); lb.Font = globalFont
         lb.TextSize = LABEL_SIZE - 2; lb.BackgroundTransparency = 1; lb.TextXAlignment = "Left"; lb.Parent = sld
 
         local bar = Instance.new("Frame")
@@ -294,12 +307,12 @@ function _G.XeNOX:CreateTab(name)
         
         local lb = Instance.new("TextLabel")
         lb.Name = "KeybindLabel"; lb.Size = UDim2.new(1,-110,1,0); lb.Position = UDim2.new(0,15,0,0)
-        lb.Text = text; lb.TextColor3 = Color3.new(1,1,1); lb.Font = Enum.Font.SourceSansBold
+        lb.Text = text; lb.TextColor3 = Color3.new(1,1,1); lb.Font = globalFont
         lb.TextSize = LABEL_SIZE; lb.BackgroundTransparency = 1; lb.TextXAlignment = "Left"; lb.Parent = kb
         
         local btn = Instance.new("TextButton")
         btn.Name = "KeybindBtn"; btn.Size = UDim2.new(0,100,0,30); btn.Position = UDim2.new(1,-110,0.5,-15)
-        btn.Text = default.Name; btn.Parent = kb; Instance.new("UICorner", btn)
+        btn.Text = default.Name; btn.Font = globalFont; btn.Parent = kb; Instance.new("UICorner", btn)
         
         btn.MouseButton1Click:Connect(function()
             btn.Text = "..."
@@ -314,6 +327,37 @@ function _G.XeNOX:CreateTab(name)
         end)
     end
 
+    function tabObj:CreateFontPicker(text, callback)
+        local fp = Instance.new("Frame")
+        fp.Size = UDim2.new(1, -20, 0, 120); fp.BackgroundColor3 = Color3.new(0,0,0); fp.BackgroundTransparency = 0.5
+        fp.Parent = page; Instance.new("UICorner", fp)
+
+        local lb = Instance.new("TextLabel")
+        lb.Size = UDim2.new(1, -20, 0, 30); lb.Position = UDim2.new(0, 10, 0, 5)
+        lb.Text = text .. " (Current: " .. globalFont.Name .. ")"; lb.TextColor3 = Color3.new(1,1,1)
+        lb.Font = globalFont; lb.TextSize = LABEL_SIZE; lb.BackgroundTransparency = 1; lb.TextXAlignment = "Left"; lb.Parent = fp
+
+        local container = Instance.new("ScrollingFrame")
+        container.Size = UDim2.new(1, -20, 0, 70); container.Position = UDim2.new(0, 10, 0, 40)
+        container.BackgroundTransparency = 0.8; container.BackgroundColor3 = Color3.new(0,0,0)
+        container.ScrollBarThickness = 4; container.CanvasSize = UDim2.new(2, 0, 0, 0); container.Parent = fp
+
+        local list = Instance.new("UIListLayout", container)
+        list.FillDirection = Enum.FillDirection.Horizontal; list.Padding = UDim.new(0, 10); list.VerticalAlignment = Enum.VerticalAlignment.Center
+
+        local fonts = {Enum.Font.SourceSansBold, Enum.Font.Roboto, Enum.Font.GothamBold, Enum.Font.Arcade, Enum.Font.SciFi, Enum.Font.Ubuntu, Enum.Font.SpecialElite}
+
+        for _, f in pairs(fonts) do
+            local b = Instance.new("TextButton")
+            b.Size = UDim2.new(0, 100, 0, 40); b.Text = f.Name; b.Font = f; b.BackgroundColor3 = shadeColor
+            b.TextColor3 = Color3.new(1,1,1); b.Parent = container; Instance.new("UICorner", b)
+            b.MouseButton1Click:Connect(function()
+                lb.Text = text .. " (Current: " .. f.Name .. ")"
+                callback(f)
+            end)
+        end
+    end
+
     function tabObj:CreateColorPicker(text, defaultColor, callback)
         local cp = Instance.new("Frame")
         cp.Size = UDim2.new(1,-20,0,200); cp.BackgroundColor3 = Color3.new(0,0,0); cp.BackgroundTransparency = 0.3
@@ -321,7 +365,7 @@ function _G.XeNOX:CreateTab(name)
 
         local lb = Instance.new("TextLabel")
         lb.Size = UDim2.new(1,-10,0,30); lb.Position = UDim2.new(0,10,0,5)
-        lb.Text = text; lb.TextColor3 = Color3.new(1,1,1); lb.Font = Enum.Font.SourceSansBold
+        lb.Text = text; lb.TextColor3 = Color3.new(1,1,1); lb.Font = globalFont
         lb.TextSize = LABEL_SIZE; lb.BackgroundTransparency = 1; lb.TextXAlignment = "Left"; lb.Parent = cp
 
         local box = Instance.new("ImageLabel")
@@ -359,18 +403,18 @@ function _G.XeNOX:CreateTab(name)
         local status = Instance.new("TextLabel")
         status.Size = UDim2.new(1, 0, 0, 20); status.Position = UDim2.new(0, 0, 1, -25)
         status.BackgroundTransparency = 1; status.Text = "Status: Idle"; status.TextColor3 = Color3.new(0.7,0.7,0.7)
-        status.Font = Enum.Font.SourceSansItalic; status.TextSize = 14; status.Parent = container
+        status.Font = globalFont; status.TextSize = 14; status.Parent = container
 
         local input = Instance.new("TextBox")
         input.Size = UDim2.new(0.6, 0, 0, 40); input.Position = UDim2.new(0, 10, 0, 10)
         input.PlaceholderText = "New Config Name..."; input.BackgroundColor3 = Color3.fromRGB(30,30,30)
-        input.TextColor3 = Color3.new(1,1,1); input.Font = Enum.Font.SourceSansBold; input.TextSize = LABEL_SIZE
+        input.TextColor3 = Color3.new(1,1,1); input.Font = globalFont; input.TextSize = LABEL_SIZE
         input.Parent = container; Instance.new("UICorner", input)
 
         local save = Instance.new("TextButton")
         save.Size = UDim2.new(0.35, -5, 0, 40); save.Position = UDim2.new(0.6, 15, 0, 10)
         save.Text = "CREATE"; save.BackgroundColor3 = shadeColor; save.TextColor3 = Color3.new(1,1,1)
-        save.Font = Enum.Font.SourceSansBold; save.Parent = container; Instance.new("UICorner", save)
+        save.Font = globalFont; save.Parent = container; Instance.new("UICorner", save)
 
         local list = Instance.new("ScrollingFrame")
         list.Size = UDim2.new(1, -20, 0, 130); list.Position = UDim2.new(0, 10, 0, 60)
@@ -386,7 +430,7 @@ function _G.XeNOX:CreateTab(name)
                     local b = Instance.new("TextButton")
                     b.Name = "ConfigBtn"; b.Size = UDim2.new(1, 0, 0, 35); b.Text = name
                     b.BackgroundColor3 = shadeColor; b.TextColor3 = Color3.new(1,1,1)
-                    b.Font = Enum.Font.SourceSansBold; b.Parent = list
+                    b.Font = globalFont; b.Parent = list
                     b.MouseButton1Click:Connect(function()
                         selectedConfig = name
                         for _, x in pairs(list:GetChildren()) do if x:IsA("TextButton") then x.BackgroundColor3 = shadeColor end end
@@ -407,7 +451,7 @@ function _G.XeNOX:CreateTab(name)
             local btn = Instance.new("TextButton")
             btn.Size = UDim2.new(0.3, 0, 0, 45); btn.Position = info.Pos; btn.Text = info.Text
             btn.BackgroundColor3 = info.Color or shadeColor; btn.TextColor3 = Color3.new(1,1,1)
-            btn.Font = Enum.Font.SourceSansBold; btn.Parent = container; Instance.new("UICorner", btn)
+            btn.Font = globalFont; btn.Parent = container; Instance.new("UICorner", btn)
 
             btn.MouseButton1Click:Connect(function()
                 if selectedConfig == "" then status.Text = "Error: Select a config first!" return end
@@ -422,6 +466,7 @@ function _G.XeNOX:CreateTab(name)
                         UpdateShadeTheme(Color3.new(unpack(data.Shade)))
                         blobColor = Color3.new(unpack(data.Blob))
                         if data.Outline then UpdateOutlineTheme(Color3.new(unpack(data.Outline))) end
+                        if data.Font then UpdateGlobalFont(Enum.Font[data.Font]) end
                         status.Text = "Status: Loaded " .. selectedConfig
                     end
                 elseif i == "Update" then
@@ -451,6 +496,7 @@ m:CreateLabel("SYSTEM INITIALIZED")
 local s = _G.XeNOX:CreateTab("Settings")
 s:CreateConfigManager()
 s:CreateKeybind("Menu Toggle", menuKey, function(k) menuKey = k end)
+s:CreateFontPicker("Global Font", function(f) UpdateGlobalFont(f) end)
 s:CreateColorPicker("Main Theme", mainTheme, function(c) UpdateUITheme(c) end)
 s:CreateColorPicker("Outline Color", outlineColor, function(c) UpdateOutlineTheme(c) end)
 s:CreateColorPicker("Shade Color", shadeColor, function(c) UpdateShadeTheme(c) end)
