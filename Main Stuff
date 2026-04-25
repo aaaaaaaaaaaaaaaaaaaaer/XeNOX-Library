@@ -3,7 +3,7 @@ local mouse = player:GetMouse()
 local pGui = player:WaitForChild("PlayerGui")
 
 local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "XENOX_vULTRA_TURBO"
+screenGui.Name = "XENOX LIBRARY"
 screenGui.ResetOnSpawn = false
 screenGui.Parent = pGui
 
@@ -42,12 +42,13 @@ task.spawn(function()
         star.Parent = mainFrame
         
         local trail = Instance.new("Frame")
-        trail.Size = UDim2.new(0, 3, 0, 3)
-        trail.Position = UDim2.new(0, mouse.X - mainFrame.AbsolutePosition.X, 0, mouse.Y - mainFrame.AbsolutePosition.Y)
+        trail.Size = UDim2.new(0, 6, 0, 6)
+        trail.Position = UDim2.new(0, mouse.X - mainFrame.AbsolutePosition.X - 3, 0, mouse.Y - mainFrame.AbsolutePosition.Y - 3)
         trail.BackgroundColor3 = Color3.fromRGB(0, 255, 255)
         trail.BorderSizePixel = 0
         trail.ZIndex = 2
         trail.Parent = mainFrame
+        Instance.new("UICorner", trail).CornerRadius = UDim.new(1, 0)
 
         game:GetService("TweenService"):Create(star, TweenInfo.new(0.6, Enum.EasingStyle.Linear), {
             Position = UDim2.new(star.Position.X.Scale, 0, 1.2, 0), 
@@ -55,11 +56,11 @@ task.spawn(function()
         }):Play()
         game:GetService("Debris"):AddItem(star, 0.6)
         
-        game:GetService("TweenService"):Create(trail, TweenInfo.new(0.3), {
+        game:GetService("TweenService"):Create(trail, TweenInfo.new(0.4), {
             BackgroundTransparency = 1, 
             Size = UDim2.new(0, 0, 0, 0)
         }):Play()
-        game:GetService("Debris"):AddItem(trail, 0.3)
+        game:GetService("Debris"):AddItem(trail, 0.4)
 
         task.spawn(function()
             local life = 3
