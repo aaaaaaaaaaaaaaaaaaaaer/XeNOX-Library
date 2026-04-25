@@ -43,10 +43,8 @@ uiStroke.Parent = mainFrame
 local function UpdateGlobalFont(newFont)
     globalFont = newFont
     for _, v in pairs(mainFrame:GetDescendants()) do
-        if v:IsA("TextLabel") or v:IsA("TextButton") or v:IsA("TextBox") then
-            if v.Name ~= "Title" then
-                v.Font = newFont
-            end
+        if (v:IsA("TextLabel") or v:IsA("TextButton") or v:IsA("TextBox")) and v.Name ~= "Title" then
+            v.Font = newFont
         end
     end
 end
