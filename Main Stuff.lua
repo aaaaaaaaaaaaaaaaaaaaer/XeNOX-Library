@@ -6,13 +6,11 @@ local uis = game:GetService("UserInputService")
 local runService = game:GetService("RunService")
 local HttpService = game:GetService("HttpService")
 
--- Configuration & Defaults
 local menuKey = Enum.KeyCode.RightControl
 local mainTheme = Color3.fromRGB(0, 255, 255)
 local shadeColor = Color3.fromRGB(25, 55, 95)
 local blobColor = Color3.fromRGB(0, 20, 100)
 
--- ORIGINAL FONT SIZES
 local TITLE_SIZE = 22
 local TAB_SIZE = 16
 local LABEL_SIZE = 18
@@ -34,7 +32,6 @@ mainFrame.ClipsDescendants = true
 mainFrame.Parent = screenGui
 Instance.new("UICorner", mainFrame).CornerRadius = UDim.new(0, 8)
 
--- Theme Management Functions
 local function UpdateUITheme(color)
     mainTheme = color
     mainFrame.BackgroundColor3 = color
@@ -52,11 +49,14 @@ local function UpdateShadeTheme(newShade)
     end
 end
 
--- FILE SYSTEM (MULTIPLE CONFIGS + DELETE)
 local folderName = "XeNOX_Configs"
 if writefile and not isfolder(folderName) then makefolder(folderName) end
 
 local selectedConfig = ""
+
+local function GetPath(name)
+    return folderName .. "/" .. name .. ".json"
+end
 
 local function SaveSettings(name)
     if name == "" then return end
@@ -66,87 +66,31 @@ local function SaveSettings(name)
         Shade = {shadeColor.R, shadeColor.G, shadeColor.B},
         Blob = {blobColor.R, blobColor.G, blobColor.B}
     }
-    if writefile then
-        writefile(folderName .. "/" .. name .. ".json", HttpService:JSONEncode(data))
-    end
+    writefile(GetPath(name), HttpService:JSONEncode(data))
 end
 
-local function LoadSettings(name)
-    local path = folderName .. "/" .. name .. ".json"
-    if isfile and isfile(path) then
-        local success, data = pcall(function() return HttpService:JSONDecode(readfile(path)) end)
-        if success then
-            menuKey = Enum.KeyCode[data.Keybind]
-            UpdateUITheme(Color3.new(unpack(data.Theme)))
-            UpdateShadeTheme(Color3.new(unpack(data.Shade)))
-            blobColor = Color3.new(unpack(data.Blob))
-        end
-    end
-end
-
-local function DeleteConfig(name)
-    local path = folderName .. "/" .. name .. ".json"
-    if isfile and isfile(path) then
-        delfile(path)
-        selectedConfig = ""
-    end
-end
-
--- Minimize Button ("-")
-local closeBtn = Instance.new("TextButton")
-closeBtn.Name = "Minimize"
-closeBtn.Size = UDim2.new(0, 30, 0, 30)
-closeBtn.Position = UDim2.new(1, -40, 0, 10)
-closeBtn.BackgroundTransparency = 1
-closeBtn.Text = "-"
-closeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-closeBtn.TextSize = 35
-closeBtn.Font = Enum.Font.SourceSansBold
-closeBtn.ZIndex = 20
-closeBtn.Parent = mainFrame
-
-local isMinimized = false
-closeBtn.MouseButton1Click:Connect(function()
-    isMinimized = not isMinimized
-    mainFrame:TweenSize(isMinimized and UDim2.new(0, 1000, 0, 50) or UDim2.new(0, 1000, 0, 750), "Out", "Quad", 0.3, true)
-end)
-
--- Toggle Listener
-uis.InputBegan:Connect(function(input, gpe)
-    if gpe then return end
-    if input.KeyCode == menuKey then
-        mainFrame.Visible = not mainFrame.Visible
-    end
-end)
-
--- VFX (RAIN, BLOBS, TRAILS)
 task.spawn(function()
     while task.wait(0.02) do 
         if not screenGui.Parent then break end
-        
-        -- Rain
         local star = Instance.new("Frame")
         star.Size = UDim2.new(0, 1, 0, math.random(30, 80))
         star.Position = UDim2.new(math.random(0, 100)/100, 0, -0.2, 0)
         star.BackgroundColor3 = Color3.new(1,1,1)
-        star.BackgroundTransparency = 0.7
         star.ZIndex = 1
         star.Parent = mainFrame
         tweenService:Create(star, TweenInfo.new(0.6, Enum.EasingStyle.Linear), {Position = UDim2.new(star.Position.X.Scale, 0, 1.2, 0), BackgroundTransparency = 1}):Play()
         game:GetService("Debris"):AddItem(star, 0.6)
-
-        -- Trail
+        
         local trail = Instance.new("Frame")
         trail.Size = UDim2.new(0, 10, 0, 10)
         trail.Position = UDim2.new(0, mouse.X - mainFrame.AbsolutePosition.X - 5, 0, mouse.Y - mainFrame.AbsolutePosition.Y - 5)
-        trail.BackgroundColor3 = mainFrame.BackgroundColor3
+        trail.BackgroundColor3 = mainTheme
         trail.ZIndex = 2
         trail.Parent = mainFrame
         Instance.new("UICorner", trail).CornerRadius = UDim.new(1, 0)
         tweenService:Create(trail, TweenInfo.new(0.4), {BackgroundTransparency = 1, Size = UDim2.new(0, 0, 0, 0)}):Play()
         game:GetService("Debris"):AddItem(trail, 0.4)
 
-        -- Blobs
         local blob = Instance.new("ImageLabel")
         blob.Size = UDim2.new(math.random(2,5)/10, 0, math.random(2,5)/10, 0)
         blob.Position = UDim2.new(math.random(-1, 9)/10, 0, math.random(-1, 9)/10, 0)
@@ -172,6 +116,22 @@ task.spawn(function()
     end
 end)
 
+local closeBtn = Instance.new("TextButton")
+closeBtn.Size = UDim2.new(0, 30, 0, 30)
+closeBtn.Position = UDim2.new(1, -40, 0, 10)
+closeBtn.BackgroundTransparency = 1
+closeBtn.Text = "-"
+closeBtn.TextColor3 = Color3.new(1,1,1)
+closeBtn.TextSize = 35
+closeBtn.Font = Enum.Font.SourceSansBold
+closeBtn.ZIndex = 20
+closeBtn.Parent = mainFrame
+local isMin = false
+closeBtn.MouseButton1Click:Connect(function()
+    isMin = not isMin
+    mainFrame:TweenSize(isMin and UDim2.new(0, 1000, 0, 50) or UDim2.new(0, 1000, 0, 750), "Out", "Quad", 0.3, true)
+end)
+
 local title = Instance.new("TextLabel")
 title.Name = "Title"
 title.Size = UDim2.new(1, 0, 0, 40)
@@ -180,7 +140,6 @@ title.Text = "XeNOX Library"
 title.TextColor3 = mainTheme
 title.TextSize = TITLE_SIZE
 title.Font = Enum.Font.SourceSansBold
-title.ZIndex = 10
 title.Parent = mainFrame
 
 _G.XeNOX = {}
@@ -195,7 +154,6 @@ function _G.XeNOX:CreateTab(name)
     tabBtn.Size = UDim2.new(0, 160, 0, 45)
     tabBtn.Position = UDim2.new(0, 15, 0, 50 + (tabCount - 1) * 50)
     tabBtn.BackgroundColor3 = shadeColor
-    tabBtn.BackgroundTransparency = 0.2
     tabBtn.Text = name
     tabBtn.TextColor3 = Color3.new(1,1,1)
     tabBtn.Font = Enum.Font.SourceSansBold
@@ -222,17 +180,26 @@ function _G.XeNOX:CreateTab(name)
     
     function tabObj:CreateConfigManager()
         local container = Instance.new("Frame")
-        container.Size = UDim2.new(1, -10, 0, 270)
-        container.BackgroundTransparency = 0.5
+        container.Size = UDim2.new(1, -10, 0, 340)
         container.BackgroundColor3 = Color3.new(0,0,0)
+        container.BackgroundTransparency = 0.5
         container.Parent = page
         Instance.new("UICorner", container)
+
+        local status = Instance.new("TextLabel")
+        status.Size = UDim2.new(1, 0, 0, 20)
+        status.Position = UDim2.new(0, 0, 1, -25)
+        status.BackgroundTransparency = 1
+        status.Text = "Status: Idle"
+        status.TextColor3 = Color3.new(0.7,0.7,0.7)
+        status.Font = Enum.Font.SourceSansItalic
+        status.TextSize = 14
+        status.Parent = container
 
         local input = Instance.new("TextBox")
         input.Size = UDim2.new(0.6, 0, 0, 40)
         input.Position = UDim2.new(0, 10, 0, 10)
-        input.PlaceholderText = "Config Name..."
-        input.Text = ""
+        input.PlaceholderText = "New Config Name..."
         input.BackgroundColor3 = Color3.fromRGB(30,30,30)
         input.TextColor3 = Color3.new(1,1,1)
         input.Font = Enum.Font.SourceSansBold
@@ -241,10 +208,9 @@ function _G.XeNOX:CreateTab(name)
         Instance.new("UICorner", input)
 
         local save = Instance.new("TextButton")
-        save.Name = "LabelElement"
         save.Size = UDim2.new(0.35, -5, 0, 40)
         save.Position = UDim2.new(0.6, 15, 0, 10)
-        save.Text = "SAVE"
+        save.Text = "CREATE"
         save.BackgroundColor3 = shadeColor
         save.TextColor3 = Color3.new(1,1,1)
         save.Font = Enum.Font.SourceSansBold
@@ -256,58 +222,86 @@ function _G.XeNOX:CreateTab(name)
         list.Position = UDim2.new(0, 10, 0, 60)
         list.BackgroundTransparency = 0.8
         list.BackgroundColor3 = Color3.new(0,0,0)
-        list.ScrollBarThickness = 2
+        list.ScrollBarThickness = 4
         list.Parent = container
-        local layout = Instance.new("UIListLayout", list)
+        Instance.new("UIListLayout", list)
 
         local function refreshList()
             for _, v in pairs(list:GetChildren()) do if v:IsA("TextButton") then v:Destroy() end end
             if listfiles then
-                for _, file in pairs(listfiles(folderName)) do
-                    local name = file:match("([^/]+)%.json$")
-                    if name then
-                        local b = Instance.new("TextButton")
-                        b.Name = "ConfigBtn"
-                        b.Size = UDim2.new(1, 0, 0, 30)
-                        b.Text = name
-                        b.BackgroundColor3 = shadeColor
-                        b.TextColor3 = Color3.new(1,1,1)
-                        b.Font = Enum.Font.SourceSansBold
-                        b.Parent = list
-                        b.MouseButton1Click:Connect(function()
-                            selectedConfig = name
-                            for _, x in pairs(list:GetChildren()) do if x:IsA("TextButton") then x.BackgroundTransparency = 0 end end
-                            b.BackgroundTransparency = 0.5
-                        end)
-                    end
+                local files = listfiles(folderName)
+                for _, file in pairs(files) do
+                    local name = file:gsub(folderName.."/", ""):gsub(".json", ""):gsub(folderName.."\\", "")
+                    local b = Instance.new("TextButton")
+                    b.Name = "ConfigBtn"
+                    b.Size = UDim2.new(1, 0, 0, 35)
+                    b.Text = name
+                    b.BackgroundColor3 = shadeColor
+                    b.TextColor3 = Color3.new(1,1,1)
+                    b.Font = Enum.Font.SourceSansBold
+                    b.Parent = list
+                    b.MouseButton1Click:Connect(function()
+                        selectedConfig = name
+                        for _, x in pairs(list:GetChildren()) do if x:IsA("TextButton") then x.BackgroundColor3 = shadeColor end end
+                        b.BackgroundColor3 = Color3.fromRGB(200, 0, 0)
+                        status.Text = "Selected: " .. name
+                    end)
                 end
             end
         end
 
-        local load = Instance.new("TextButton")
-        load.Name = "LabelElement"
-        load.Size = UDim2.new(0.45, 0, 0, 40)
-        load.Position = UDim2.new(0, 10, 0, 210)
-        load.Text = "LOAD"
-        load.BackgroundColor3 = shadeColor
-        load.TextColor3 = Color3.new(1,1,1)
-        load.Font = Enum.Font.SourceSansBold
-        load.Parent = container
-        Instance.new("UICorner", load)
+        local actions = {
+            Load = {Pos = UDim2.new(0, 10, 0, 210), Text = "LOAD"},
+            Update = {Pos = UDim2.new(0.34, 10, 0, 210), Text = "UPDATE"},
+            Delete = {Pos = UDim2.new(0.68, 10, 0, 210), Text = "DELETE", Color = Color3.fromRGB(150, 0, 0)}
+        }
 
-        local delete = Instance.new("TextButton")
-        delete.Size = UDim2.new(0.45, 0, 0, 40)
-        delete.Position = UDim2.new(0.5, 5, 0, 210)
-        delete.Text = "DELETE"
-        delete.BackgroundColor3 = Color3.fromRGB(150, 0, 0)
-        delete.TextColor3 = Color3.new(1,1,1)
-        delete.Font = Enum.Font.SourceSansBold
-        delete.Parent = container
-        Instance.new("UICorner", delete)
+        for i, info in pairs(actions) do
+            local btn = Instance.new("TextButton")
+            btn.Size = UDim2.new(0.3, 0, 0, 45)
+            btn.Position = info.Pos
+            btn.Text = info.Text
+            btn.BackgroundColor3 = info.Color or shadeColor
+            btn.TextColor3 = Color3.new(1,1,1)
+            btn.Font = Enum.Font.SourceSansBold
+            btn.Parent = container
+            Instance.new("UICorner", btn)
 
-        save.MouseButton1Click:Connect(function() SaveSettings(input.Text) refreshList() end)
-        load.MouseButton1Click:Connect(function() if selectedConfig ~= "" then LoadSettings(selectedConfig) end end)
-        delete.MouseButton1Click:Connect(function() if selectedConfig ~= "" then DeleteConfig(selectedConfig) refreshList() end end)
+            btn.MouseButton1Click:Connect(function()
+                if selectedConfig == "" then status.Text = "Error: Select a config first!" return end
+                local path = GetPath(selectedConfig)
+                
+                if i == "Load" then
+                    if isfile(path) then
+                        local data = HttpService:JSONDecode(readfile(path))
+                        menuKey = Enum.KeyCode[data.Keybind]
+                        UpdateUITheme(Color3.new(unpack(data.Theme)))
+                        UpdateShadeTheme(Color3.new(unpack(data.Shade)))
+                        blobColor = Color3.new(unpack(data.Blob))
+                        status.Text = "Status: Loaded " .. selectedConfig
+                    end
+                elseif i == "Update" then
+                    SaveSettings(selectedConfig)
+                    status.Text = "Status: Updated " .. selectedConfig
+                elseif i == "Delete" then
+                    if isfile(path) then delfile(path) end
+                    status.Text = "Status: Deleted " .. selectedConfig
+                    selectedConfig = ""
+                    task.wait(0.1)
+                    refreshList()
+                end
+            end)
+        end
+
+        save.MouseButton1Click:Connect(function() 
+            if input.Text ~= "" then 
+                SaveSettings(input.Text) 
+                status.Text = "Status: Created " .. input.Text
+                input.Text = "" 
+                task.wait(0.1)
+                refreshList() 
+            end 
+        end)
         refreshList()
     end
 
@@ -316,7 +310,6 @@ function _G.XeNOX:CreateTab(name)
         l.Name = "LabelElement"
         l.Size = UDim2.new(1, -10, 0, 50)
         l.BackgroundColor3 = shadeColor
-        l.BackgroundTransparency = 0.1
         l.Text = text
         l.TextColor3 = Color3.new(1,1,1)
         l.Font = Enum.Font.SourceSansBold
@@ -326,105 +319,69 @@ function _G.XeNOX:CreateTab(name)
     end
 
     function tabObj:CreateKeybind(text, default, callback)
-        local kbFrame = Instance.new("Frame")
-        kbFrame.Size = UDim2.new(1, -10, 0, 50)
-        kbFrame.BackgroundTransparency = 0.5
-        kbFrame.BackgroundColor3 = Color3.new(0,0,0)
-        kbFrame.Parent = page
-        Instance.new("UICorner", kbFrame)
-        
-        local label = Instance.new("TextLabel")
-        label.Size = UDim2.new(1, -100, 1, 0)
-        label.Position = UDim2.new(0, 15, 0, 0)
-        label.BackgroundTransparency = 1
-        label.Text = text
-        label.TextColor3 = Color3.new(1,1,1)
-        label.Font = Enum.Font.SourceSansBold
-        label.TextSize = LABEL_SIZE
-        label.TextXAlignment = Enum.TextXAlignment.Left
-        label.Parent = kbFrame
-
-        local bindBtn = Instance.new("TextButton")
-        bindBtn.Size = UDim2.new(0, 100, 0, 30)
-        bindBtn.Position = UDim2.new(1, -110, 0.5, -15)
-        bindBtn.Text = menuKey.Name
-        bindBtn.Parent = kbFrame
-        Instance.new("UICorner", bindBtn)
-        bindBtn.MouseButton1Click:Connect(function()
-            bindBtn.Text = "..."
-            local con; con = uis.InputBegan:Connect(function(i)
+        local kb = Instance.new("Frame")
+        kb.Size = UDim2.new(1,-10,0,50)
+        kb.BackgroundColor3 = Color3.new(0,0,0); kb.BackgroundTransparency = 0.5
+        kb.Parent = page; Instance.new("UICorner", kb)
+        local lb = Instance.new("TextLabel")
+        lb.Size = UDim2.new(1,-110,1,0); lb.Position = UDim2.new(0,15,0,0)
+        lb.Text = text; lb.TextColor3 = Color3.new(1,1,1); lb.Font = Enum.Font.SourceSansBold
+        lb.TextSize = LABEL_SIZE; lb.BackgroundTransparency = 1; lb.TextXAlignment = Enum.TextXAlignment.Left; lb.Parent = kb
+        local btn = Instance.new("TextButton")
+        btn.Size = UDim2.new(0,100,0,30); btn.Position = UDim2.new(1,-110,0.5,-15)
+        btn.Text = menuKey.Name; btn.Parent = kb; Instance.new("UICorner", btn)
+        btn.MouseButton1Click:Connect(function()
+            btn.Text = "..."
+            local c; c = uis.InputBegan:Connect(function(i)
                 if i.UserInputType == Enum.UserInputType.Keyboard then
-                    menuKey = i.KeyCode
-                    bindBtn.Text = i.KeyCode.Name
-                    con:Disconnect()
-                    callback(i.KeyCode)
+                    menuKey = i.KeyCode; btn.Text = i.KeyCode.Name; c:Disconnect(); callback(i.KeyCode)
                 end
             end)
         end)
     end
 
     function tabObj:CreateColorPicker(text, defaultColor, callback)
-        local cpFrame = Instance.new("Frame")
-        cpFrame.Size = UDim2.new(1, -10, 0, 200)
-        cpFrame.BackgroundColor3 = Color3.new(0,0,0)
-        cpFrame.BackgroundTransparency = 0.3
-        cpFrame.Parent = page
-        Instance.new("UICorner", cpFrame)
-        
-        local label = Instance.new("TextLabel")
-        label.Size = UDim2.new(1, -10, 0, 30)
-        label.Position = UDim2.new(0, 10, 0, 5)
-        label.BackgroundTransparency = 1
-        label.Text = text
-        label.TextColor3 = Color3.new(1,1,1)
-        label.Font = Enum.Font.SourceSansBold
-        label.TextSize = LABEL_SIZE
-        label.TextXAlignment = Enum.TextXAlignment.Left
-        label.Parent = cpFrame
-
+        local cp = Instance.new("Frame")
+        cp.Size = UDim2.new(1,-10,0,200); cp.BackgroundColor3 = Color3.new(0,0,0); cp.BackgroundTransparency = 0.3
+        cp.Parent = page; Instance.new("UICorner", cp)
+        local lb = Instance.new("TextLabel")
+        lb.Size = UDim2.new(1,-10,0,30); lb.Position = UDim2.new(0,10,0,5)
+        lb.Text = text; lb.TextColor3 = Color3.new(1,1,1); lb.Font = Enum.Font.SourceSansBold
+        lb.TextSize = LABEL_SIZE; lb.BackgroundTransparency = 1; lb.TextXAlignment = Enum.TextXAlignment.Left; lb.Parent = cp
         local box = Instance.new("ImageLabel")
-        box.Size = UDim2.new(0, 140, 0, 140)
-        box.Position = UDim2.new(0, 10, 0, 45)
-        box.Image = "rbxassetid://4155801252"
-        box.Parent = cpFrame
+        box.Size = UDim2.new(0,140,0,140); box.Position = UDim2.new(0,10,0,45)
+        box.Image = "rbxassetid://4155801252"; box.Parent = cp
         local hue = Instance.new("ImageLabel")
-        hue.Size = UDim2.new(0, 20, 0, 140)
-        hue.Position = UDim2.new(0, 160, 0, 45)
-        hue.Image = "rbxassetid://3641079629"
-        hue.Parent = cpFrame
-        local currH, currS, currV = defaultColor:ToHSV()
-        local dragH, dragSV = false, false
-        local function update()
-            local c = Color3.fromHSV(currH, currS, currV)
-            box.ImageColor3 = Color3.fromHSV(currH, 1, 1)
-            callback(c)
+        hue.Size = UDim2.new(0,20,0,140); hue.Position = UDim2.new(0,160,0,45)
+        hue.Image = "rbxassetid://3641079629"; hue.Parent = cp
+        local curH, curS, curV = defaultColor:ToHSV()
+        local function upd()
+            local c = Color3.fromHSV(curH, curS, curV)
+            box.ImageColor3 = Color3.fromHSV(curH, 1, 1); callback(c)
         end
-        hue.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 then dragH = true end end)
-        box.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 then dragSV = true end end)
-        uis.InputEnded:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 then dragH, dragSV = false, false end end)
+        local dH, dSV = false, false
+        hue.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 then dH = true end end)
+        box.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 then dSV = true end end)
+        uis.InputEnded:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 then dH, dSV = false end end)
         runService.RenderStepped:Connect(function()
-            if dragH then
-                currH = 1 - math.clamp((mouse.Y - hue.AbsolutePosition.Y) / hue.AbsoluteSize.Y, 0, 1)
-                update()
-            elseif dragSV then
-                currS = math.clamp((mouse.X - box.AbsolutePosition.X) / box.AbsoluteSize.X, 0, 1)
-                currV = 1 - math.clamp((mouse.Y - box.AbsolutePosition.Y) / box.AbsoluteSize.Y, 0, 1)
-                update()
-            end
+            if dH then curH = 1 - math.clamp((mouse.Y - hue.AbsolutePosition.Y) / hue.AbsoluteSize.Y, 0, 1); upd()
+            elseif dSV then curS = math.clamp((mouse.X - box.AbsolutePosition.X) / box.AbsoluteSize.X, 0, 1)
+                curV = 1 - math.clamp((mouse.Y - box.AbsolutePosition.Y) / box.AbsoluteSize.Y, 0, 1); upd() end
         end)
     end
     return tabObj
 end
 
--- Initialize Library
-local mainTab = _G.XeNOX:CreateTab("Main")
-mainTab:CreateLabel("SYSTEMS ONLINE")
+local m = _G.XeNOX:CreateTab("Main")
+m:CreateLabel("STUFF READY")
 
-local settings = _G.XeNOX:CreateTab("Settings")
-settings:CreateConfigManager()
-settings:CreateKeybind("Menu Toggle Key", menuKey, function(new) menuKey = new end)
-settings:CreateColorPicker("Main Theme Color", mainTheme, function(c) UpdateUITheme(c) end)
-settings:CreateColorPicker("Shade Color Accent", shadeColor, function(c) UpdateShadeTheme(c) end)
-settings:CreateColorPicker("Background Blob Color", blobColor, function(c) blobColor = c end)
+local s = _G.XeNOX:CreateTab("Settings")
+s:CreateConfigManager()
+s:CreateKeybind("Menu Toggle", menuKey, function(k) menuKey = k end)
+s:CreateColorPicker("Main Theme", mainTheme, function(c) UpdateUITheme(c) end)
+s:CreateColorPicker("Shade Color", shadeColor, function(c) UpdateShadeTheme(c) end)
+s:CreateColorPicker("Blob Color", blobColor, function(c) blobColor = c end)
 
-print("XeNOX: Config Manager with Delete & Color Labels loaded.")
+uis.InputBegan:Connect(function(input, gpe)
+    if not gpe and input.KeyCode == menuKey then mainFrame.Visible = not mainFrame.Visible end
+end)
