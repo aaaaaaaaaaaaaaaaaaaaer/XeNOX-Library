@@ -9,13 +9,26 @@ local HttpService = game:GetService("HttpService")
 local menuKey = Enum.KeyCode.RightControl
 local mainTheme = Color3.fromRGB(0, 255, 255)
 local shadeColor = Color3.fromRGB(25, 55, 95)
-local blobColor = Color3.fromRGB(0, 20, 100)
 local outlineColor = Color3.fromRGB(0, 255, 255)
 local globalFont = Enum.Font.SourceSansBold
 
+-- Effect States
 local starsEnabled = false
 local trailsEnabled = false
 local blobsEnabled = false
+local matrixEnabled = false
+local hexEnabled = false
+local plasmaEnabled = false
+local glitchEnabled = false
+
+-- Effect Colors
+local rainCol = Color3.fromRGB(255, 255, 255)
+local trailCol = Color3.fromRGB(0, 255, 255)
+local blobCol = Color3.fromRGB(0, 20, 100)
+local matrixCol = Color3.fromRGB(0, 255, 0)
+local hexCol = Color3.fromRGB(0, 255, 255)
+local plasmaCol = Color3.fromRGB(255, 0, 255)
+local glitchCol = Color3.fromRGB(255, 255, 255)
 
 local TITLE_SIZE = 22
 local TAB_SIZE = 16
@@ -44,6 +57,35 @@ uiStroke.Color = outlineColor
 uiStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 uiStroke.Parent = mainFrame
 
+-- Title with Glow
+local title = Instance.new("TextLabel")
+title.Name = "Title"
+title.Size = UDim2.new(1, 0, 0, 40)
+title.BackgroundTransparency = 1
+title.Text = "XeNOX Library"
+title.TextColor3 = mainTheme
+title.TextSize = TITLE_SIZE
+title.Font = Enum.Font.LuckiestGuy
+title.Parent = mainFrame
+
+local titleGlow = Instance.new("UIStroke")
+titleGlow.Thickness = 0
+titleGlow.Color = mainTheme
+titleGlow.Transparency = 1
+titleGlow.Enabled = false
+titleGlow.Parent = title
+
+-- Pulsing Glow Logic for Minimized State
+task.spawn(function()
+    while task.wait() do
+        if titleGlow.Enabled then
+            local pulse = (math.sin(tick() * 5) + 1) / 2
+            titleGlow.Thickness = 1 + (pulse * 5)
+            titleGlow.Transparency = 0.1 + (pulse * 0.5)
+        end
+    end
+end)
+
 local function UpdateGlobalFont(newFont)
     globalFont = newFont
     for _, v in pairs(mainFrame:GetDescendants()) do
@@ -56,9 +98,8 @@ end
 local function UpdateUITheme(color)
     mainTheme = color
     mainFrame.BackgroundColor3 = color
-    for _, v in pairs(mainFrame:GetDescendants()) do
-        if v:IsA("TextLabel") and v.Name == "Title" then v.TextColor3 = color end
-    end
+    title.TextColor3 = color
+    titleGlow.Color = color
 end
 
 local function UpdateOutlineTheme(color)
@@ -80,24 +121,37 @@ if writefile and not isfolder(folderName) then makefolder(folderName) end
 local selectedConfig = ""
 local function GetPath(name) return folderName .. "/" .. name .. ".json" end
 
+-- UPGRADED SAVE SYSTEM
 local function SaveSettings(name)
     if name == "" then return end
     local data = {
         Keybind = menuKey.Name,
         Theme = {mainTheme.R, mainTheme.G, mainTheme.B},
         Shade = {shadeColor.R, shadeColor.G, shadeColor.B},
-        Blob = {blobColor.R, blobColor.G, blobColor.B},
         Outline = {outlineColor.R, outlineColor.G, outlineColor.B},
         Font = globalFont.Name,
-        Stars = starsEnabled,
-        Trails = trailsEnabled,
-        Blobs = blobsEnabled
+        States = {
+            Rain = starsEnabled, Trail = trailsEnabled, Blob = blobsEnabled, 
+            Matrix = matrixEnabled, Hex = hexEnabled, Plasma = plasmaEnabled, Glitch = glitchEnabled
+        },
+        Colors = {
+            Rain = {rainCol.R, rainCol.G, rainCol.B},
+            Trail = {trailCol.R, trailCol.G, trailCol.B},
+            Blob = {blobCol.R, blobCol.G, blobCol.B},
+            Matrix = {matrixCol.R, matrixCol.G, matrixCol.B},
+            Hex = {hexCol.R, hexCol.G, hexCol.B},
+            Plasma = {plasmaCol.R, plasmaCol.G, plasmaCol.B},
+            Glitch = {glitchCol.R, glitchCol.G, glitchCol.B}
+        }
     }
     writefile(GetPath(name), HttpService:JSONEncode(data))
 end
 
+-- Background Effect Logic Loop
 task.spawn(function()
+    local t = 0
     while task.wait(0.02) do 
+        t = t + 0.05
         if not screenGui.Parent then break end
         if not mainFrame.Visible then continue end
 
@@ -105,7 +159,7 @@ task.spawn(function()
             local star = Instance.new("Frame")
             star.Size = UDim2.new(0, 1, 0, math.random(30, 80))
             star.Position = UDim2.new(math.random(0, 100)/100, 0, -0.2, 0)
-            star.BackgroundColor3 = Color3.new(1,1,1)
+            star.BackgroundColor3 = rainCol
             star.ZIndex = 1
             star.Parent = mainFrame
             tweenService:Create(star, TweenInfo.new(0.6, Enum.EasingStyle.Linear), {Position = UDim2.new(star.Position.X.Scale, 0, 1.2, 0), BackgroundTransparency = 1}):Play()
@@ -116,7 +170,7 @@ task.spawn(function()
             local trail = Instance.new("Frame")
             trail.Size = UDim2.new(0, 10, 0, 10)
             trail.Position = UDim2.new(0, mouse.X - mainFrame.AbsolutePosition.X - 5, 0, mouse.Y - mainFrame.AbsolutePosition.Y - 5)
-            trail.BackgroundColor3 = mainTheme
+            trail.BackgroundColor3 = trailCol
             trail.ZIndex = 2
             trail.Parent = mainFrame
             Instance.new("UICorner", trail).CornerRadius = UDim.new(1, 0)
@@ -124,12 +178,67 @@ task.spawn(function()
             game:GetService("Debris"):AddItem(trail, 0.4)
         end
 
+        if matrixEnabled and math.random(1, 5) == 1 then
+            local char = Instance.new("TextLabel")
+            char.Size = UDim2.new(0, 20, 0, 20)
+            char.Position = UDim2.new(math.random(0, 100)/100, 0, -0.1, 0)
+            char.BackgroundTransparency = 1
+            char.Text = string.char(math.random(33, 126))
+            char.TextColor3 = matrixCol
+            char.Font = Enum.Font.Code
+            char.TextSize = 15
+            char.ZIndex = 1
+            char.Parent = mainFrame
+            tweenService:Create(char, TweenInfo.new(math.random(1, 3), Enum.EasingStyle.Linear), {Position = UDim2.new(char.Position.X.Scale, 0, 1.1, 0), TextTransparency = 1}):Play()
+            game:GetService("Debris"):AddItem(char, 3)
+        end
+
+        if hexEnabled and math.random(1, 15) == 1 then
+            local hex = Instance.new("ImageLabel")
+            hex.Size = UDim2.new(0, 0, 0, 0)
+            hex.Position = UDim2.new(math.random(0, 100)/100, 0, math.random(0, 100)/100, 0)
+            hex.Image = "rbxassetid://6073628820"
+            hex.ImageColor3 = hexCol
+            hex.BackgroundTransparency = 1
+            hex.ImageTransparency = 0.8
+            hex.ZIndex = 1
+            hex.Parent = mainFrame
+            local size = math.random(50, 150)
+            tweenService:Create(hex, TweenInfo.new(2), {Size = UDim2.new(0, size, 0, size), ImageTransparency = 1, Rotation = 180}):Play()
+            game:GetService("Debris"):AddItem(hex, 2)
+        end
+
+        if plasmaEnabled then
+            local p = Instance.new("Frame")
+            p.Size = UDim2.new(0, 4, 0, 4)
+            local x = math.sin(t + math.random()) * 0.4 + 0.5
+            local y = math.cos(t * 0.8 + math.random()) * 0.4 + 0.5
+            p.Position = UDim2.new(x, math.random(-50, 50), y, math.random(-50, 50))
+            p.BackgroundColor3 = plasmaCol
+            p.BorderSizePixel = 0
+            p.ZIndex = 1
+            p.Parent = mainFrame
+            Instance.new("UICorner", p).CornerRadius = UDim.new(1, 0)
+            tweenService:Create(p, TweenInfo.new(1), {BackgroundTransparency = 1, Size = UDim2.new(0, 50, 0, 50)}):Play()
+            game:GetService("Debris"):AddItem(p, 1)
+        end
+
+        if glitchEnabled and math.random(1,10) == 1 then
+            local g = Instance.new("Frame")
+            g.Size = UDim2.new(0, math.random(20, 100), 0, 2)
+            g.Position = UDim2.new(math.random(0,100)/100, 0, math.random(0,100)/100, 0)
+            g.BackgroundColor3 = glitchCol
+            g.BackgroundTransparency = 0.5
+            g.Parent = mainFrame
+            task.delay(0.1, function() g:Destroy() end)
+        end
+
         if blobsEnabled then
             local blob = Instance.new("ImageLabel")
             blob.Size = UDim2.new(math.random(2,5)/10, 0, math.random(2,5)/10, 0)
             blob.Position = UDim2.new(math.random(-1, 9)/10, 0, math.random(-1, 9)/10, 0)
             blob.Image = "rbxassetid://232918622"
-            blob.ImageColor3 = blobColor
+            blob.ImageColor3 = blobCol
             blob.BackgroundTransparency = 1
             blob.ImageTransparency = 0.93
             blob.ZIndex = 1
@@ -166,18 +275,9 @@ local isMin = false
 closeBtn.MouseButton1Click:Connect(function()
     isMin = not isMin
     uiStroke.Enabled = not isMin
+    titleGlow.Enabled = isMin -- ACTIVATE GLOW WHEN MINIMIZED
     mainFrame:TweenSize(isMin and UDim2.new(0, 1000, 0, 50) or UDim2.new(0, 1000, 0, 750), "Out", "Quad", 0.3, true)
 end)
-
-local title = Instance.new("TextLabel")
-title.Name = "Title"
-title.Size = UDim2.new(1, 0, 0, 40)
-title.BackgroundTransparency = 1
-title.Text = "XeNOX Library"
-title.TextColor3 = mainTheme
-title.TextSize = TITLE_SIZE
-title.Font = Enum.Font.LuckiestGuy
-title.Parent = mainFrame
 
 _G.XeNOX = {}
 local tabs = {}
@@ -269,65 +369,6 @@ function _G.XeNOX:CreateTab(name)
         end)
     end
 
-    function tabObj:CreateSlider(text, min, max, default, callback)
-        local sld = Instance.new("Frame")
-        sld.Size = UDim2.new(1, -20, 0, 65); sld.BackgroundColor3 = Color3.new(0,0,0); sld.BackgroundTransparency = 0.5
-        sld.Parent = page; Instance.new("UICorner", sld)
-
-        local lb = Instance.new("TextLabel")
-        lb.Size = UDim2.new(1, -20, 0, 30); lb.Position = UDim2.new(0, 15, 0, 5)
-        lb.Text = text .. ": " .. default; lb.TextColor3 = Color3.new(1,1,1); lb.Font = globalFont
-        lb.TextSize = LABEL_SIZE - 2; lb.BackgroundTransparency = 1; lb.TextXAlignment = "Left"; lb.Parent = sld
-
-        local bar = Instance.new("Frame")
-        bar.Size = UDim2.new(1, -40, 0, 6); bar.Position = UDim2.new(0, 20, 0, 45)
-        bar.BackgroundColor3 = shadeColor; bar.Parent = sld; Instance.new("UICorner", bar)
-
-        local fill = Instance.new("Frame")
-        fill.Size = UDim2.new((default - min) / (max - min), 0, 1, 0)
-        fill.BackgroundColor3 = mainTheme; fill.Parent = bar; Instance.new("UICorner", fill)
-
-        local dragging = false
-        local function update()
-            local percent = math.clamp((mouse.X - bar.AbsolutePosition.X) / bar.AbsoluteSize.X, 0, 1)
-            local val = math.floor(min + (max - min) * percent)
-            fill.Size = UDim2.new(percent, 0, 1, 0)
-            lb.Text = text .. ": " .. val
-            callback(val)
-        end
-
-        bar.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 then dragging = true end end)
-        uis.InputEnded:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end end)
-        runService.RenderStepped:Connect(function() if dragging then update() end end)
-    end
-
-    function tabObj:CreateKeybind(text, default, callback)
-        local kb = Instance.new("Frame")
-        kb.Size = UDim2.new(1,-20,0,50); kb.BackgroundColor3 = Color3.new(0,0,0); kb.BackgroundTransparency = 0.5
-        kb.Parent = page; Instance.new("UICorner", kb)
-        
-        local lb = Instance.new("TextLabel")
-        lb.Name = "KeybindLabel"; lb.Size = UDim2.new(1,-110,1,0); lb.Position = UDim2.new(0,15,0,0)
-        lb.Text = text; lb.TextColor3 = Color3.new(1,1,1); lb.Font = globalFont
-        lb.TextSize = LABEL_SIZE; lb.BackgroundTransparency = 1; lb.TextXAlignment = "Left"; lb.Parent = kb
-        
-        local btn = Instance.new("TextButton")
-        btn.Name = "KeybindBtn"; btn.Size = UDim2.new(0,100,0,30); btn.Position = UDim2.new(1,-110,0.5,-15)
-        btn.Text = default.Name; btn.Font = globalFont; btn.Parent = kb; Instance.new("UICorner", btn)
-        
-        btn.MouseButton1Click:Connect(function()
-            btn.Text = "..."
-            local connection
-            connection = uis.InputBegan:Connect(function(input)
-                if input.UserInputType == Enum.UserInputType.Keyboard then
-                    btn.Text = input.KeyCode.Name
-                    connection:Disconnect()
-                    callback(input.KeyCode)
-                end
-            end)
-        end)
-    end
-
     function tabObj:CreateFontPicker(text, callback)
         local fp = Instance.new("Frame")
         fp.Size = UDim2.new(1, -20, 0, 120); fp.BackgroundColor3 = Color3.new(0,0,0); fp.BackgroundTransparency = 0.5
@@ -346,7 +387,7 @@ function _G.XeNOX:CreateTab(name)
         listLayout.FillDirection = Enum.FillDirection.Horizontal
         listLayout.Padding = UDim.new(0, 10)
 
-        local fonts = {Enum.Font.SourceSansBold, Enum.Font.Roboto, Enum.Font.GothamBold, Enum.Font.Arcade}
+        local fonts = {Enum.Font.SourceSansBold, Enum.Font.Roboto, Enum.Font.GothamBold, Enum.Font.Arcade, Enum.Font.Code, Enum.Font.SciFi}
         for _, f in pairs(fonts) do
             local b = Instance.new("TextButton")
             b.Size = UDim2.new(0, 100, 0, 40); b.Text = f.Name; b.Font = f; b.BackgroundColor3 = shadeColor
@@ -357,26 +398,32 @@ function _G.XeNOX:CreateTab(name)
 
     function tabObj:CreateColorPicker(text, defaultColor, callback)
         local cp = Instance.new("Frame")
-        cp.Size = UDim2.new(1,-20,0,200); cp.BackgroundColor3 = Color3.new(0,0,0); cp.BackgroundTransparency = 0.3
+        cp.Size = UDim2.new(1,-20,0,180); cp.BackgroundColor3 = Color3.new(0,0,0); cp.BackgroundTransparency = 0.3
         cp.Parent = page; Instance.new("UICorner", cp)
 
         local lb = Instance.new("TextLabel")
         lb.Size = UDim2.new(1,-10,0,30); lb.Position = UDim2.new(0,10,0,5)
         lb.Text = text; lb.TextColor3 = Color3.new(1,1,1); lb.Font = globalFont
-        lb.TextSize = LABEL_SIZE; lb.BackgroundTransparency = 1; lb.TextXAlignment = "Left"; lb.Parent = cp
+        lb.TextSize = LABEL_SIZE - 2; lb.BackgroundTransparency = 1; lb.TextXAlignment = "Left"; lb.Parent = cp
 
         local box = Instance.new("ImageLabel")
-        box.Size = UDim2.new(0,140,0,140); box.Position = UDim2.new(0,10,0,45)
+        box.Size = UDim2.new(0,120,0,120); box.Position = UDim2.new(0,10,0,40)
         box.Image = "rbxassetid://4155801252"; box.Parent = cp
 
         local hue = Instance.new("ImageLabel")
-        hue.Size = UDim2.new(0,20,0,140); hue.Position = UDim2.new(0,160,0,45)
+        hue.Size = UDim2.new(0,20,0,120); hue.Position = UDim2.new(0,140,0,40)
         hue.Image = "rbxassetid://3641079629"; hue.Parent = cp
+
+        local preview = Instance.new("Frame")
+        preview.Size = UDim2.new(0, 30, 0, 30); preview.Position = UDim2.new(1, -40, 0, 5)
+        preview.BackgroundColor3 = defaultColor; preview.Parent = cp; Instance.new("UICorner", preview)
 
         local curH, curS, curV = defaultColor:ToHSV()
         local function upd()
             local c = Color3.fromHSV(curH, curS, curV)
-            box.ImageColor3 = Color3.fromHSV(curH, 1, 1); callback(c)
+            box.ImageColor3 = Color3.fromHSV(curH, 1, 1)
+            preview.BackgroundColor3 = c
+            callback(c)
         end
 
         local dH, dSV = false, false
@@ -454,22 +501,32 @@ function _G.XeNOX:CreateTab(name)
                 if selectedConfig == "" then status.Text = "Error: Select a config first!" return end
                 local path = GetPath(selectedConfig)
                 
-                if i == "Load" then
-                    if isfile(path) then
-                        local data = HttpService:JSONDecode(readfile(path))
-                        menuKey = Enum.KeyCode[data.Keybind]
-                        UpdateUITheme(Color3.new(unpack(data.Theme)))
-                        UpdateShadeTheme(Color3.new(unpack(data.Shade)))
-                        blobColor = Color3.new(unpack(data.Blob))
-                        if data.Outline then UpdateOutlineTheme(Color3.new(unpack(data.Outline))) end
-                        if data.Font then UpdateGlobalFont(Enum.Font[data.Font]) end
-                        
-                        starsEnabled = data.Stars or false
-                        trailsEnabled = data.Trails or false
-                        blobsEnabled = data.Blobs or false
-                        
-                        status.Text = "Status: Loaded " .. selectedConfig
-                    end
+                if i == "Load" and isfile(path) then
+                    local data = HttpService:JSONDecode(readfile(path))
+                    UpdateUITheme(Color3.new(unpack(data.Theme)))
+                    UpdateShadeTheme(Color3.new(unpack(data.Shade)))
+                    UpdateOutlineTheme(Color3.new(unpack(data.Outline)))
+                    UpdateGlobalFont(Enum.Font[data.Font])
+                    
+                    -- Load States
+                    starsEnabled = data.States.Rain
+                    trailsEnabled = data.States.Trail
+                    blobsEnabled = data.States.Blob
+                    matrixEnabled = data.States.Matrix
+                    hexEnabled = data.States.Hex
+                    plasmaEnabled = data.States.Plasma
+                    glitchEnabled = data.States.Glitch
+                    
+                    -- Load Colors
+                    rainCol = Color3.new(unpack(data.Colors.Rain))
+                    trailCol = Color3.new(unpack(data.Colors.Trail))
+                    blobCol = Color3.new(unpack(data.Colors.Blob))
+                    matrixCol = Color3.new(unpack(data.Colors.Matrix))
+                    hexCol = Color3.new(unpack(data.Colors.Hex))
+                    plasmaCol = Color3.new(unpack(data.Colors.Plasma))
+                    glitchCol = Color3.new(unpack(data.Colors.Glitch))
+
+                    status.Text = "Status: Loaded " .. selectedConfig
                 elseif i == "Update" then
                     SaveSettings(selectedConfig); status.Text = "Status: Updated " .. selectedConfig
                 elseif i == "Delete" then
@@ -485,25 +542,35 @@ function _G.XeNOX:CreateTab(name)
     return tabObj
 end
 
+-- SETUP UI
 local m = _G.XeNOX:CreateTab("Main")
 m:CreateLabel("")
-m:CreateLabel("Welcome to XeNOX Lib")
+m:CreateLabel("Welcome to Xenox Library")
 
 local s = _G.XeNOX:CreateTab("Settings")
 s:CreateConfigManager()
-s:CreateKeybind("Menu Toggle", menuKey, function(k) menuKey = k end)
 
 s:CreateLabel("BACKGROUND EFFECTS")
 s:CreateToggle("Enable Rain", false, function(t) starsEnabled = t end)
+s:CreateColorPicker("Rain Color", rainCol, function(c) rainCol = c end)
 s:CreateToggle("Enable Mouse Trail", false, function(t) trailsEnabled = t end)
+s:CreateColorPicker("Trail Color", trailCol, function(c) trailCol = c end)
 s:CreateToggle("Enable Interactive Blobs", false, function(t) blobsEnabled = t end)
+s:CreateColorPicker("Blob Color", blobCol, function(c) blobCol = c end)
+s:CreateToggle("Enable Matrix Rain", false, function(t) matrixEnabled = t end)
+s:CreateColorPicker("Matrix Color", matrixCol, function(c) matrixCol = c end)
+s:CreateToggle("Enable Floating Hexagons", false, function(t) hexEnabled = t end)
+s:CreateColorPicker("Hex Color", hexCol, function(c) hexCol = c end)
+s:CreateToggle("Enable Plasma Waves", false, function(t) plasmaEnabled = t end)
+s:CreateColorPicker("Plasma Color", plasmaCol, function(c) plasmaCol = c end)
+s:CreateToggle("Enable Glitch Blocks", false, function(t) glitchEnabled = t end)
+s:CreateColorPicker("Glitch Color", glitchCol, function(c) glitchCol = c end)
 
 s:CreateLabel("APPEARANCE")
 s:CreateFontPicker("Global Font", function(f) UpdateGlobalFont(f) end)
 s:CreateColorPicker("Main Theme", mainTheme, function(c) UpdateUITheme(c) end)
 s:CreateColorPicker("Outline Color", outlineColor, function(c) UpdateOutlineTheme(c) end)
 s:CreateColorPicker("Shade Color", shadeColor, function(c) UpdateShadeTheme(c) end)
-s:CreateColorPicker("Blob Color", blobColor, function(c) blobColor = c end)
 
 uis.InputBegan:Connect(function(input, gpe)
     if not gpe and input.KeyCode == menuKey then mainFrame.Visible = not mainFrame.Visible end
