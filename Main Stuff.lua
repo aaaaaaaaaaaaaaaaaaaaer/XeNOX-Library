@@ -4,10 +4,18 @@ local pGui = player:WaitForChild("PlayerGui")
 local tweenService = game:GetService("TweenService")
 local uis = game:GetService("UserInputService")
 local runService = game:GetService("RunService")
+local HttpService = game:GetService("HttpService")
 
--- Configuration
+-- Configuration & Defaults
 local menuKey = Enum.KeyCode.RightControl
-local SMART_FONT = Enum.Font.GothamBold
+local mainTheme = Color3.fromRGB(0, 255, 255)
+local shadeColor = Color3.fromRGB(25, 55, 95)
+local blobColor = Color3.fromRGB(0, 20, 100)
+
+-- ORIGINAL FONT SIZES
+local TITLE_SIZE = 22
+local TAB_SIZE = 16
+local LABEL_SIZE = 18
 
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "XENOX_LIBRARY"
@@ -18,7 +26,7 @@ local mainFrame = Instance.new("Frame")
 mainFrame.Name = "MainFrame"
 mainFrame.Size = UDim2.new(0, 1000, 0, 750)
 mainFrame.Position = UDim2.new(0.5, -500, 0.5, -375)
-mainFrame.BackgroundColor3 = Color3.fromRGB(0, 255, 255)
+mainFrame.BackgroundColor3 = mainTheme
 mainFrame.BackgroundTransparency = 0.4
 mainFrame.Active = true
 mainFrame.Draggable = true
@@ -26,15 +34,65 @@ mainFrame.ClipsDescendants = true
 mainFrame.Parent = screenGui
 Instance.new("UICorner", mainFrame).CornerRadius = UDim.new(0, 8)
 
--- UI Toggle Logic
-uis.InputBegan:Connect(function(input, gpe)
-    if gpe then return end
-    if input.KeyCode == menuKey then
-        mainFrame.Visible = not mainFrame.Visible
+-- Theme Management Functions
+local function UpdateUITheme(color)
+    mainTheme = color
+    mainFrame.BackgroundColor3 = color
+    for _, v in pairs(mainFrame:GetDescendants()) do
+        if v:IsA("TextLabel") and v.Name == "Title" then v.TextColor3 = color end
     end
-end)
+end
 
--- The Minimize Button ("-") in the upper right
+local function UpdateShadeTheme(newShade)
+    shadeColor = newShade
+    for _, v in pairs(mainFrame:GetDescendants()) do
+        if v.Name == "TabBtn" or v.Name == "LabelElement" or v.Name == "ConfigBtn" then
+            v.BackgroundColor3 = shadeColor
+        end
+    end
+end
+
+-- FILE SYSTEM (MULTIPLE CONFIGS + DELETE)
+local folderName = "XeNOX_Configs"
+if writefile and not isfolder(folderName) then makefolder(folderName) end
+
+local selectedConfig = ""
+
+local function SaveSettings(name)
+    if name == "" then return end
+    local data = {
+        Keybind = menuKey.Name,
+        Theme = {mainTheme.R, mainTheme.G, mainTheme.B},
+        Shade = {shadeColor.R, shadeColor.G, shadeColor.B},
+        Blob = {blobColor.R, blobColor.G, blobColor.B}
+    }
+    if writefile then
+        writefile(folderName .. "/" .. name .. ".json", HttpService:JSONEncode(data))
+    end
+end
+
+local function LoadSettings(name)
+    local path = folderName .. "/" .. name .. ".json"
+    if isfile and isfile(path) then
+        local success, data = pcall(function() return HttpService:JSONDecode(readfile(path)) end)
+        if success then
+            menuKey = Enum.KeyCode[data.Keybind]
+            UpdateUITheme(Color3.new(unpack(data.Theme)))
+            UpdateShadeTheme(Color3.new(unpack(data.Shade)))
+            blobColor = Color3.new(unpack(data.Blob))
+        end
+    end
+end
+
+local function DeleteConfig(name)
+    local path = folderName .. "/" .. name .. ".json"
+    if isfile and isfile(path) then
+        delfile(path)
+        selectedConfig = ""
+    end
+end
+
+-- Minimize Button ("-")
 local closeBtn = Instance.new("TextButton")
 closeBtn.Name = "Minimize"
 closeBtn.Size = UDim2.new(0, 30, 0, 30)
@@ -50,51 +108,47 @@ closeBtn.Parent = mainFrame
 local isMinimized = false
 closeBtn.MouseButton1Click:Connect(function()
     isMinimized = not isMinimized
-    if isMinimized then
-        mainFrame:TweenSize(UDim2.new(0, 1000, 0, 50), "Out", "Quad", 0.3, true)
-    else
-        mainFrame:TweenSize(UDim2.new(0, 1000, 0, 750), "Out", "Quad", 0.3, true)
+    mainFrame:TweenSize(isMinimized and UDim2.new(0, 1000, 0, 50) or UDim2.new(0, 1000, 0, 750), "Out", "Quad", 0.3, true)
+end)
+
+-- Toggle Listener
+uis.InputBegan:Connect(function(input, gpe)
+    if gpe then return end
+    if input.KeyCode == menuKey then
+        mainFrame.Visible = not mainFrame.Visible
     end
 end)
 
-local blobColor = Color3.fromRGB(0, 20, 100)
-
-local function UpdateUITheme(color)
-    mainFrame.BackgroundColor3 = color
-    for _, v in pairs(mainFrame:GetDescendants()) do
-        if v:IsA("TextButton") and v.Name == "TabBtn" then
-            v.BackgroundColor3 = color
-        elseif v:IsA("TextLabel") and v.Name == "Title" then
-            v.TextColor3 = color
-        end
-    end
-end
-
--- VFX: Blobs, Trails, and Rain (Stars)
+-- VFX (RAIN, BLOBS, TRAILS)
 task.spawn(function()
     while task.wait(0.02) do 
         if not screenGui.Parent then break end
         
-        -- Falling Star "Rain"
+        -- Rain
         local star = Instance.new("Frame")
         star.Size = UDim2.new(0, 1, 0, math.random(30, 80))
         star.Position = UDim2.new(math.random(0, 100)/100, 0, -0.2, 0)
-        star.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+        star.BackgroundColor3 = Color3.new(1,1,1)
         star.BackgroundTransparency = 0.7
-        star.BorderSizePixel = 0
         star.ZIndex = 1
         star.Parent = mainFrame
-
-        tweenService:Create(star, TweenInfo.new(0.6, Enum.EasingStyle.Linear), {
-            Position = UDim2.new(star.Position.X.Scale, 0, 1.2, 0), 
-            BackgroundTransparency = 1
-        }):Play()
+        tweenService:Create(star, TweenInfo.new(0.6, Enum.EasingStyle.Linear), {Position = UDim2.new(star.Position.X.Scale, 0, 1.2, 0), BackgroundTransparency = 1}):Play()
         game:GetService("Debris"):AddItem(star, 0.6)
 
-        -- Background Blobs
+        -- Trail
+        local trail = Instance.new("Frame")
+        trail.Size = UDim2.new(0, 10, 0, 10)
+        trail.Position = UDim2.new(0, mouse.X - mainFrame.AbsolutePosition.X - 5, 0, mouse.Y - mainFrame.AbsolutePosition.Y - 5)
+        trail.BackgroundColor3 = mainFrame.BackgroundColor3
+        trail.ZIndex = 2
+        trail.Parent = mainFrame
+        Instance.new("UICorner", trail).CornerRadius = UDim.new(1, 0)
+        tweenService:Create(trail, TweenInfo.new(0.4), {BackgroundTransparency = 1, Size = UDim2.new(0, 0, 0, 0)}):Play()
+        game:GetService("Debris"):AddItem(trail, 0.4)
+
+        -- Blobs
         local blob = Instance.new("ImageLabel")
-        local size = math.random(2, 5) / 10
-        blob.Size = UDim2.new(size, 0, size, 0)
+        blob.Size = UDim2.new(math.random(2,5)/10, 0, math.random(2,5)/10, 0)
         blob.Position = UDim2.new(math.random(-1, 9)/10, 0, math.random(-1, 9)/10, 0)
         blob.Image = "rbxassetid://232918622"
         blob.ImageColor3 = blobColor
@@ -102,30 +156,11 @@ task.spawn(function()
         blob.ImageTransparency = 0.93
         blob.ZIndex = 1
         blob.Parent = mainFrame
-        
-        -- Mouse Trail
-        local trail = Instance.new("Frame")
-        trail.Size = UDim2.new(0, 10, 0, 10)
-        trail.Position = UDim2.new(0, mouse.X - mainFrame.AbsolutePosition.X - 5, 0, mouse.Y - mainFrame.AbsolutePosition.Y - 5)
-        trail.BackgroundColor3 = mainFrame.BackgroundColor3
-        trail.BorderSizePixel = 0
-        trail.ZIndex = 2
-        trail.Parent = mainFrame
-        Instance.new("UICorner", trail).CornerRadius = UDim.new(1, 0)
-
-        tweenService:Create(trail, TweenInfo.new(0.4), {
-            BackgroundTransparency = 1, 
-            Size = UDim2.new(0, 0, 0, 0)
-        }):Play()
-        game:GetService("Debris"):AddItem(trail, 0.4)
-
         task.spawn(function()
             local start = tick()
             while tick() - start < 3 do
                 if not blob or not blob.Parent then break end
-                local bPos = blob.AbsolutePosition + (blob.AbsoluteSize/2)
-                local mPos = Vector2.new(mouse.X, mouse.Y)
-                local diff = bPos - mPos
+                local diff = (blob.AbsolutePosition + blob.AbsoluteSize/2) - Vector2.new(mouse.X, mouse.Y)
                 if diff.Magnitude < 250 then
                     local push = diff.Unit * (1 - (diff.Magnitude / 250)) * 0.18
                     blob.Position = blob.Position:Lerp(UDim2.new(blob.Position.X.Scale + push.X, 0, blob.Position.Y.Scale + push.Y, 0), 0.45)
@@ -142,9 +177,9 @@ title.Name = "Title"
 title.Size = UDim2.new(1, 0, 0, 40)
 title.BackgroundTransparency = 1
 title.Text = "XeNOX Library"
-title.TextColor3 = Color3.fromRGB(25, 55, 95)
-title.TextSize = 22
-title.Font = SMART_FONT
+title.TextColor3 = mainTheme
+title.TextSize = TITLE_SIZE
+title.Font = Enum.Font.SourceSansBold
 title.ZIndex = 10
 title.Parent = mainFrame
 
@@ -159,13 +194,12 @@ function _G.XeNOX:CreateTab(name)
     tabBtn.Name = "TabBtn"
     tabBtn.Size = UDim2.new(0, 160, 0, 45)
     tabBtn.Position = UDim2.new(0, 15, 0, 50 + (tabCount - 1) * 50)
-    tabBtn.BackgroundColor3 = Color3.fromRGB(25, 55, 95)
+    tabBtn.BackgroundColor3 = shadeColor
     tabBtn.BackgroundTransparency = 0.2
     tabBtn.Text = name
-    tabBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    tabBtn.Font = SMART_FONT
-    tabBtn.TextSize = 16
-    tabBtn.ZIndex = 10
+    tabBtn.TextColor3 = Color3.new(1,1,1)
+    tabBtn.Font = Enum.Font.SourceSansBold
+    tabBtn.TextSize = TAB_SIZE
     tabBtn.Parent = mainFrame
     Instance.new("UICorner", tabBtn)
 
@@ -186,82 +220,165 @@ function _G.XeNOX:CreateTab(name)
 
     local tabObj = {}
     
+    function tabObj:CreateConfigManager()
+        local container = Instance.new("Frame")
+        container.Size = UDim2.new(1, -10, 0, 270)
+        container.BackgroundTransparency = 0.5
+        container.BackgroundColor3 = Color3.new(0,0,0)
+        container.Parent = page
+        Instance.new("UICorner", container)
+
+        local input = Instance.new("TextBox")
+        input.Size = UDim2.new(0.6, 0, 0, 40)
+        input.Position = UDim2.new(0, 10, 0, 10)
+        input.PlaceholderText = "Config Name..."
+        input.Text = ""
+        input.BackgroundColor3 = Color3.fromRGB(30,30,30)
+        input.TextColor3 = Color3.new(1,1,1)
+        input.Font = Enum.Font.SourceSansBold
+        input.TextSize = LABEL_SIZE
+        input.Parent = container
+        Instance.new("UICorner", input)
+
+        local save = Instance.new("TextButton")
+        save.Name = "LabelElement"
+        save.Size = UDim2.new(0.35, -5, 0, 40)
+        save.Position = UDim2.new(0.6, 15, 0, 10)
+        save.Text = "SAVE"
+        save.BackgroundColor3 = shadeColor
+        save.TextColor3 = Color3.new(1,1,1)
+        save.Font = Enum.Font.SourceSansBold
+        save.Parent = container
+        Instance.new("UICorner", save)
+
+        local list = Instance.new("ScrollingFrame")
+        list.Size = UDim2.new(1, -20, 0, 130)
+        list.Position = UDim2.new(0, 10, 0, 60)
+        list.BackgroundTransparency = 0.8
+        list.BackgroundColor3 = Color3.new(0,0,0)
+        list.ScrollBarThickness = 2
+        list.Parent = container
+        local layout = Instance.new("UIListLayout", list)
+
+        local function refreshList()
+            for _, v in pairs(list:GetChildren()) do if v:IsA("TextButton") then v:Destroy() end end
+            if listfiles then
+                for _, file in pairs(listfiles(folderName)) do
+                    local name = file:match("([^/]+)%.json$")
+                    if name then
+                        local b = Instance.new("TextButton")
+                        b.Name = "ConfigBtn"
+                        b.Size = UDim2.new(1, 0, 0, 30)
+                        b.Text = name
+                        b.BackgroundColor3 = shadeColor
+                        b.TextColor3 = Color3.new(1,1,1)
+                        b.Font = Enum.Font.SourceSansBold
+                        b.Parent = list
+                        b.MouseButton1Click:Connect(function()
+                            selectedConfig = name
+                            for _, x in pairs(list:GetChildren()) do if x:IsA("TextButton") then x.BackgroundTransparency = 0 end end
+                            b.BackgroundTransparency = 0.5
+                        end)
+                    end
+                end
+            end
+        end
+
+        local load = Instance.new("TextButton")
+        load.Name = "LabelElement"
+        load.Size = UDim2.new(0.45, 0, 0, 40)
+        load.Position = UDim2.new(0, 10, 0, 210)
+        load.Text = "LOAD"
+        load.BackgroundColor3 = shadeColor
+        load.TextColor3 = Color3.new(1,1,1)
+        load.Font = Enum.Font.SourceSansBold
+        load.Parent = container
+        Instance.new("UICorner", load)
+
+        local delete = Instance.new("TextButton")
+        delete.Size = UDim2.new(0.45, 0, 0, 40)
+        delete.Position = UDim2.new(0.5, 5, 0, 210)
+        delete.Text = "DELETE"
+        delete.BackgroundColor3 = Color3.fromRGB(150, 0, 0)
+        delete.TextColor3 = Color3.new(1,1,1)
+        delete.Font = Enum.Font.SourceSansBold
+        delete.Parent = container
+        Instance.new("UICorner", delete)
+
+        save.MouseButton1Click:Connect(function() SaveSettings(input.Text) refreshList() end)
+        load.MouseButton1Click:Connect(function() if selectedConfig ~= "" then LoadSettings(selectedConfig) end end)
+        delete.MouseButton1Click:Connect(function() if selectedConfig ~= "" then DeleteConfig(selectedConfig) refreshList() end end)
+        refreshList()
+    end
+
+    function tabObj:CreateLabel(text)
+        local l = Instance.new("TextLabel")
+        l.Name = "LabelElement"
+        l.Size = UDim2.new(1, -10, 0, 50)
+        l.BackgroundColor3 = shadeColor
+        l.BackgroundTransparency = 0.1
+        l.Text = text
+        l.TextColor3 = Color3.new(1,1,1)
+        l.Font = Enum.Font.SourceSansBold
+        l.TextSize = LABEL_SIZE
+        l.Parent = page
+        Instance.new("UICorner", l)
+    end
+
     function tabObj:CreateKeybind(text, default, callback)
         local kbFrame = Instance.new("Frame")
         kbFrame.Size = UDim2.new(1, -10, 0, 50)
-        kbFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-        kbFrame.BackgroundTransparency = 0.3
+        kbFrame.BackgroundTransparency = 0.5
+        kbFrame.BackgroundColor3 = Color3.new(0,0,0)
         kbFrame.Parent = page
         Instance.new("UICorner", kbFrame)
-
+        
         local label = Instance.new("TextLabel")
         label.Size = UDim2.new(1, -100, 1, 0)
         label.Position = UDim2.new(0, 15, 0, 0)
         label.BackgroundTransparency = 1
         label.Text = text
         label.TextColor3 = Color3.new(1,1,1)
-        label.Font = SMART_FONT
-        label.TextSize = 18
+        label.Font = Enum.Font.SourceSansBold
+        label.TextSize = LABEL_SIZE
         label.TextXAlignment = Enum.TextXAlignment.Left
         label.Parent = kbFrame
 
         local bindBtn = Instance.new("TextButton")
         bindBtn.Size = UDim2.new(0, 100, 0, 30)
         bindBtn.Position = UDim2.new(1, -110, 0.5, -15)
-        bindBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
-        bindBtn.Text = default.Name
-        bindBtn.TextColor3 = Color3.new(1,1,1)
-        bindBtn.Font = SMART_FONT
-        bindBtn.TextSize = 14
+        bindBtn.Text = menuKey.Name
         bindBtn.Parent = kbFrame
         Instance.new("UICorner", bindBtn)
-
-        local waiting = false
         bindBtn.MouseButton1Click:Connect(function()
-            if waiting then return end
-            waiting = true
             bindBtn.Text = "..."
-            local connection; connection = uis.InputBegan:Connect(function(i)
+            local con; con = uis.InputBegan:Connect(function(i)
                 if i.UserInputType == Enum.UserInputType.Keyboard then
                     menuKey = i.KeyCode
                     bindBtn.Text = i.KeyCode.Name
-                    connection:Disconnect()
-                    waiting = false
+                    con:Disconnect()
                     callback(i.KeyCode)
                 end
             end)
         end)
     end
 
-    function tabObj:CreateLabel(text)
-        local l = Instance.new("TextLabel")
-        l.Size = UDim2.new(1, -10, 0, 50)
-        l.BackgroundColor3 = Color3.fromRGB(25, 55, 95)
-        l.BackgroundTransparency = 0.1
-        l.Text = text
-        l.TextColor3 = Color3.fromRGB(255, 255, 255)
-        l.Font = SMART_FONT
-        l.TextSize = 18
-        l.Parent = page
-        Instance.new("UICorner", l)
-    end
-
     function tabObj:CreateColorPicker(text, defaultColor, callback)
         local cpFrame = Instance.new("Frame")
         cpFrame.Size = UDim2.new(1, -10, 0, 200)
-        cpFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+        cpFrame.BackgroundColor3 = Color3.new(0,0,0)
         cpFrame.BackgroundTransparency = 0.3
         cpFrame.Parent = page
         Instance.new("UICorner", cpFrame)
-
+        
         local label = Instance.new("TextLabel")
-        label.Size = UDim2.new(1, -200, 0, 40)
-        label.Position = UDim2.new(0, 10, 0, 0)
+        label.Size = UDim2.new(1, -10, 0, 30)
+        label.Position = UDim2.new(0, 10, 0, 5)
         label.BackgroundTransparency = 1
         label.Text = text
         label.TextColor3 = Color3.new(1,1,1)
-        label.Font = SMART_FONT
-        label.TextSize = 18
+        label.Font = Enum.Font.SourceSansBold
+        label.TextSize = LABEL_SIZE
         label.TextXAlignment = Enum.TextXAlignment.Left
         label.Parent = cpFrame
 
@@ -270,50 +387,21 @@ function _G.XeNOX:CreateTab(name)
         box.Position = UDim2.new(0, 10, 0, 45)
         box.Image = "rbxassetid://4155801252"
         box.Parent = cpFrame
-
-        local selectCircle = Instance.new("Frame")
-        selectCircle.Size = UDim2.new(0, 10, 0, 10)
-        selectCircle.BackgroundColor3 = Color3.new(1,1,1)
-        selectCircle.ZIndex = 5
-        selectCircle.Parent = box
-        Instance.new("UICorner", selectCircle).CornerRadius = UDim.new(1, 0)
-
         local hue = Instance.new("ImageLabel")
         hue.Size = UDim2.new(0, 20, 0, 140)
         hue.Position = UDim2.new(0, 160, 0, 45)
         hue.Image = "rbxassetid://3641079629"
         hue.Parent = cpFrame
-
-        local hueArrow = Instance.new("Frame")
-        hueArrow.Size = UDim2.new(1.4, 0, 0, 4)
-        hueArrow.Position = UDim2.new(-0.2, 0, 0.5, 0)
-        hueArrow.BackgroundColor3 = Color3.new(1,1,1)
-        hueArrow.ZIndex = 5
-        hueArrow.Parent = hue
-
-        local preview = Instance.new("Frame")
-        preview.Size = UDim2.new(0, 40, 0, 40)
-        preview.Position = UDim2.new(1, -50, 0, 10)
-        preview.BackgroundColor3 = defaultColor
-        preview.Parent = cpFrame
-        Instance.new("UICorner", preview)
-
         local currH, currS, currV = defaultColor:ToHSV()
         local dragH, dragSV = false, false
-
         local function update()
             local c = Color3.fromHSV(currH, currS, currV)
             box.ImageColor3 = Color3.fromHSV(currH, 1, 1)
-            preview.BackgroundColor3 = c
-            selectCircle.Position = UDim2.new(currS, -5, 1-currV, -5)
-            hueArrow.Position = UDim2.new(-0.2, 0, 1-currH, -2)
             callback(c)
         end
-
         hue.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 then dragH = true end end)
         box.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 then dragSV = true end end)
         uis.InputEnded:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 then dragH, dragSV = false, false end end)
-
         runService.RenderStepped:Connect(function()
             if dragH then
                 currH = 1 - math.clamp((mouse.Y - hue.AbsolutePosition.Y) / hue.AbsoluteSize.Y, 0, 1)
@@ -324,26 +412,19 @@ function _G.XeNOX:CreateTab(name)
                 update()
             end
         end)
-        update()
     end
     return tabObj
 end
 
 -- Initialize Library
 local mainTab = _G.XeNOX:CreateTab("Main")
-mainTab:CreateLabel("MAIN CONTENT")
+mainTab:CreateLabel("SYSTEMS ONLINE")
 
 local settings = _G.XeNOX:CreateTab("Settings")
-settings:CreateKeybind("Menu Toggle Key", menuKey, function(newKey)
-    menuKey = newKey
-end)
+settings:CreateConfigManager()
+settings:CreateKeybind("Menu Toggle Key", menuKey, function(new) menuKey = new end)
+settings:CreateColorPicker("Main Theme Color", mainTheme, function(c) UpdateUITheme(c) end)
+settings:CreateColorPicker("Shade Color Accent", shadeColor, function(c) UpdateShadeTheme(c) end)
+settings:CreateColorPicker("Background Blob Color", blobColor, function(c) blobColor = c end)
 
-settings:CreateColorPicker("UI Theme Color", Color3.fromRGB(0, 255, 255), function(color)
-    UpdateUITheme(color)
-end)
-
-settings:CreateColorPicker("Background Blobs", Color3.fromRGB(0, 20, 100), function(color)
-    blobColor = color
-end)
-
-print("XeNOX: Library successfully loaded with rain VFX re-enabled.")
+print("XeNOX: Config Manager with Delete & Color Labels loaded.")
