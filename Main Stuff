@@ -3,7 +3,7 @@ local mouse = player:GetMouse()
 local pGui = player:WaitForChild("PlayerGui")
 
 local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "XENOX_v4"
+screenGui.Name = "XENOX_vULTRA_TURBO"
 screenGui.ResetOnSpawn = false
 screenGui.Parent = pGui
 
@@ -12,29 +12,57 @@ mainFrame.Name = "MainFrame"
 mainFrame.Size = UDim2.new(0, 1000, 0, 750)
 mainFrame.Position = UDim2.new(0.5, -500, 0.5, -375)
 mainFrame.BackgroundColor3 = Color3.fromRGB(0, 255, 255)
-mainFrame.BackgroundTransparency = 0.4 -- More transparent main frame
+mainFrame.BackgroundTransparency = 0.4
 mainFrame.Active = true
 mainFrame.Draggable = true
 mainFrame.ClipsDescendants = true
 mainFrame.Parent = screenGui
 Instance.new("UICorner", mainFrame).CornerRadius = UDim.new(0, 8)
 
--- ULTRA SENSITIVE REPULSION BLOBS
 task.spawn(function()
-    while task.wait(0.05) do -- Insanely fast spawn rate
+    while task.wait(0.02) do 
         local blob = Instance.new("ImageLabel")
-        local size = math.random(3, 7) / 10
+        local size = math.random(2, 5) / 10
         blob.Size = UDim2.new(size, 0, size, 0)
         blob.Position = UDim2.new(math.random(-1, 9)/10, 0, math.random(-1, 9)/10, 0)
         blob.Image = "rbxassetid://232918622"
         blob.ImageColor3 = Color3.fromRGB(0, 20, 100)
         blob.BackgroundTransparency = 1
-        blob.ImageTransparency = 0.9 -- Very transparent
+        blob.ImageTransparency = 0.93
         blob.ZIndex = 1
         blob.Parent = mainFrame
 
+        local star = Instance.new("Frame")
+        star.Size = UDim2.new(0, 1, 0, math.random(30, 80))
+        star.Position = UDim2.new(math.random(0, 100)/100, 0, -0.2, 0)
+        star.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+        star.BackgroundTransparency = 0.7
+        star.BorderSizePixel = 0
+        star.ZIndex = 1
+        star.Parent = mainFrame
+        
+        local trail = Instance.new("Frame")
+        trail.Size = UDim2.new(0, 3, 0, 3)
+        trail.Position = UDim2.new(0, mouse.X - mainFrame.AbsolutePosition.X, 0, mouse.Y - mainFrame.AbsolutePosition.Y)
+        trail.BackgroundColor3 = Color3.fromRGB(0, 255, 255)
+        trail.BorderSizePixel = 0
+        trail.ZIndex = 2
+        trail.Parent = mainFrame
+
+        game:GetService("TweenService"):Create(star, TweenInfo.new(0.6, Enum.EasingStyle.Linear), {
+            Position = UDim2.new(star.Position.X.Scale, 0, 1.2, 0), 
+            BackgroundTransparency = 1
+        }):Play()
+        game:GetService("Debris"):AddItem(star, 0.6)
+        
+        game:GetService("TweenService"):Create(trail, TweenInfo.new(0.3), {
+            BackgroundTransparency = 1, 
+            Size = UDim2.new(0, 0, 0, 0)
+        }):Play()
+        game:GetService("Debris"):AddItem(trail, 0.3)
+
         task.spawn(function()
-            local life = 5
+            local life = 3
             local startTick = tick()
             while tick() - startTick < life do
                 local blobPos = Vector2.new(blob.AbsolutePosition.X + (blob.AbsoluteSize.X/2), blob.AbsolutePosition.Y + (blob.AbsoluteSize.Y/2))
@@ -42,20 +70,16 @@ task.spawn(function()
                 local diff = blobPos - mousePos
                 local dist = diff.Magnitude
                 
-                -- Repulsion Logic: Move AWAY from mouse
-                if dist < 200 then
-                    local force = (1 - (dist / 200)) * 0.05 -- Stronger force the closer it is
+                if dist < 250 then
+                    local force = (1 - (dist / 250)) * 0.18 
                     local pushDir = diff.Unit
-                    
                     local newX = blob.Position.X.Scale + (pushDir.X * force)
                     local newY = blob.Position.Y.Scale + (pushDir.Y * force)
-                    
-                    blob.Position = blob.Position:Lerp(UDim2.new(newX, 0, newY, 0), 0.2)
-                    blob.ImageTransparency = 0.95 -- Fade out even more when pushed
+                    blob.Position = blob.Position:Lerp(UDim2.new(newX, 0, newY, 0), 0.45)
+                    blob.ImageTransparency = 0.98
                 else
-                    blob.ImageTransparency = 0.9 -- Normal transparency
+                    blob.ImageTransparency = 0.93
                 end
-                
                 task.wait()
             end
             blob:Destroy()
@@ -73,7 +97,6 @@ title.Font = Enum.Font.SourceSansBold
 title.ZIndex = 10
 title.Parent = mainFrame
 
--- LIBRARY CORE
 _G.XeNOX = {}
 local tabs = {}
 local tabCount = 0
@@ -101,7 +124,7 @@ function _G.XeNOX:CreateTab(name)
     page.BackgroundTransparency = 1
     page.ScrollBarThickness = 0
     page.Visible = (tabID == 1)
-    page.ZIndex = 5
+    page.ZIndex = 10
     page.Parent = mainFrame
     
     Instance.new("UIListLayout", page).Padding = UDim.new(0, 8)
@@ -123,7 +146,7 @@ function _G.XeNOX:CreateTab(name)
         b.TextColor3 = Color3.fromRGB(255, 255, 255)
         b.Font = Enum.Font.SourceSansBold
         b.TextSize = 18
-        b.ZIndex = 10
+        b.ZIndex = 15
         b.Parent = page
         Instance.new("UICorner", b)
         b.MouseButton1Click:Connect(callback)
