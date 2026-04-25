@@ -10,6 +10,7 @@ local menuKey = Enum.KeyCode.RightControl
 local mainTheme = Color3.fromRGB(0, 255, 255)
 local shadeColor = Color3.fromRGB(25, 55, 95)
 local blobColor = Color3.fromRGB(0, 20, 100)
+local outlineColor = Color3.fromRGB(0, 255, 255)
 
 local TITLE_SIZE = 22
 local TAB_SIZE = 16
@@ -32,12 +33,23 @@ mainFrame.ClipsDescendants = true
 mainFrame.Parent = screenGui
 Instance.new("UICorner", mainFrame).CornerRadius = UDim.new(0, 8)
 
+local uiStroke = Instance.new("UIStroke")
+uiStroke.Thickness = 2
+uiStroke.Color = outlineColor
+uiStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+uiStroke.Parent = mainFrame
+
 local function UpdateUITheme(color)
     mainTheme = color
     mainFrame.BackgroundColor3 = color
     for _, v in pairs(mainFrame:GetDescendants()) do
         if v:IsA("TextLabel") and v.Name == "Title" then v.TextColor3 = color end
     end
+end
+
+local function UpdateOutlineTheme(color)
+    outlineColor = color
+    uiStroke.Color = color
 end
 
 local function UpdateShadeTheme(newShade)
@@ -64,7 +76,8 @@ local function SaveSettings(name)
         Keybind = menuKey.Name,
         Theme = {mainTheme.R, mainTheme.G, mainTheme.B},
         Shade = {shadeColor.R, shadeColor.G, shadeColor.B},
-        Blob = {blobColor.R, blobColor.G, blobColor.B}
+        Blob = {blobColor.R, blobColor.G, blobColor.B},
+        Outline = {outlineColor.R, outlineColor.G, outlineColor.B}
     }
     writefile(GetPath(name), HttpService:JSONEncode(data))
 end
@@ -129,6 +142,7 @@ closeBtn.Parent = mainFrame
 local isMin = false
 closeBtn.MouseButton1Click:Connect(function()
     isMin = not isMin
+    uiStroke.Enabled = not isMin
     mainFrame:TweenSize(isMin and UDim2.new(0, 1000, 0, 50) or UDim2.new(0, 1000, 0, 750), "Out", "Quad", 0.3, true)
 end)
 
@@ -145,6 +159,19 @@ title.Parent = mainFrame
 _G.XeNOX = {}
 local tabs = {}
 local tabCount = 0
+
+local function UpdateKeybindDisplay(key)
+    for _, tab in pairs(tabs) do
+        for _, v in pairs(tab.Page:GetChildren()) do
+            if v:IsA("Frame") and v:FindFirstChild("TextButton") then
+                local lb = v:FindFirstChild("TextLabel")
+                if lb and lb.Text == "Menu Toggle" then
+                    v.TextButton.Text = key.Name
+                end
+            end
+        end
+    end
+end
 
 function _G.XeNOX:CreateTab(name)
     tabCount = tabCount + 1
@@ -275,9 +302,11 @@ function _G.XeNOX:CreateTab(name)
                     if isfile(path) then
                         local data = HttpService:JSONDecode(readfile(path))
                         menuKey = Enum.KeyCode[data.Keybind]
+                        UpdateKeybindDisplay(menuKey)
                         UpdateUITheme(Color3.new(unpack(data.Theme)))
                         UpdateShadeTheme(Color3.new(unpack(data.Shade)))
                         blobColor = Color3.new(unpack(data.Blob))
+                        if data.Outline then UpdateOutlineTheme(Color3.new(unpack(data.Outline))) end
                         status.Text = "Status: Loaded " .. selectedConfig
                     end
                 elseif i == "Update" then
@@ -379,6 +408,7 @@ local s = _G.XeNOX:CreateTab("Settings")
 s:CreateConfigManager()
 s:CreateKeybind("Menu Toggle", menuKey, function(k) menuKey = k end)
 s:CreateColorPicker("Main Theme", mainTheme, function(c) UpdateUITheme(c) end)
+s:CreateColorPicker("Outline Color", outlineColor, function(c) UpdateOutlineTheme(c) end)
 s:CreateColorPicker("Shade Color", shadeColor, function(c) UpdateShadeTheme(c) end)
 s:CreateColorPicker("Blob Color", blobColor, function(c) blobColor = c end)
 
