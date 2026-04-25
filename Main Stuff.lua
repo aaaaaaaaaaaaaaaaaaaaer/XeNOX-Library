@@ -39,7 +39,6 @@ uiStroke.Color = outlineColor
 uiStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 uiStroke.Parent = mainFrame
 
--- // THEME UPDATERS //
 local function UpdateUITheme(color)
     mainTheme = color
     mainFrame.BackgroundColor3 = color
@@ -62,7 +61,6 @@ local function UpdateShadeTheme(newShade)
     end
 end
 
--- // CONFIG SYSTEM //
 local folderName = "XeNOX_Configs"
 if writefile and not isfolder(folderName) then makefolder(folderName) end
 local selectedConfig = ""
@@ -80,11 +78,9 @@ local function SaveSettings(name)
     writefile(GetPath(name), HttpService:JSONEncode(data))
 end
 
--- // DYNAMIC BACKGROUND & MOUSE EFFECTS //
 task.spawn(function()
     while task.wait(0.02) do 
         if not screenGui.Parent then break end
-        -- Falling Stars
         local star = Instance.new("Frame")
         star.Size = UDim2.new(0, 1, 0, math.random(30, 80))
         star.Position = UDim2.new(math.random(0, 100)/100, 0, -0.2, 0)
@@ -94,7 +90,6 @@ task.spawn(function()
         tweenService:Create(star, TweenInfo.new(0.6, Enum.EasingStyle.Linear), {Position = UDim2.new(star.Position.X.Scale, 0, 1.2, 0), BackgroundTransparency = 1}):Play()
         game:GetService("Debris"):AddItem(star, 0.6)
 
-        -- Mouse Trail
         local trail = Instance.new("Frame")
         trail.Size = UDim2.new(0, 10, 0, 10)
         trail.Position = UDim2.new(0, mouse.X - mainFrame.AbsolutePosition.X - 5, 0, mouse.Y - mainFrame.AbsolutePosition.Y - 5)
@@ -105,7 +100,6 @@ task.spawn(function()
         tweenService:Create(trail, TweenInfo.new(0.4), {BackgroundTransparency = 1, Size = UDim2.new(0, 0, 0, 0)}):Play()
         game:GetService("Debris"):AddItem(trail, 0.4)
 
-        -- Blobs
         local blob = Instance.new("ImageLabel")
         blob.Size = UDim2.new(math.random(2,5)/10, 0, math.random(2,5)/10, 0)
         blob.Position = UDim2.new(math.random(-1, 9)/10, 0, math.random(-1, 9)/10, 0)
@@ -131,7 +125,6 @@ task.spawn(function()
     end
 end)
 
--- // HEADER //
 local closeBtn = Instance.new("TextButton")
 closeBtn.Size = UDim2.new(0, 30, 0, 30)
 closeBtn.Position = UDim2.new(1, -40, 0, 10)
@@ -160,12 +153,10 @@ title.TextSize = TITLE_SIZE
 title.Font = Enum.Font.SourceSansBold
 title.Parent = mainFrame
 
--- // LIBRARY CORE //
 _G.XeNOX = {}
 local tabs = {}
 local tabCount = 0
 
--- Function to keep Keybind button updated across all tabs
 local function UpdateKeybindDisplay(key)
     for _, tab in pairs(tabs) do
         for _, v in pairs(tab.Page:GetChildren()) do
@@ -454,7 +445,6 @@ function _G.XeNOX:CreateTab(name)
     return tabObj
 end
 
--- // INITIALIZATION //
 local m = _G.XeNOX:CreateTab("Main")
 m:CreateLabel("SYSTEM INITIALIZED")
 
