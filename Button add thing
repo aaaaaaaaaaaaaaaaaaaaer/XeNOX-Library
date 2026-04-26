@@ -1,0 +1,6 @@
+local exampleTab = _G.XeNOX:CreateTab("Example")
+
+exampleTab:CreateLabel("Button")
+
+exampleTab:CreateButton("button", function()
+    -- Put your code function stuff here
