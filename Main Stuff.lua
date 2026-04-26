@@ -17,37 +17,67 @@ local trailsEnabled = false
 local blobsEnabled = false
 local matrixEnabled = false
 local hexEnabled = false
-local plasmaEnabled = false
-local glitchEnabled = false
+local glitchEnabled = false 
+--rip plasma btw
 
 local rainCol = Color3.fromRGB(255, 255, 255)
 local trailCol = Color3.fromRGB(0, 255, 255)
 local blobCol = Color3.fromRGB(0, 20, 100)
 local matrixCol = Color3.fromRGB(0, 255, 0)
 local hexCol = Color3.fromRGB(0, 255, 255)
-local plasmaCol = Color3.fromRGB(255, 0, 255)
 local glitchCol = Color3.fromRGB(255, 255, 255)
 
 local TITLE_SIZE = 22
 local TAB_SIZE = 16
 local LABEL_SIZE = 18
 
+-- [[ STEALTH INITIALIZATION ]]
 local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "XENOX_LIBRARY"
+screenGui.Name = HttpService:GenerateGUID(false) 
 screenGui.ResetOnSpawn = false
-screenGui.Parent = pGui
+
+-- Protect GUI from detection
+if gethui then
+    screenGui.Parent = gethui()
+elseif syn and syn.protect_gui then
+    syn.protect_gui(screenGui)
+    screenGui.Parent = pGui
+else
+    screenGui.Parent = pGui
+end
 
 local mainFrame = Instance.new("Frame")
-mainFrame.Name = "MainFrame"
+mainFrame.Name = HttpService:GenerateGUID(false)
 mainFrame.Size = UDim2.new(0, 1000, 0, 750)
 mainFrame.Position = UDim2.new(0.5, -500, 0.5, -375)
 mainFrame.BackgroundColor3 = mainTheme
 mainFrame.BackgroundTransparency = 0.4
 mainFrame.Active = true
-mainFrame.Draggable = true
 mainFrame.ClipsDescendants = true
 mainFrame.Parent = screenGui
 Instance.new("UICorner", mainFrame).CornerRadius = UDim.new(0, 8)
+
+-- Custom Dragging (detection-safe)
+local dragging, dragInput, dragStart, startPos
+mainFrame.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = true
+        dragStart = input.Position
+        startPos = mainFrame.Position
+    end
+end)
+mainFrame.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement then dragInput = input end
+end)
+uis.InputChanged:Connect(function(input)
+    if input == dragInput and dragging then
+        local delta = input.Position - dragStart
+        mainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+end)
+uis.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end
+end)
 
 local uiStroke = Instance.new("UIStroke")
 uiStroke.Thickness = 2
@@ -83,6 +113,7 @@ task.spawn(function()
     end
 end)
 
+-- [[ THEME LOGIC ]]
 local function UpdateGlobalFont(newFont)
     globalFont = newFont
     for _, v in pairs(mainFrame:GetDescendants()) do
@@ -107,14 +138,17 @@ end
 local function UpdateShadeTheme(newShade)
     shadeColor = newShade
     for _, v in pairs(mainFrame:GetDescendants()) do
-        if v.Name == "TabBtn" or v.Name == "LabelElement" or v.Name == "ConfigBtn" or v.Name == "ToggleBG" then
+        if v.Name == "TabBtn" or v.Name == "LabelElement" or v.Name == "ConfigBtn" or v.Name == "ToggleBG" or v.Name == "Button" then
             v.BackgroundColor3 = shadeColor
         end
     end
 end
 
+-- [[ FILE SYSTEM ]]
 local folderName = "XeNOX_Configs"
-if writefile and not isfolder(folderName) then makefolder(folderName) end
+pcall(function()
+    if writefile and not isfolder(folderName) then makefolder(folderName) end
+end)
 local selectedConfig = ""
 local function GetPath(name) return folderName .. "/" .. name .. ".json" end
 
@@ -126,48 +160,32 @@ local function SaveSettings(name)
         Shade = {shadeColor.R, shadeColor.G, shadeColor.B},
         Outline = {outlineColor.R, outlineColor.G, outlineColor.B},
         Font = globalFont.Name,
-        States = {
-            Rain = starsEnabled, Trail = trailsEnabled, Blob = blobsEnabled, 
-            Matrix = matrixEnabled, Hex = hexEnabled, Plasma = plasmaEnabled, Glitch = glitchEnabled
-        },
-        Colors = {
-            Rain = {rainCol.R, rainCol.G, rainCol.B},
-            Trail = {trailCol.R, trailCol.G, trailCol.B},
-            Blob = {blobCol.R, blobCol.G, blobCol.B},
-            Matrix = {matrixCol.R, matrixCol.G, matrixCol.B},
-            Hex = {hexCol.R, hexCol.G, hexCol.B},
-            Plasma = {plasmaCol.R, plasmaCol.G, plasmaCol.B},
-            Glitch = {glitchCol.R, glitchCol.G, glitchCol.B}
-        }
+        States = { Rain = starsEnabled, Trail = trailsEnabled, Blob = blobsEnabled, Matrix = matrixEnabled, Hex = hexEnabled, Glitch = glitchEnabled },
+        Colors = { Rain = {rainCol.R, rainCol.G, rainCol.B}, Trail = {trailCol.R, trailCol.G, trailCol.B}, Blob = {blobCol.R, blobCol.G, blobCol.B}, Matrix = {matrixCol.R, matrixCol.G, matrixCol.B}, Hex = {hexCol.R, hexCol.G, hexCol.B}, Glitch = {glitchCol.R, glitchCol.G, glitchCol.B} }
     }
-    writefile(GetPath(name), HttpService:JSONEncode(data))
+    pcall(function() writefile(GetPath(name), HttpService:JSONEncode(data)) end)
 end
 
+-- [[ STABLE BACKGROUND EFFECTS ]]
 task.spawn(function()
     local t = 0
-    while task.wait(0.02) do 
+    while task.wait(0.03) do 
         t = t + 0.05
         if not screenGui.Parent then break end
         if not mainFrame.Visible then continue end
 
         if starsEnabled then
             local star = Instance.new("Frame")
-            star.Size = UDim2.new(0, 1, 0, math.random(30, 80))
-            star.Position = UDim2.new(math.random(0, 100)/100, 0, -0.2, 0)
-            star.BackgroundColor3 = rainCol
-            star.ZIndex = 1
-            star.Parent = mainFrame
+            star.Size = UDim2.new(0, 1, 0, math.random(30, 80)); star.Position = UDim2.new(math.random(0, 100)/100, 0, -0.2, 0)
+            star.BackgroundColor3 = rainCol; star.ZIndex = 1; star.Parent = mainFrame
             tweenService:Create(star, TweenInfo.new(0.6, Enum.EasingStyle.Linear), {Position = UDim2.new(star.Position.X.Scale, 0, 1.2, 0), BackgroundTransparency = 1}):Play()
             game:GetService("Debris"):AddItem(star, 0.6)
         end
 
         if trailsEnabled then
             local trail = Instance.new("Frame")
-            trail.Size = UDim2.new(0, 10, 0, 10)
-            trail.Position = UDim2.new(0, mouse.X - mainFrame.AbsolutePosition.X - 5, 0, mouse.Y - mainFrame.AbsolutePosition.Y - 5)
-            trail.BackgroundColor3 = trailCol
-            trail.ZIndex = 2
-            trail.Parent = mainFrame
+            trail.Size = UDim2.new(0, 10, 0, 10); trail.Position = UDim2.new(0, mouse.X - mainFrame.AbsolutePosition.X - 5, 0, mouse.Y - mainFrame.AbsolutePosition.Y - 5)
+            trail.BackgroundColor3 = trailCol; trail.ZIndex = 2; trail.Parent = mainFrame
             Instance.new("UICorner", trail).CornerRadius = UDim.new(1, 0)
             tweenService:Create(trail, TweenInfo.new(0.4), {BackgroundTransparency = 1, Size = UDim2.new(0, 0, 0, 0)}):Play()
             game:GetService("Debris"):AddItem(trail, 0.4)
@@ -175,69 +193,33 @@ task.spawn(function()
 
         if matrixEnabled and math.random(1, 5) == 1 then
             local char = Instance.new("TextLabel")
-            char.Size = UDim2.new(0, 20, 0, 20)
-            char.Position = UDim2.new(math.random(0, 100)/100, 0, -0.1, 0)
-            char.BackgroundTransparency = 1
-            char.Text = string.char(math.random(33, 126))
-            char.TextColor3 = matrixCol
-            char.Font = Enum.Font.Code
-            char.TextSize = 15
-            char.ZIndex = 1
-            char.Parent = mainFrame
+            char.Size = UDim2.new(0, 20, 0, 20); char.Position = UDim2.new(math.random(0, 100)/100, 0, -0.1, 0)
+            char.BackgroundTransparency = 1; char.Text = string.char(math.random(33, 126))
+            char.TextColor3 = matrixCol; char.Font = Enum.Font.Code; char.TextSize = 15; char.ZIndex = 1; char.Parent = mainFrame
             tweenService:Create(char, TweenInfo.new(math.random(1, 3), Enum.EasingStyle.Linear), {Position = UDim2.new(char.Position.X.Scale, 0, 1.1, 0), TextTransparency = 1}):Play()
             game:GetService("Debris"):AddItem(char, 3)
         end
 
         if hexEnabled and math.random(1, 15) == 1 then
             local hex = Instance.new("ImageLabel")
-            hex.Size = UDim2.new(0, 0, 0, 0)
-            hex.Position = UDim2.new(math.random(0, 100)/100, 0, math.random(0, 100)/100, 0)
-            hex.Image = "rbxassetid://6073628820"
-            hex.ImageColor3 = hexCol
-            hex.BackgroundTransparency = 1
-            hex.ImageTransparency = 0.8
-            hex.ZIndex = 1
-            hex.Parent = mainFrame
+            hex.Size = UDim2.new(0, 0, 0, 0); hex.Position = UDim2.new(math.random(0, 100)/100, 0, math.random(0, 100)/100, 0)
+            hex.Image = "rbxassetid://6073628820"; hex.ImageColor3 = hexCol; hex.BackgroundTransparency = 1; hex.ImageTransparency = 0.8; hex.ZIndex = 1; hex.Parent = mainFrame
             local size = math.random(50, 150)
             tweenService:Create(hex, TweenInfo.new(2), {Size = UDim2.new(0, size, 0, size), ImageTransparency = 1, Rotation = 180}):Play()
             game:GetService("Debris"):AddItem(hex, 2)
         end
 
-        if plasmaEnabled then
-            local p = Instance.new("Frame")
-            p.Size = UDim2.new(0, 4, 0, 4)
-            local x = math.sin(t + math.random()) * 0.4 + 0.5
-            local y = math.cos(t * 0.8 + math.random()) * 0.4 + 0.5
-            p.Position = UDim2.new(x, math.random(-50, 50), y, math.random(-50, 50))
-            p.BackgroundColor3 = plasmaCol
-            p.BorderSizePixel = 0
-            p.ZIndex = 1
-            p.Parent = mainFrame
-            Instance.new("UICorner", p).CornerRadius = UDim.new(1, 0)
-            tweenService:Create(p, TweenInfo.new(1), {BackgroundTransparency = 1, Size = UDim2.new(0, 50, 0, 50)}):Play()
-            game:GetService("Debris"):AddItem(p, 1)
-        end
-
         if glitchEnabled and math.random(1,10) == 1 then
             local g = Instance.new("Frame")
-            g.Size = UDim2.new(0, math.random(20, 100), 0, 2)
-            g.Position = UDim2.new(math.random(0,100)/100, 0, math.random(0,100)/100, 0)
-            g.BackgroundColor3 = glitchCol
-            g.BackgroundTransparency = 0.5
-            g.Parent = mainFrame
+            g.Size = UDim2.new(0, math.random(20, 100), 0, 2); g.Position = UDim2.new(math.random(0,100)/100, 0, math.random(0,100)/100, 0)
+            g.BackgroundColor3 = glitchCol; g.BackgroundTransparency = 0.5; g.Parent = mainFrame
             task.delay(0.1, function() g:Destroy() end)
         end
 
         if blobsEnabled then
             local blob = Instance.new("ImageLabel")
-            blob.Size = UDim2.new(math.random(2,5)/10, 0, math.random(2,5)/10, 0)
-            blob.Position = UDim2.new(math.random(-1, 9)/10, 0, math.random(-1, 9)/10, 0)
-            blob.Image = "rbxassetid://232918622"
-            blob.ImageColor3 = blobCol
-            blob.BackgroundTransparency = 1
-            blob.ImageTransparency = 0.93
-            blob.ZIndex = 1
-            blob.Parent = mainFrame
+            blob.Size = UDim2.new(math.random(2,5)/10, 0, math.random(2,5)/10, 0); blob.Position = UDim2.new(math.random(-1, 9)/10, 0, math.random(-1, 9)/10, 0)
+            blob.Image = "rbxassetid://232918622"; blob.ImageColor3 = blobCol; blob.BackgroundTransparency = 1; blob.ImageTransparency = 0.93; blob.ZIndex = 1; blob.Parent = mainFrame
             task.spawn(function()
                 local start = tick()
                 while tick() - start < 3 do
@@ -256,15 +238,8 @@ task.spawn(function()
 end)
 
 local closeBtn = Instance.new("TextButton")
-closeBtn.Size = UDim2.new(0, 30, 0, 30)
-closeBtn.Position = UDim2.new(1, -40, 0, 10)
-closeBtn.BackgroundTransparency = 1
-closeBtn.Text = "-"
-closeBtn.TextColor3 = Color3.new(1,1,1)
-closeBtn.TextSize = 35
-closeBtn.Font = Enum.Font.SourceSansBold
-closeBtn.ZIndex = 20
-closeBtn.Parent = mainFrame
+closeBtn.Size = UDim2.new(0, 30, 0, 30); closeBtn.Position = UDim2.new(1, -40, 0, 10)
+closeBtn.BackgroundTransparency = 1; closeBtn.Text = "-"; closeBtn.TextColor3 = Color3.new(1,1,1); closeBtn.TextSize = 35; closeBtn.Font = Enum.Font.SourceSansBold; closeBtn.ZIndex = 20; closeBtn.Parent = mainFrame
 
 local isMin = false
 closeBtn.MouseButton1Click:Connect(function()
@@ -284,35 +259,17 @@ function _G.XeNOX:CreateTab(name)
     local tabID = tabCount
     
     local tabBtn = Instance.new("TextButton")
-    tabBtn.Name = "TabBtn"
-    tabBtn.Size = UDim2.new(0, 160, 0, 45)
-    tabBtn.Position = UDim2.new(0, 15, 0, 50 + (tabCount - 1) * 50)
-    tabBtn.BackgroundColor3 = shadeColor
-    tabBtn.Text = name
-    tabBtn.TextColor3 = Color3.new(1,1,1)
-    tabBtn.Font = globalFont
-    tabBtn.TextSize = TAB_SIZE
-    tabBtn.Parent = mainFrame
+    tabBtn.Name = "TabBtn"; tabBtn.Size = UDim2.new(0, 160, 0, 45); tabBtn.Position = UDim2.new(0, 15, 0, 50 + (tabCount - 1) * 50)
+    tabBtn.BackgroundColor3 = shadeColor; tabBtn.Text = name; tabBtn.TextColor3 = Color3.new(1,1,1); tabBtn.Font = globalFont; tabBtn.TextSize = TAB_SIZE; tabBtn.Parent = mainFrame
     Instance.new("UICorner", tabBtn).CornerRadius = UDim.new(0, 8)
 
     local page = Instance.new("ScrollingFrame")
-    page.Name = name .. "_Page"
-    page.Size = UDim2.new(0, 780, 0, 670)
-    page.Position = UDim2.new(0, 195, 0, 55)
-    page.BackgroundTransparency = 1
-    page.ScrollBarThickness = 3
-    page.ScrollBarImageColor3 = mainTheme
-    page.Visible = (tabID == 1)
-    page.Parent = mainFrame
+    page.Name = name .. "_Page"; page.Size = UDim2.new(0, 780, 0, 670); page.Position = UDim2.new(0, 195, 0, 55)
+    page.BackgroundTransparency = 1; page.ScrollBarThickness = 3; page.ScrollBarImageColor3 = mainTheme; page.Visible = (tabID == 1); page.Parent = mainFrame
 
     local layout = Instance.new("UIListLayout", page)
-    layout.Padding = UDim.new(0, 10)
-    layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-    layout.SortOrder = Enum.SortOrder.LayoutOrder
-
-    layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-        page.CanvasSize = UDim2.new(0, 0, 0, layout.AbsoluteContentSize.Y + 20)
-    end)
+    layout.Padding = UDim.new(0, 10); layout.HorizontalAlignment = Enum.HorizontalAlignment.Center; layout.SortOrder = Enum.SortOrder.LayoutOrder
+    layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function() page.CanvasSize = UDim2.new(0, 0, 0, layout.AbsoluteContentSize.Y + 20) end)
     
     tabs[tabID] = {Page = page, Btn = tabBtn}
     tabBtn.MouseButton1Click:Connect(function()
@@ -321,42 +278,42 @@ function _G.XeNOX:CreateTab(name)
     end)
 
     local tabObj = {}
+
+    function tabObj:CreateButton(text, callback)
+        local btn = Instance.new("TextButton")
+        btn.Name = "Button"
+        btn.Size = UDim2.new(1, -20, 0, 45)
+        btn.BackgroundColor3 = shadeColor
+        btn.Text = text
+        btn.TextColor3 = Color3.new(1, 1, 1)
+        btn.Font = globalFont
+        btn.TextSize = TAB_SIZE
+        btn.Parent = page
+        Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 8)
+
+        btn.MouseButton1Click:Connect(function()
+            btn.BackgroundColor3 = mainTheme
+            task.delay(0.1, function() btn.BackgroundColor3 = shadeColor end)
+            callback()
+        end)
+    end
     
     function tabObj:CreateLabel(text)
         local l = Instance.new("TextLabel")
-        l.Name = "LabelElement"
-        l.Size = UDim2.new(1, -20, 0, 45)
-        l.BackgroundColor3 = shadeColor
-        l.Text = text
-        l.TextColor3 = Color3.new(1,1,1)
-        l.Font = globalFont
-        l.TextSize = LABEL_SIZE
-        l.Parent = page
+        l.Name = "LabelElement"; l.Size = UDim2.new(1, -20, 0, 45); l.BackgroundColor3 = shadeColor; l.Text = text; l.TextColor3 = Color3.new(1,1,1); l.Font = globalFont; l.TextSize = LABEL_SIZE; l.Parent = page
         Instance.new("UICorner", l).CornerRadius = UDim.new(0, 8)
     end
 
     function tabObj:CreateToggle(text, default, callback)
         local enabled = default
         local tgl = Instance.new("Frame")
-        tgl.Size = UDim2.new(1, -20, 0, 50)
-        tgl.BackgroundColor3 = Color3.new(0,0,0); tgl.BackgroundTransparency = 0.5
-        tgl.Parent = page; Instance.new("UICorner", tgl).CornerRadius = UDim.new(0, 8)
-
+        tgl.Size = UDim2.new(1, -20, 0, 50); tgl.BackgroundColor3 = Color3.new(0,0,0); tgl.BackgroundTransparency = 0.5; tgl.Parent = page; Instance.new("UICorner", tgl).CornerRadius = UDim.new(0, 8)
         local lb = Instance.new("TextLabel")
-        lb.Size = UDim2.new(1, -60, 1, 0); lb.Position = UDim2.new(0, 15, 0, 0)
-        lb.Text = text; lb.TextColor3 = Color3.new(1,1,1); lb.Font = globalFont
-        lb.TextSize = LABEL_SIZE; lb.BackgroundTransparency = 1; lb.TextXAlignment = "Left"; lb.Parent = tgl
-
+        lb.Size = UDim2.new(1, -60, 1, 0); lb.Position = UDim2.new(0, 15, 0, 0); lb.Text = text; lb.TextColor3 = Color3.new(1,1,1); lb.Font = globalFont; lb.TextSize = LABEL_SIZE; lb.BackgroundTransparency = 1; lb.TextXAlignment = "Left"; lb.Parent = tgl
         local bg = Instance.new("TextButton")
-        bg.Name = "ToggleBG"
-        bg.Size = UDim2.new(0, 45, 0, 25); bg.Position = UDim2.new(1, -55, 0.5, -12)
-        bg.BackgroundColor3 = enabled and mainTheme or shadeColor
-        bg.Text = ""; bg.Parent = tgl; Instance.new("UICorner", bg).CornerRadius = UDim.new(1,0)
-
+        bg.Name = "ToggleBG"; bg.Size = UDim2.new(0, 45, 0, 25); bg.Position = UDim2.new(1, -55, 0.5, -12); bg.BackgroundColor3 = enabled and mainTheme or shadeColor; bg.Text = ""; bg.Parent = tgl; Instance.new("UICorner", bg).CornerRadius = UDim.new(1,0)
         local ball = Instance.new("Frame")
-        ball.Size = UDim2.new(0, 17, 0, 17); ball.Position = enabled and UDim2.new(1, -21, 0.5, -8) or UDim2.new(0, 4, 0.5, -8)
-        ball.BackgroundColor3 = Color3.new(1,1,1); ball.Parent = bg; Instance.new("UICorner", ball).CornerRadius = UDim.new(1,0)
-
+        ball.Size = UDim2.new(0, 17, 0, 17); ball.Position = enabled and UDim2.new(1, -21, 0.5, -8) or UDim2.new(0, 4, 0.5, -8); ball.BackgroundColor3 = Color3.new(1,1,1); ball.Parent = bg; Instance.new("UICorner", ball).CornerRadius = UDim.new(1,0)
         bg.MouseButton1Click:Connect(function()
             enabled = not enabled
             tweenService:Create(bg, TweenInfo.new(0.2), {BackgroundColor3 = enabled and mainTheme or shadeColor}):Play()
@@ -367,171 +324,76 @@ function _G.XeNOX:CreateTab(name)
 
     function tabObj:CreateFontPicker(text, callback)
         local fp = Instance.new("Frame")
-        fp.Size = UDim2.new(1, -20, 0, 120); fp.BackgroundColor3 = Color3.new(0,0,0); fp.BackgroundTransparency = 0.5
-        fp.Parent = page; Instance.new("UICorner", fp).CornerRadius = UDim.new(0, 8)
-
+        fp.Size = UDim2.new(1, -20, 0, 120); fp.BackgroundColor3 = Color3.new(0,0,0); fp.BackgroundTransparency = 0.5; fp.Parent = page; Instance.new("UICorner", fp).CornerRadius = UDim.new(0, 8)
         local lb = Instance.new("TextLabel")
-        lb.Size = UDim2.new(1, -20, 0, 30); lb.Position = UDim2.new(0, 10, 0, 5)
-        lb.Text = text; lb.TextColor3 = Color3.new(1,1,1); lb.Font = globalFont
-        lb.TextSize = LABEL_SIZE; lb.BackgroundTransparency = 1; lb.TextXAlignment = "Left"; lb.Parent = fp
-
+        lb.Size = UDim2.new(1, -20, 0, 30); lb.Position = UDim2.new(0, 10, 0, 5); lb.Text = text; lb.TextColor3 = Color3.new(1,1,1); lb.Font = globalFont; lb.TextSize = LABEL_SIZE; lb.BackgroundTransparency = 1; lb.TextXAlignment = "Left"; lb.Parent = fp
         local container = Instance.new("ScrollingFrame")
-        container.Size = UDim2.new(1, -20, 0, 70); container.Position = UDim2.new(0, 10, 0, 40)
-        container.BackgroundTransparency = 0.8; container.BackgroundColor3 = Color3.new(0,0,0)
-        container.ScrollBarThickness = 4; container.CanvasSize = UDim2.new(2, 0, 0, 0); container.Parent = fp
-        local listLayout = Instance.new("UIListLayout", container)
-        listLayout.FillDirection = Enum.FillDirection.Horizontal
-        listLayout.Padding = UDim.new(0, 10)
-
+        container.Size = UDim2.new(1, -20, 0, 70); container.Position = UDim2.new(0, 10, 0, 40); container.BackgroundTransparency = 0.8; container.BackgroundColor3 = Color3.new(0,0,0); container.ScrollBarThickness = 4; container.CanvasSize = UDim2.new(2, 0, 0, 0); container.Parent = fp
+        local listLayout = Instance.new("UIListLayout", container); listLayout.FillDirection = Enum.FillDirection.Horizontal; listLayout.Padding = UDim.new(0, 10)
         local fonts = {Enum.Font.SourceSansBold, Enum.Font.Roboto, Enum.Font.GothamBold, Enum.Font.Arcade, Enum.Font.Code, Enum.Font.SciFi}
         for _, f in pairs(fonts) do
             local b = Instance.new("TextButton")
-            b.Size = UDim2.new(0, 100, 0, 40); b.Text = f.Name; b.Font = f; b.BackgroundColor3 = shadeColor
-            b.TextColor3 = Color3.new(1,1,1); b.Parent = container; Instance.new("UICorner", b).CornerRadius = UDim.new(0, 8)
+            b.Size = UDim2.new(0, 100, 0, 40); b.Text = f.Name; b.Font = f; b.BackgroundColor3 = shadeColor; b.TextColor3 = Color3.new(1,1,1); b.Parent = container; Instance.new("UICorner", b).CornerRadius = UDim.new(0, 8)
             b.MouseButton1Click:Connect(function() callback(f) end)
         end
     end
 
     function tabObj:CreateColorPicker(text, defaultColor, callback)
         local cp = Instance.new("Frame")
-        cp.Size = UDim2.new(1,-20,0,180); cp.BackgroundColor3 = Color3.new(0,0,0); cp.BackgroundTransparency = 0.3
-        cp.Parent = page; Instance.new("UICorner", cp).CornerRadius = UDim.new(0, 8)
-
+        cp.Size = UDim2.new(1,-20,0,180); cp.BackgroundColor3 = Color3.new(0,0,0); cp.BackgroundTransparency = 0.3; cp.Parent = page; Instance.new("UICorner", cp).CornerRadius = UDim.new(0, 8)
         local lb = Instance.new("TextLabel")
-        lb.Size = UDim2.new(1,-10,0,30); lb.Position = UDim2.new(0,10,0,5)
-        lb.Text = text; lb.TextColor3 = Color3.new(1,1,1); lb.Font = globalFont
-        lb.TextSize = LABEL_SIZE - 2; lb.BackgroundTransparency = 1; lb.TextXAlignment = "Left"; lb.Parent = cp
-
-        local box = Instance.new("ImageLabel")
-        box.Size = UDim2.new(0,120,0,120); box.Position = UDim2.new(0,10,0,40)
-        box.Image = "rbxassetid://4155801252"; box.Parent = cp
-
-        local hue = Instance.new("ImageLabel")
-        hue.Size = UDim2.new(0,20,0,120); hue.Position = UDim2.new(0,140,0,40)
-        hue.Image = "rbxassetid://3641079629"; hue.Parent = cp
-
-        local preview = Instance.new("Frame")
-        preview.Size = UDim2.new(0, 30, 0, 30); preview.Position = UDim2.new(1, -40, 0, 5)
-        preview.BackgroundColor3 = defaultColor; preview.Parent = cp; Instance.new("UICorner", preview).CornerRadius = UDim.new(0, 8)
-
+        lb.Size = UDim2.new(1,-10,0,30); lb.Position = UDim2.new(0,10,0,5); lb.Text = text; lb.TextColor3 = Color3.new(1,1,1); lb.Font = globalFont; lb.TextSize = LABEL_SIZE - 2; lb.BackgroundTransparency = 1; lb.TextXAlignment = "Left"; lb.Parent = cp
+        local box = Instance.new("ImageLabel"); box.Size = UDim2.new(0,120,0,120); box.Position = UDim2.new(0,10,0,40); box.Image = "rbxassetid://4155801252"; box.Parent = cp
+        local hue = Instance.new("ImageLabel"); hue.Size = UDim2.new(0,20,0,120); hue.Position = UDim2.new(0,140,0,40); hue.Image = "rbxassetid://3641079629"; hue.Parent = cp
+        local preview = Instance.new("Frame"); preview.Size = UDim2.new(0, 30, 0, 30); preview.Position = UDim2.new(1, -40, 0, 5); preview.BackgroundColor3 = defaultColor; preview.Parent = cp; Instance.new("UICorner", preview).CornerRadius = UDim.new(0, 8)
         local curH, curS, curV = defaultColor:ToHSV()
         local function upd()
-            local c = Color3.fromHSV(curH, curS, curV)
-            box.ImageColor3 = Color3.fromHSV(curH, 1, 1)
-            preview.BackgroundColor3 = c
-            callback(c)
+            local c = Color3.fromHSV(curH, curS, curV); box.ImageColor3 = Color3.fromHSV(curH, 1, 1); preview.BackgroundColor3 = c; callback(c)
         end
-
         local dH, dSV = false, false
         hue.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 then dH = true end end)
         box.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 then dSV = true end end)
         uis.InputEnded:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 then dH, dSV = false end end)
-        
         runService.RenderStepped:Connect(function()
             if dH then curH = 1 - math.clamp((mouse.Y - hue.AbsolutePosition.Y) / hue.AbsoluteSize.Y, 0, 1); upd()
-            elseif dSV then curS = math.clamp((mouse.X - box.AbsolutePosition.X) / box.AbsoluteSize.X, 0, 1)
-                curV = 1 - math.clamp((mouse.Y - box.AbsolutePosition.Y) / box.AbsoluteSize.Y, 0, 1); upd() end
+            elseif dSV then curS = math.clamp((mouse.X - box.AbsolutePosition.X) / box.AbsoluteSize.X, 0, 1); curV = 1 - math.clamp((mouse.Y - box.AbsolutePosition.Y) / box.AbsoluteSize.Y, 0, 1); upd() end
         end)
     end
 
     function tabObj:CreateConfigManager()
         local container = Instance.new("Frame")
-        container.Size = UDim2.new(1, -20, 0, 340)
-        container.BackgroundColor3 = Color3.new(0,0,0); container.BackgroundTransparency = 0.5
-        container.Parent = page; Instance.new("UICorner", container).CornerRadius = UDim.new(0, 8)
-
-        local status = Instance.new("TextLabel")
-        status.Size = UDim2.new(1, 0, 0, 20); status.Position = UDim2.new(0, 0, 1, -25)
-        status.BackgroundTransparency = 1; status.Text = "Status: Idle"; status.TextColor3 = Color3.new(0.7,0.7,0.7)
-        status.Font = globalFont; status.TextSize = 14; status.Parent = container
-
-        local input = Instance.new("TextBox")
-        input.Size = UDim2.new(0.6, 0, 0, 40); input.Position = UDim2.new(0, 10, 0, 10)
-        input.PlaceholderText = "New Config Name..."; input.BackgroundColor3 = Color3.fromRGB(30,30,30)
-        input.TextColor3 = Color3.new(1,1,1); input.Font = globalFont
-        input.TextSize = 20
-        input.Parent = container; 
-        Instance.new("UICorner", input).CornerRadius = UDim.new(0, 2)
-
-        local save = Instance.new("TextButton")
-        save.Size = UDim2.new(0.35, -5, 0, 40); save.Position = UDim2.new(0.6, 15, 0, 10)
-        save.Text = "CREATE"; save.BackgroundColor3 = shadeColor; save.TextColor3 = Color3.new(1,1,1)
-        save.Font = globalFont; 
-        save.TextSize = 20
-        save.Parent = container; 
-        Instance.new("UICorner", save).CornerRadius = UDim.new(0, 2)
-
-        local list = Instance.new("ScrollingFrame")
-        list.Size = UDim2.new(1, -20, 0, 130); list.Position = UDim2.new(0, 10, 0, 60)
-        list.BackgroundTransparency = 0.8; list.BackgroundColor3 = Color3.new(0,0,0)
-        list.ScrollBarThickness = 4; list.Parent = container; Instance.new("UIListLayout", list)
-
+        container.Size = UDim2.new(1, -20, 0, 340); container.BackgroundColor3 = Color3.new(0,0,0); container.BackgroundTransparency = 0.5; container.Parent = page; Instance.new("UICorner", container).CornerRadius = UDim.new(0, 8)
+        local status = Instance.new("TextLabel"); status.Size = UDim2.new(1, 0, 0, 20); status.Position = UDim2.new(0, 0, 1, -25); status.BackgroundTransparency = 1; status.Text = "Status: Idle"; status.TextColor3 = Color3.new(0.7,0.7,0.7); status.Font = globalFont; status.TextSize = 14; status.Parent = container
+        local input = Instance.new("TextBox"); input.Size = UDim2.new(0.6, 0, 0, 40); input.Position = UDim2.new(0, 10, 0, 10); input.PlaceholderText = "New Config Name..."; input.BackgroundColor3 = Color3.fromRGB(30,30,30); input.TextColor3 = Color3.new(1,1,1); input.Font = globalFont; input.TextSize = 20; input.Parent = container; Instance.new("UICorner", input).CornerRadius = UDim.new(0, 2)
+        local save = Instance.new("TextButton"); save.Size = UDim2.new(0.35, -5, 0, 40); save.Position = UDim2.new(0.6, 15, 0, 10); save.Text = "CREATE"; save.BackgroundColor3 = shadeColor; save.TextColor3 = Color3.new(1,1,1); save.Font = globalFont; save.TextSize = 20; save.Parent = container; Instance.new("UICorner", save).CornerRadius = UDim.new(0, 2)
+        local list = Instance.new("ScrollingFrame"); list.Size = UDim2.new(1, -20, 0, 130); list.Position = UDim2.new(0, 10, 0, 60); list.BackgroundTransparency = 0.8; list.BackgroundColor3 = Color3.new(0,0,0); list.ScrollBarThickness = 4; list.Parent = container; Instance.new("UIListLayout", list)
         local function refreshList()
             for _, v in pairs(list:GetChildren()) do if v:IsA("TextButton") then v:Destroy() end end
-            if listfiles then
-                local files = listfiles(folderName)
-                for _, file in pairs(files) do
-                    local name = file:gsub(folderName.."/", ""):gsub(".json", ""):gsub(folderName.."\\", "")
-                    local b = Instance.new("TextButton")
-                    b.Name = "ConfigBtn"; b.Size = UDim2.new(1, 0, 0, 35); b.Text = name
-                    b.BackgroundColor3 = shadeColor; b.TextColor3 = Color3.new(1,1,1)
-                    b.Font = globalFont; b.Parent = list; Instance.new("UICorner", b).CornerRadius = UDim.new(0, 8)
-                    b.MouseButton1Click:Connect(function()
-                        selectedConfig = name
-                        for _, x in pairs(list:GetChildren()) do if x:IsA("TextButton") then x.BackgroundColor3 = shadeColor end end
-                        b.BackgroundColor3 = Color3.fromRGB(200, 0, 0)
-                        status.Text = "Selected: " .. name
-                    end)
+            pcall(function()
+                if listfiles then
+                    local files = listfiles(folderName)
+                    for _, file in pairs(files) do
+                        local name = file:gsub(folderName.."/", ""):gsub(".json", ""):gsub(folderName.."\\", "")
+                        local b = Instance.new("TextButton"); b.Name = "ConfigBtn"; b.Size = UDim2.new(1, 0, 0, 35); b.Text = name; b.BackgroundColor3 = shadeColor; b.TextColor3 = Color3.new(1,1,1); b.Font = globalFont; b.Parent = list; Instance.new("UICorner", b).CornerRadius = UDim.new(0, 8)
+                        b.MouseButton1Click:Connect(function() selectedConfig = name; for _, x in pairs(list:GetChildren()) do if x:IsA("TextButton") then x.BackgroundColor3 = shadeColor end end; b.BackgroundColor3 = Color3.fromRGB(200, 0, 0); status.Text = "Selected: " .. name end)
+                    end
                 end
-            end
+            end)
         end
-
-        local actions = {
-            Load = {Pos = UDim2.new(0, 10, 0, 210), Text = "LOAD"},
-            Update = {Pos = UDim2.new(0.34, 10, 0, 210), Text = "UPDATE"},
-            Delete = {Pos = UDim2.new(0.68, 10, 0, 210), Text = "DELETE", Color = Color3.fromRGB(150, 0, 0)}
-        }
-
+        local actions = { Load = {Pos = UDim2.new(0, 10, 0, 210), Text = "LOAD"}, Update = {Pos = UDim2.new(0.34, 10, 0, 210), Text = "UPDATE"}, Delete = {Pos = UDim2.new(0.68, 10, 0, 210), Text = "DELETE", Color = Color3.fromRGB(150, 0, 0)} }
         for i, info in pairs(actions) do
-            local btn = Instance.new("TextButton")
-            btn.Size = UDim2.new(0.3, 0, 0, 45); btn.Position = info.Pos; btn.Text = info.Text
-            btn.BackgroundColor3 = info.Color or shadeColor; btn.TextColor3 = Color3.new(1,1,1)
-            btn.Font = globalFont; btn.Parent = container; Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 8)
-
+            local btn = Instance.new("TextButton"); btn.Size = UDim2.new(0.3, 0, 0, 45); btn.Position = info.Pos; btn.Text = info.Text; btn.BackgroundColor3 = info.Color or shadeColor; btn.TextColor3 = Color3.new(1,1,1); btn.Font = globalFont; btn.Parent = container; Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 8)
             btn.MouseButton1Click:Connect(function()
                 if selectedConfig == "" then status.Text = "Error: Select a config first!" return end
                 local path = GetPath(selectedConfig)
-                
                 if i == "Load" and isfile(path) then
                     local data = HttpService:JSONDecode(readfile(path))
-                    UpdateUITheme(Color3.new(unpack(data.Theme)))
-                    UpdateShadeTheme(Color3.new(unpack(data.Shade)))
-                    UpdateOutlineTheme(Color3.new(unpack(data.Outline)))
-                    UpdateGlobalFont(Enum.Font[data.Font])
-                    
-                    starsEnabled = data.States.Rain
-                    trailsEnabled = data.States.Trail
-                    blobsEnabled = data.States.Blob
-                    matrixEnabled = data.States.Matrix
-                    hexEnabled = data.States.Hex
-                    plasmaEnabled = data.States.Plasma
-                    glitchEnabled = data.States.Glitch
-                    
-                    rainCol = Color3.new(unpack(data.Colors.Rain))
-                    trailCol = Color3.new(unpack(data.Colors.Trail))
-                    blobCol = Color3.new(unpack(data.Colors.Blob))
-                    matrixCol = Color3.new(unpack(data.Colors.Matrix))
-                    hexCol = Color3.new(unpack(data.Colors.Hex))
-                    plasmaCol = Color3.new(unpack(data.Colors.Plasma))
-                    glitchCol = Color3.new(unpack(data.Colors.Glitch))
-
+                    UpdateUITheme(Color3.new(unpack(data.Theme))); UpdateShadeTheme(Color3.new(unpack(data.Shade))); UpdateOutlineTheme(Color3.new(unpack(data.Outline))); UpdateGlobalFont(Enum.Font[data.Font])
+                    starsEnabled = data.States.Rain; trailsEnabled = data.States.Trail; blobsEnabled = data.States.Blob; matrixEnabled = data.States.Matrix; hexEnabled = data.States.Hex; glitchEnabled = data.States.Glitch
+                    rainCol = Color3.new(unpack(data.Colors.Rain)); trailCol = Color3.new(unpack(data.Colors.Trail)); blobCol = Color3.new(unpack(data.Colors.Blob)); matrixCol = Color3.new(unpack(data.Colors.Matrix)); hexCol = Color3.new(unpack(data.Colors.Hex)); glitchCol = Color3.new(unpack(data.Colors.Glitch))
                     status.Text = "Status: Loaded " .. selectedConfig
-                elseif i == "Update" then
-                    SaveSettings(selectedConfig); status.Text = "Status: Updated " .. selectedConfig
-                elseif i == "Delete" then
-                    if isfile(path) then delfile(path) end
-                    status.Text = "Status: Deleted " .. selectedConfig; selectedConfig = ""; refreshList()
-                end
+                elseif i == "Update" then SaveSettings(selectedConfig); status.Text = "Status: Updated " .. selectedConfig
+                elseif i == "Delete" then if isfile(path) then delfile(path) end; status.Text = "Status: Deleted " .. selectedConfig; selectedConfig = ""; refreshList() end
             end)
         end
         save.MouseButton1Click:Connect(function() if input.Text ~= "" then SaveSettings(input.Text); input.Text = ""; refreshList() end end)
@@ -541,13 +403,13 @@ function _G.XeNOX:CreateTab(name)
     return tabObj
 end
 
+-- [[ EXAMPLE SETUP ]]
 local m = _G.XeNOX:CreateTab("Main")
-m:CreateLabel("")
-m:CreateLabel("Welcome to Xenox Library")
+m:CreateLabel("Welcome to XeNOX Library")
+m:CreateButton("Sample Button", function() print("Button Pressed") end)
 
 local s = _G.XeNOX:CreateTab("Settings")
 s:CreateConfigManager()
-
 s:CreateLabel("BACKGROUND EFFECTS")
 s:CreateToggle("Enable Rain", false, function(t) starsEnabled = t end)
 s:CreateColorPicker("Rain Color", rainCol, function(c) rainCol = c end)
@@ -559,8 +421,6 @@ s:CreateToggle("Enable Matrix Rain", false, function(t) matrixEnabled = t end)
 s:CreateColorPicker("Matrix Color", matrixCol, function(c) matrixCol = c end)
 s:CreateToggle("Enable Floating Hexagons", false, function(t) hexEnabled = t end)
 s:CreateColorPicker("Hex Color", hexCol, function(c) hexCol = c end)
-s:CreateToggle("Enable Plasma Waves", false, function(t) plasmaEnabled = t end)
-s:CreateColorPicker("Plasma Color", plasmaCol, function(c) plasmaCol = c end)
 s:CreateToggle("Enable Glitch Blocks", false, function(t) glitchEnabled = t end)
 s:CreateColorPicker("Glitch Color", glitchCol, function(c) glitchCol = c end)
 
