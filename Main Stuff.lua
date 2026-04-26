@@ -31,12 +31,10 @@ local TITLE_SIZE = 22
 local TAB_SIZE = 16
 local LABEL_SIZE = 18
 
--- [[ STEALTH INITIALIZATION ]]
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = HttpService:GenerateGUID(false) 
 screenGui.ResetOnSpawn = false
 
--- Protect GUI from detection
 if gethui then
     screenGui.Parent = gethui()
 elseif syn and syn.protect_gui then
@@ -57,7 +55,6 @@ mainFrame.ClipsDescendants = true
 mainFrame.Parent = screenGui
 Instance.new("UICorner", mainFrame).CornerRadius = UDim.new(0, 8)
 
--- Custom Dragging (detection-safe)
 local dragging, dragInput, dragStart, startPos
 mainFrame.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then
@@ -113,7 +110,6 @@ task.spawn(function()
     end
 end)
 
--- [[ THEME LOGIC ]]
 local function UpdateGlobalFont(newFont)
     globalFont = newFont
     for _, v in pairs(mainFrame:GetDescendants()) do
@@ -144,7 +140,6 @@ local function UpdateShadeTheme(newShade)
     end
 end
 
--- [[ FILE SYSTEM ]]
 local folderName = "XeNOX_Configs"
 pcall(function()
     if writefile and not isfolder(folderName) then makefolder(folderName) end
@@ -166,7 +161,6 @@ local function SaveSettings(name)
     pcall(function() writefile(GetPath(name), HttpService:JSONEncode(data)) end)
 end
 
--- [[ STABLE BACKGROUND EFFECTS ]]
 task.spawn(function()
     local t = 0
     while task.wait(0.03) do 
@@ -403,7 +397,6 @@ function _G.XeNOX:CreateTab(name)
     return tabObj
 end
 
--- [[ EXAMPLE SETUP ]]
 local m = _G.XeNOX:CreateTab("Main")
 m:CreateLabel("Welcome to XeNOX Library")
 m:CreateButton("Sample Button", function() print("Button Pressed") end)
