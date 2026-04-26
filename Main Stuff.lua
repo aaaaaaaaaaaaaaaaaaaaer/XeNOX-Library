@@ -18,7 +18,7 @@ local blobsEnabled = false
 local matrixEnabled = false
 local hexEnabled = false
 local glitchEnabled = false 
---rip plasma btw
+--rip plasma btw cuz removed cuz problems
 
 local rainCol = Color3.fromRGB(255, 255, 255)
 local trailCol = Color3.fromRGB(0, 255, 255)
@@ -399,7 +399,7 @@ end
 
 local m = _G.XeNOX:CreateTab("Main")
 m:CreateLabel("Welcome to XeNOX Library")
-m:CreateButton("Sample Button", function() print("Button Pressed") end)
+m:CreateButton("Example Button", function() print("Button Pressed") end)
 
 local s = _G.XeNOX:CreateTab("Settings")
 s:CreateConfigManager()
