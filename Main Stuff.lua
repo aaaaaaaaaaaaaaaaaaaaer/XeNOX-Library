@@ -493,7 +493,7 @@ function _G.XeNOX:CreateTab(name)
         box.Size = UDim2.new(0, 150, 0, 150)
         box.Position = UDim2.new(0, 10, 0, 10)
         box.Image = "rbxassetid://4155801252"
-        box.ImageColor3 = Color3.new(1, 1, 1) -- THIS fixes the gradient tint bug
+        box.ImageColor3 = Color3.new(1, 1, 1)
         box.AutoButtonColor = false
         box.ZIndex = 101
         box.Parent = popup
@@ -508,13 +508,28 @@ function _G.XeNOX:CreateTab(name)
         cursorSVStroke.Color = Color3.new(0, 0, 0)
         cursorSVStroke.Thickness = 1
 
-        local hue = Instance.new("ImageButton")
+        local hue = Instance.new("TextButton")
         hue.Size = UDim2.new(0, 20, 0, 150)
         hue.Position = UDim2.new(0, 170, 0, 10)
-        hue.Image = "rbxassetid://3641079629"
+        hue.BackgroundColor3 = Color3.new(1, 1, 1)
+        hue.Text = ""
         hue.AutoButtonColor = false
         hue.ZIndex = 101
         hue.Parent = popup
+        
+        local hueGradient = Instance.new("UIGradient")
+        hueGradient.Rotation = 90
+        hueGradient.Color = ColorSequence.new({
+            ColorSequenceKeypoint.new(0.000, Color3.fromRGB(255, 0, 0)),
+            ColorSequenceKeypoint.new(0.167, Color3.fromRGB(255, 255, 0)),
+            ColorSequenceKeypoint.new(0.333, Color3.fromRGB(0, 255, 0)),
+            ColorSequenceKeypoint.new(0.500, Color3.fromRGB(0, 255, 255)),
+            ColorSequenceKeypoint.new(0.667, Color3.fromRGB(0, 0, 255)),
+            ColorSequenceKeypoint.new(0.833, Color3.fromRGB(255, 0, 255)),
+            ColorSequenceKeypoint.new(1.000, Color3.fromRGB(255, 0, 0))
+        })
+        hueGradient.Parent = hue
+        -- --- END OF GRADIENT CODE ---
         
         local cursorHue = Instance.new("Frame")
         cursorHue.Size = UDim2.new(1, 4, 0, 3)
@@ -541,7 +556,6 @@ function _G.XeNOX:CreateTab(name)
         
         local function upd()
             local c = Color3.fromHSV(curH, curS, curV)
-            -- We set BackgroundColor3 to the Hue, not the ImageColor3!
             box.BackgroundColor3 = Color3.fromHSV(curH, 1, 1)
             previewBtn.BackgroundColor3 = c
             
@@ -567,7 +581,6 @@ function _G.XeNOX:CreateTab(name)
         local dragLoop
 
         local function updateHSV()
-            -- We use plrMouse to guarantee standard screen coordinates regardless of executor gui insets
             if draggingHue then
                 curH = math.clamp((plrMouse.Y - hue.AbsolutePosition.Y) / hue.AbsoluteSize.Y, 0, 1)
             elseif draggingSV then
