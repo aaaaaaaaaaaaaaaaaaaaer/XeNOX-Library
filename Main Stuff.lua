@@ -134,7 +134,7 @@ end
 local function UpdateShadeTheme(newShade)
     shadeColor = newShade
     for _, v in pairs(mainFrame:GetDescendants()) do
-        if v.Name == "TabBtn" or v.Name == "LabelElement" or v.Name == "ConfigBtn" or v.Name == "ToggleBG" or v.Name == "Button" then
+        if v.Name == "TabBtn" or v.Name == "LabelElement" or v.Name == "ConfigBtn" or v.Name == "ToggleBG" or v.Name == "Button" or v.Name == "BindBtn" then
             v.BackgroundColor3 = shadeColor
         end
     end
@@ -316,6 +316,39 @@ function _G.XeNOX:CreateTab(name)
         end)
     end
 
+    function tabObj:CreateKeybind(text, defaultKey, callback)
+        local currentKey = defaultKey
+        local listening = false
+
+        local kbFrame = Instance.new("Frame")
+        kbFrame.Size = UDim2.new(1, -20, 0, 50); kbFrame.BackgroundColor3 = Color3.new(0,0,0); kbFrame.BackgroundTransparency = 0.5; kbFrame.Parent = page; Instance.new("UICorner", kbFrame).CornerRadius = UDim.new(0, 8)
+        
+        local lb = Instance.new("TextLabel")
+        lb.Size = UDim2.new(1, -160, 1, 0); lb.Position = UDim2.new(0, 15, 0, 0); lb.Text = text; lb.TextColor3 = Color3.new(1,1,1); lb.Font = globalFont; lb.TextSize = LABEL_SIZE; lb.BackgroundTransparency = 1; lb.TextXAlignment = "Left"; lb.Parent = kbFrame
+        
+        local btn = Instance.new("TextButton")
+        btn.Name = "BindBtn"; btn.Size = UDim2.new(0, 120, 0, 30); btn.Position = UDim2.new(1, -135, 0.5, -15); btn.BackgroundColor3 = shadeColor; btn.Text = currentKey.Name; btn.TextColor3 = Color3.new(1,1,1); btn.Font = globalFont; btn.TextSize = TAB_SIZE; btn.Parent = kbFrame; Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
+        
+        btn.MouseButton1Click:Connect(function()
+            if listening then return end
+            listening = true
+            btn.Text = "..."
+            btn.TextColor3 = mainTheme
+            
+            local connection
+            connection = uis.InputBegan:Connect(function(input)
+                if input.UserInputType == Enum.UserInputType.Keyboard then
+                    connection:Disconnect()
+                    currentKey = input.KeyCode
+                    btn.Text = currentKey.Name
+                    btn.TextColor3 = Color3.new(1,1,1)
+                    listening = false
+                    callback(currentKey)
+                end
+            end)
+        end)
+    end
+
     function tabObj:CreateFontPicker(text, callback)
         local fp = Instance.new("Frame")
         fp.Size = UDim2.new(1, -20, 0, 120); fp.BackgroundColor3 = Color3.new(0,0,0); fp.BackgroundTransparency = 0.5; fp.Parent = page; Instance.new("UICorner", fp).CornerRadius = UDim.new(0, 8)
@@ -385,6 +418,7 @@ function _G.XeNOX:CreateTab(name)
                     UpdateUITheme(Color3.new(unpack(data.Theme))); UpdateShadeTheme(Color3.new(unpack(data.Shade))); UpdateOutlineTheme(Color3.new(unpack(data.Outline))); UpdateGlobalFont(Enum.Font[data.Font])
                     starsEnabled = data.States.Rain; trailsEnabled = data.States.Trail; blobsEnabled = data.States.Blob; matrixEnabled = data.States.Matrix; hexEnabled = data.States.Hex; glitchEnabled = data.States.Glitch
                     rainCol = Color3.new(unpack(data.Colors.Rain)); trailCol = Color3.new(unpack(data.Colors.Trail)); blobCol = Color3.new(unpack(data.Colors.Blob)); matrixCol = Color3.new(unpack(data.Colors.Matrix)); hexCol = Color3.new(unpack(data.Colors.Hex)); glitchCol = Color3.new(unpack(data.Colors.Glitch))
+                    if data.Keybind then menuKey = Enum.KeyCode[data.Keybind] end -- Fallback mapping for config keybind loads
                     status.Text = "Status: Loaded " .. selectedConfig
                 elseif i == "Update" then SaveSettings(selectedConfig); status.Text = "Status: Updated " .. selectedConfig
                 elseif i == "Delete" then if isfile(path) then delfile(path) end; status.Text = "Status: Deleted " .. selectedConfig; selectedConfig = ""; refreshList() end
@@ -418,6 +452,7 @@ s:CreateToggle("Enable Glitch Blocks", false, function(t) glitchEnabled = t end)
 s:CreateColorPicker("Glitch Color", glitchCol, function(c) glitchCol = c end)
 
 s:CreateLabel("APPEARANCE")
+s:CreateKeybind("Menu Toggle Key", menuKey, function(newKey) menuKey = newKey end)
 s:CreateFontPicker("Global Font", function(f) UpdateGlobalFont(f) end)
 s:CreateColorPicker("Main Theme", mainTheme, function(c) UpdateUITheme(c) end)
 s:CreateColorPicker("Outline Color", outlineColor, function(c) UpdateOutlineTheme(c) end)
