@@ -10,6 +10,8 @@ local menuKey = Enum.KeyCode.RightControl
 local mainTheme = Color3.fromRGB(0, 255, 255)
 local shadeColor = Color3.fromRGB(25, 55, 95)
 local outlineColor = Color3.fromRGB(0, 255, 255)
+local buttonColor = Color3.fromRGB(0, 200, 255)
+local buttonOutlineColor = Color3.fromRGB(0, 255, 255)
 local globalFont = Enum.Font.SourceSansBold
 
 local starsEnabled = false
@@ -55,11 +57,33 @@ mainFrame.ClipsDescendants = true
 mainFrame.Parent = screenGui
 Instance.new("UICorner", mainFrame).CornerRadius = UDim.new(0, 8)
 
+local uiScale = Instance.new("UIScale")
+uiScale.Parent = mainFrame
+uiScale.Scale = 1
+
 local uiStroke = Instance.new("UIStroke")
 uiStroke.Thickness = 2
 uiStroke.Color = outlineColor
 uiStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 uiStroke.Parent = mainFrame
+
+local function ApplyButtonStroke(btn)
+    local stroke = Instance.new("UIStroke")
+    stroke.Name = "ButtonStroke"
+    stroke.Color = buttonOutlineColor
+    stroke.Thickness = 1
+    stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    stroke.Parent = btn
+end
+
+local function ApplyButtonInteraction(btn)
+    btn.MouseEnter:Connect(function()
+        tweenService:Create(btn, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 0.2}):Play()
+    end)
+    btn.MouseLeave:Connect(function()
+        tweenService:Create(btn, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 0}):Play()
+    end)
+end
 
 local title = Instance.new("TextLabel")
 title.Name = "Title"
@@ -132,10 +156,28 @@ local function UpdateOutlineTheme(color)
     uiStroke.Color = color
 end
 
+local function UpdateButtonTheme(color)
+    buttonColor = color
+    for _, v in pairs(mainFrame:GetDescendants()) do
+        if v.Name == "TabBtn" or v.Name == "CustomButton" or v.Name == "ActionBtn" or v.Name == "ConfigBtn" then
+            v.BackgroundColor3 = color
+        end
+    end
+end
+
+local function UpdateButtonOutlineTheme(color)
+    buttonOutlineColor = color
+    for _, v in pairs(mainFrame:GetDescendants()) do
+        if v:IsA("UIStroke") and v.Name == "ButtonStroke" then
+            v.Color = color
+        end
+    end
+end
+
 local function UpdateShadeTheme(newShade)
     shadeColor = newShade
     for _, v in pairs(mainFrame:GetDescendants()) do
-        if v.Name == "TabBtn" or v.Name == "LabelElement" or v.Name == "ConfigBtn" or v.Name == "ToggleBG" or v.Name == "Button" or v.Name == "BindBtn" or v.Name == "ColorRow" then
+        if v.Name == "LabelElement" or v.Name == "ButtonRow" or v.Name == "BindBtn" or v.Name == "ColorRow" then
             v.BackgroundColor3 = shadeColor
         end
     end
@@ -155,6 +197,8 @@ local function SaveSettings(name)
         Theme = {mainTheme.R, mainTheme.G, mainTheme.B},
         Shade = {shadeColor.R, shadeColor.G, shadeColor.B},
         Outline = {outlineColor.R, outlineColor.G, outlineColor.B},
+        Button = {buttonColor.R, buttonColor.G, buttonColor.B},
+        ButtonOutline = {buttonOutlineColor.R, buttonOutlineColor.G, buttonOutlineColor.B},
         Font = globalFont.Name,
         States = { Rain = starsEnabled, Trail = trailsEnabled, Blob = blobsEnabled, Matrix = matrixEnabled, Hex = hexEnabled, Glitch = glitchEnabled },
         Colors = { Rain = {rainCol.R, rainCol.G, rainCol.B}, Trail = {trailCol.R, trailCol.G, trailCol.B}, Blob = {blobCol.R, blobCol.G, blobCol.B}, Matrix = {matrixCol.R, matrixCol.G, matrixCol.B}, Hex = {hexCol.R, hexCol.G, hexCol.B}, Glitch = {glitchCol.R, glitchCol.G, glitchCol.B} }
@@ -330,9 +374,18 @@ function _G.XeNOX:CreateTab(name)
     local tabID = tabCount
     
     local tabBtn = Instance.new("TextButton")
-    tabBtn.Name = "TabBtn"; tabBtn.Size = UDim2.new(0, 160, 0, 45); tabBtn.Position = UDim2.new(0, 15, 0, 50 + (tabCount - 1) * 50)
-    tabBtn.BackgroundColor3 = shadeColor; tabBtn.Text = name; tabBtn.TextColor3 = Color3.new(1,1,1); tabBtn.Font = globalFont; tabBtn.TextSize = TAB_SIZE; tabBtn.Parent = mainFrame
+    tabBtn.Name = "TabBtn" 
+    tabBtn.Size = UDim2.new(0, 160, 0, 45)
+    tabBtn.Position = UDim2.new(0, 15, 0, 50 + (tabCount - 1) * 50)
+    tabBtn.BackgroundColor3 = buttonColor 
+    tabBtn.Text = name
+    tabBtn.TextColor3 = Color3.new(1,1,1)
+    tabBtn.Font = globalFont
+    tabBtn.TextSize = TAB_SIZE
+    tabBtn.Parent = mainFrame
     Instance.new("UICorner", tabBtn).CornerRadius = UDim.new(0, 8)
+    ApplyButtonStroke(tabBtn)
+    ApplyButtonInteraction(tabBtn)
 
     local page = Instance.new("ScrollingFrame")
     page.Name = name .. "_Page"; page.Size = UDim2.new(0, 780, 0, 670); page.Position = UDim2.new(0, 195, 0, 55)
@@ -351,20 +404,34 @@ function _G.XeNOX:CreateTab(name)
     local tabObj = {}
 
     function tabObj:CreateButton(text, callback)
+        local btnFrame = Instance.new("Frame")
+        btnFrame.Name = "ButtonRow"
+        btnFrame.Size = UDim2.new(1, -20, 0, 50)
+        btnFrame.BackgroundColor3 = shadeColor
+        btnFrame.BackgroundTransparency = 0.5
+        btnFrame.Parent = page
+        Instance.new("UICorner", btnFrame).CornerRadius = UDim.new(0, 8)
+
         local btn = Instance.new("TextButton")
-        btn.Name = "Button"
-        btn.Size = UDim2.new(1, -20, 0, 45)
-        btn.BackgroundColor3 = shadeColor
+        btn.Name = "CustomButton"
+        btn.Size = UDim2.new(1, -16, 1, -16) 
+        btn.Position = UDim2.new(0, 8, 0, 8) 
+        btn.BackgroundColor3 = buttonColor
         btn.Text = text
-        btn.TextColor3 = Color3.new(1, 1, 1)
+        btn.TextColor3 = Color3.new(0, 0, 0)
         btn.Font = globalFont
         btn.TextSize = TAB_SIZE
-        btn.Parent = page
-        Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 8)
+        btn.Parent = btnFrame
+        Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
+        ApplyButtonStroke(btn)
+        ApplyButtonInteraction(btn)
 
         btn.MouseButton1Click:Connect(function()
-            btn.BackgroundColor3 = mainTheme
-            task.delay(0.1, function() btn.BackgroundColor3 = shadeColor end)
+            local originalColor = btn.BackgroundColor3
+            tweenService:Create(btn, TweenInfo.new(0.1), {BackgroundColor3 = Color3.new(1, 1, 1)}):Play()
+            task.delay(0.1, function()
+                tweenService:Create(btn, TweenInfo.new(0.2), {BackgroundColor3 = originalColor}):Play()
+            end)
             callback()
         end)
     end
@@ -379,15 +446,21 @@ function _G.XeNOX:CreateTab(name)
         local enabled = default
         local tgl = Instance.new("Frame")
         tgl.Size = UDim2.new(1, -20, 0, 50); tgl.BackgroundColor3 = Color3.new(0,0,0); tgl.BackgroundTransparency = 0.5; tgl.Parent = page; Instance.new("UICorner", tgl).CornerRadius = UDim.new(0, 8)
+        
         local lb = Instance.new("TextLabel")
         lb.Size = UDim2.new(1, -60, 1, 0); lb.Position = UDim2.new(0, 15, 0, 0); lb.Text = text; lb.TextColor3 = Color3.new(1,1,1); lb.Font = globalFont; lb.TextSize = LABEL_SIZE; lb.BackgroundTransparency = 1; lb.TextXAlignment = "Left"; lb.Parent = tgl
+        
         local bg = Instance.new("TextButton")
-        bg.Name = "ToggleBG"; bg.Size = UDim2.new(0, 45, 0, 25); bg.Position = UDim2.new(1, -55, 0.5, -12); bg.BackgroundColor3 = enabled and mainTheme or shadeColor; bg.Text = ""; bg.Parent = tgl; Instance.new("UICorner", bg).CornerRadius = UDim.new(1,0)
+        bg.Name = "ToggleBG"; bg.Size = UDim2.new(0, 45, 0, 25); bg.Position = UDim2.new(1, -55, 0.5, -12); bg.BackgroundColor3 = enabled and buttonColor or shadeColor; bg.Text = ""; bg.Parent = tgl; Instance.new("UICorner", bg).CornerRadius = UDim.new(1,0)
+        ApplyButtonStroke(bg)
+        ApplyButtonInteraction(bg)
+
         local ball = Instance.new("Frame")
         ball.Size = UDim2.new(0, 17, 0, 17); ball.Position = enabled and UDim2.new(1, -21, 0.5, -8) or UDim2.new(0, 4, 0.5, -8); ball.BackgroundColor3 = Color3.new(1,1,1); ball.Parent = bg; Instance.new("UICorner", ball).CornerRadius = UDim.new(1,0)
+        
         bg.MouseButton1Click:Connect(function()
             enabled = not enabled
-            tweenService:Create(bg, TweenInfo.new(0.2), {BackgroundColor3 = enabled and mainTheme or shadeColor}):Play()
+            tweenService:Create(bg, TweenInfo.new(0.2), {BackgroundColor3 = enabled and buttonColor or shadeColor}):Play()
             ball:TweenPosition(enabled and UDim2.new(1, -21, 0.5, -8) or UDim2.new(0, 4, 0.5, -8), "Out", "Quad", 0.2, true)
             callback(enabled)
         end)
@@ -405,12 +478,14 @@ function _G.XeNOX:CreateTab(name)
         
         local btn = Instance.new("TextButton")
         btn.Name = "BindBtn"; btn.Size = UDim2.new(0, 120, 0, 30); btn.Position = UDim2.new(1, -135, 0.5, -15); btn.BackgroundColor3 = shadeColor; btn.Text = currentKey.Name; btn.TextColor3 = Color3.new(1,1,1); btn.Font = globalFont; btn.TextSize = TAB_SIZE; btn.Parent = kbFrame; Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
-        
+        ApplyButtonStroke(btn)
+        ApplyButtonInteraction(btn)
+
         btn.MouseButton1Click:Connect(function()
             if listening then return end
             listening = true
             btn.Text = "..."
-            btn.TextColor3 = mainTheme
+            btn.TextColor3 = buttonColor
             
             local connection
             connection = uis.InputBegan:Connect(function(input)
@@ -437,7 +512,10 @@ function _G.XeNOX:CreateTab(name)
         local fonts = {Enum.Font.SourceSansBold, Enum.Font.Roboto, Enum.Font.GothamBold, Enum.Font.Arcade, Enum.Font.Code, Enum.Font.SciFi}
         for _, f in pairs(fonts) do
             local b = Instance.new("TextButton")
-            b.Size = UDim2.new(0, 100, 0, 40); b.Text = f.Name; b.Font = f; b.BackgroundColor3 = shadeColor; b.TextColor3 = Color3.new(1,1,1); b.Parent = container; Instance.new("UICorner", b).CornerRadius = UDim.new(0, 8)
+            b.Name = "ActionBtn"
+            b.Size = UDim2.new(0, 100, 0, 40); b.Text = f.Name; b.Font = f; b.BackgroundColor3 = buttonColor; b.TextColor3 = Color3.new(0,0,0); b.Parent = container; Instance.new("UICorner", b).CornerRadius = UDim.new(0, 8)
+            ApplyButtonStroke(b)
+            ApplyButtonInteraction(b)
             b.MouseButton1Click:Connect(function() callback(f) end)
         end
     end
@@ -448,6 +526,7 @@ function _G.XeNOX:CreateTab(name)
         cpRow.Size = UDim2.new(1, -20, 0, 45)
         cpRow.BackgroundColor3 = shadeColor
         cpRow.Parent = page
+
         Instance.new("UICorner", cpRow).CornerRadius = UDim.new(0, 8)
         
         local lb = Instance.new("TextLabel")
@@ -469,11 +548,8 @@ function _G.XeNOX:CreateTab(name)
         previewBtn.Text = ""
         previewBtn.Parent = cpRow
         Instance.new("UICorner", previewBtn).CornerRadius = UDim.new(0, 6)
-        
-        local previewStroke = Instance.new("UIStroke")
-        previewStroke.Color = Color3.new(0, 0, 0)
-        previewStroke.Thickness = 2
-        previewStroke.Parent = previewBtn
+        ApplyButtonStroke(previewBtn)
+        ApplyButtonInteraction(previewBtn)
 
         local popup = Instance.new("Frame")
         popup.Size = UDim2.new(0, 200, 0, 200)
@@ -529,7 +605,6 @@ function _G.XeNOX:CreateTab(name)
             ColorSequenceKeypoint.new(1.000, Color3.fromRGB(255, 0, 0))
         })
         hueGradient.Parent = hue
-        -- --- END OF GRADIENT CODE ---
         
         local cursorHue = Instance.new("Frame")
         cursorHue.Size = UDim2.new(1, 4, 0, 3)
@@ -631,8 +706,12 @@ function _G.XeNOX:CreateTab(name)
         container.Size = UDim2.new(1, -20, 0, 340); container.BackgroundColor3 = Color3.new(0,0,0); container.BackgroundTransparency = 0.5; container.Parent = page; Instance.new("UICorner", container).CornerRadius = UDim.new(0, 8)
         local status = Instance.new("TextLabel"); status.Size = UDim2.new(1, 0, 0, 20); status.Position = UDim2.new(0, 0, 1, -25); status.BackgroundTransparency = 1; status.Text = "Status: Idle"; status.TextColor3 = Color3.new(0.7,0.7,0.7); status.Font = globalFont; status.TextSize = 14; status.Parent = container
         local input = Instance.new("TextBox"); input.Size = UDim2.new(0.6, 0, 0, 40); input.Position = UDim2.new(0, 10, 0, 10); input.PlaceholderText = "New Config Name..."; input.BackgroundColor3 = Color3.fromRGB(30,30,30); input.TextColor3 = Color3.new(1,1,1); input.Font = globalFont; input.TextSize = 20; input.Parent = container; Instance.new("UICorner", input).CornerRadius = UDim.new(0, 2)
-        local save = Instance.new("TextButton"); save.Size = UDim2.new(0.35, -5, 0, 40); save.Position = UDim2.new(0.6, 15, 0, 10); save.Text = "CREATE"; save.BackgroundColor3 = shadeColor; save.TextColor3 = Color3.new(1,1,1); save.Font = globalFont; save.TextSize = 20; save.Parent = container; Instance.new("UICorner", save).CornerRadius = UDim.new(0, 2)
+        local save = Instance.new("TextButton"); save.Name = "ActionBtn"; save.Size = UDim2.new(0.35, -5, 0, 40); save.Position = UDim2.new(0.6, 15, 0, 10); save.Text = "CREATE"; save.BackgroundColor3 = buttonColor; save.TextColor3 = Color3.new(0,0,0); save.Font = globalFont; save.TextSize = 20; save.Parent = container; Instance.new("UICorner", save).CornerRadius = UDim.new(0, 2)
+        ApplyButtonStroke(save)
+        ApplyButtonInteraction(save)
+
         local list = Instance.new("ScrollingFrame"); list.Size = UDim2.new(1, -20, 0, 130); list.Position = UDim2.new(0, 10, 0, 60); list.BackgroundTransparency = 0.8; list.BackgroundColor3 = Color3.new(0,0,0); list.ScrollBarThickness = 4; list.Parent = container; Instance.new("UIListLayout", list)
+        
         local function refreshList()
             for _, v in pairs(list:GetChildren()) do if v:IsA("TextButton") then v:Destroy() end end
             pcall(function()
@@ -640,15 +719,19 @@ function _G.XeNOX:CreateTab(name)
                     local files = listfiles(folderName)
                     for _, file in pairs(files) do
                         local name = file:gsub(folderName.."/", ""):gsub(".json", ""):gsub(folderName.."\\", "")
-                        local b = Instance.new("TextButton"); b.Name = "ConfigBtn"; b.Size = UDim2.new(1, 0, 0, 35); b.Text = name; b.BackgroundColor3 = shadeColor; b.TextColor3 = Color3.new(1,1,1); b.Font = globalFont; b.Parent = list; Instance.new("UICorner", b).CornerRadius = UDim.new(0, 8)
-                        b.MouseButton1Click:Connect(function() selectedConfig = name; for _, x in pairs(list:GetChildren()) do if x:IsA("TextButton") then x.BackgroundColor3 = shadeColor end end; b.BackgroundColor3 = Color3.fromRGB(200, 0, 0); status.Text = "Selected: " .. name end)
+                        local b = Instance.new("TextButton"); b.Name = "ConfigBtn"; b.Size = UDim2.new(1, 0, 0, 35); b.Text = name; b.BackgroundColor3 = buttonColor; b.TextColor3 = Color3.new(0,0,0); b.Font = globalFont; b.Parent = list; Instance.new("UICorner", b).CornerRadius = UDim.new(0, 8)
+                        ApplyButtonStroke(b)
+                        ApplyButtonInteraction(b)
+                        b.MouseButton1Click:Connect(function() selectedConfig = name; for _, x in pairs(list:GetChildren()) do if x:IsA("TextButton") then x.BackgroundColor3 = buttonColor end end; b.BackgroundColor3 = Color3.fromRGB(200, 200, 200); status.Text = "Selected: " .. name end)
                     end
                 end
             end)
         end
-        local actions = { Load = {Pos = UDim2.new(0, 10, 0, 210), Text = "LOAD"}, Update = {Pos = UDim2.new(0.34, 10, 0, 210), Text = "UPDATE"}, Delete = {Pos = UDim2.new(0.68, 10, 0, 210), Text = "DELETE", Color = Color3.fromRGB(150, 0, 0)} }
+        local actions = { Load = {Pos = UDim2.new(0, 10, 0, 210), Text = "LOAD"}, Update = {Pos = UDim2.new(0.34, 10, 0, 210), Text = "UPDATE"}, Delete = {Pos = UDim2.new(0.68, 10, 0, 210), Text = "DELETE"} }
         for i, info in pairs(actions) do
-            local btn = Instance.new("TextButton"); btn.Size = UDim2.new(0.3, 0, 0, 45); btn.Position = info.Pos; btn.Text = info.Text; btn.BackgroundColor3 = info.Color or shadeColor; btn.TextColor3 = Color3.new(1,1,1); btn.Font = globalFont; btn.Parent = container; Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 8)
+            local btn = Instance.new("TextButton"); btn.Name = "ActionBtn"; btn.Size = UDim2.new(0.3, 0, 0, 45); btn.Position = info.Pos; btn.Text = info.Text; btn.BackgroundColor3 = buttonColor; btn.TextColor3 = Color3.new(0,0,0); btn.Font = globalFont; btn.Parent = container; Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 8)
+            ApplyButtonStroke(btn)
+            ApplyButtonInteraction(btn)
             btn.MouseButton1Click:Connect(function()
                 if selectedConfig == "" then 
                     status.Text = "Error: Select a config first!" 
@@ -659,6 +742,8 @@ function _G.XeNOX:CreateTab(name)
                 if i == "Load" and isfile(path) then
                     local data = HttpService:JSONDecode(readfile(path))
                     UpdateUITheme(Color3.new(unpack(data.Theme))); UpdateShadeTheme(Color3.new(unpack(data.Shade))); UpdateOutlineTheme(Color3.new(unpack(data.Outline))); UpdateGlobalFont(Enum.Font[data.Font])
+                    if data.Button then UpdateButtonTheme(Color3.new(unpack(data.Button))) end
+                    if data.ButtonOutline then UpdateButtonOutlineTheme(Color3.new(unpack(data.ButtonOutline))) end
                     starsEnabled = data.States.Rain; trailsEnabled = data.States.Trail; blobsEnabled = data.States.Blob; matrixEnabled = data.States.Matrix; hexEnabled = data.States.Hex; glitchEnabled = data.States.Glitch
                     rainCol = Color3.new(unpack(data.Colors.Rain)); trailCol = Color3.new(unpack(data.Colors.Trail)); blobCol = Color3.new(unpack(data.Colors.Blob)); matrixCol = Color3.new(unpack(data.Colors.Matrix)); hexCol = Color3.new(unpack(data.Colors.Hex)); glitchCol = Color3.new(unpack(data.Colors.Glitch))
                     if data.Keybind then menuKey = Enum.KeyCode[data.Keybind] end
@@ -692,7 +777,7 @@ end
 local m = _G.XeNOX:CreateTab("Main")
 m:CreateLabel("Welcome to XeNOX Library")
 m:CreateButton("Example Button", function() 
-    _G.XeNOX:Notify("Test", "example button clicked successfully", 3)
+    _G.XeNOX:Notify("Test", "Example button clicked successfully", 3)
 end)
 
 local s = _G.XeNOX:CreateTab("Settings")
@@ -715,9 +800,26 @@ s:CreateLabel("APPEARANCE")
 s:CreateKeybind("Menu Toggle Key", menuKey, function(newKey) menuKey = newKey end)
 s:CreateFontPicker("Global Font", function(f) UpdateGlobalFont(f) end)
 s:CreateColorPicker("Main Theme", mainTheme, function(c) UpdateUITheme(c) end)
-s:CreateColorPicker("Outline Color", outlineColor, function(c) UpdateOutlineTheme(c) end)
+s:CreateColorPicker("UI Outline Color", outlineColor, function(c) UpdateOutlineTheme(c) end)
 s:CreateColorPicker("Shade Color", shadeColor, function(c) UpdateShadeTheme(c) end)
+s:CreateColorPicker("Button Color", buttonColor, function(c) UpdateButtonTheme(c) end)
+s:CreateColorPicker("Button Outline Color", buttonOutlineColor, function(c) UpdateButtonOutlineTheme(c) end)
 
+local menuOpen = true
 uis.InputBegan:Connect(function(input, gpe)
-    if not gpe and input.KeyCode == menuKey then mainFrame.Visible = not mainFrame.Visible end
+    if not gpe and input.KeyCode == menuKey then 
+        menuOpen = not menuOpen 
+        if menuOpen then
+            mainFrame.Visible = true
+            uiScale.Scale = 0.8
+            tweenService:Create(uiScale, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
+            tweenService:Create(mainFrame, TweenInfo.new(0.3), {BackgroundTransparency = 0.4}):Play()
+        else
+            local closeTw = tweenService:Create(uiScale, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {Scale = 0.8})
+            tweenService:Create(mainFrame, TweenInfo.new(0.2), {BackgroundTransparency = 1}):Play()
+            closeTw:Play()
+            closeTw.Completed:Wait()
+            if not menuOpen then mainFrame.Visible = false end
+        end
+    end
 end)
