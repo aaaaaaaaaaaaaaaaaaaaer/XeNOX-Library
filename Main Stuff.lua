@@ -1,5 +1,6 @@
 local player = game.Players.LocalPlayer
 local pGui = player:WaitForChild("PlayerGui")
+local plrMouse = player:GetMouse()
 local tweenService = game:GetService("TweenService")
 local uis = game:GetService("UserInputService")
 local runService = game:GetService("RunService")
@@ -247,7 +248,82 @@ closeBtn.MouseButton1Click:Connect(function()
     mainFrame:TweenSize(isMin and UDim2.new(0, 1000, 0, 50) or UDim2.new(0, 1000, 0, 750), "Out", "Quad", 0.3, true)
 end)
 
+
+-- [[ NOTIFICATION SYSTEM ]] --
+local notifContainer = Instance.new("Frame")
+notifContainer.Name = "NotifContainer"
+notifContainer.Size = UDim2.new(0, 300, 1, -40)
+notifContainer.Position = UDim2.new(1, -320, 0, 20)
+notifContainer.BackgroundTransparency = 1
+notifContainer.ZIndex = 100
+notifContainer.Parent = screenGui
+
+local notifLayout = Instance.new("UIListLayout")
+notifLayout.VerticalAlignment = Enum.VerticalAlignment.Bottom
+notifLayout.Padding = UDim.new(0, 10)
+notifLayout.Parent = notifContainer
+
 _G.XeNOX = {}
+
+function _G.XeNOX:Notify(titleText, descText, duration)
+    duration = duration or 3
+    
+    local notif = Instance.new("Frame")
+    notif.Size = UDim2.new(1, 0, 0, 65)
+    notif.BackgroundColor3 = shadeColor
+    notif.BackgroundTransparency = 1 
+    notif.Position = UDim2.new(1, 50, 0, 0)
+    notif.ZIndex = 105
+    Instance.new("UICorner", notif).CornerRadius = UDim.new(0, 8)
+
+    local stroke = Instance.new("UIStroke", notif)
+    stroke.Color = outlineColor
+    stroke.Thickness = 2
+    stroke.Transparency = 1
+
+    local title = Instance.new("TextLabel", notif)
+    title.Size = UDim2.new(1, -20, 0, 25)
+    title.Position = UDim2.new(0, 10, 0, 5)
+    title.BackgroundTransparency = 1
+    title.Text = titleText
+    title.TextColor3 = mainTheme
+    title.TextXAlignment = Enum.TextXAlignment.Left
+    title.Font = globalFont
+    title.TextSize = 18
+    title.TextTransparency = 1
+    title.ZIndex = 106
+
+    local desc = Instance.new("TextLabel", notif)
+    desc.Size = UDim2.new(1, -20, 0, 25)
+    desc.Position = UDim2.new(0, 10, 0, 30)
+    desc.BackgroundTransparency = 1
+    desc.Text = descText
+    desc.TextColor3 = Color3.new(1, 1, 1)
+    desc.TextXAlignment = Enum.TextXAlignment.Left
+    desc.Font = globalFont
+    desc.TextSize = 14
+    desc.TextTransparency = 1
+    desc.ZIndex = 106
+
+    notif.Parent = notifContainer
+
+    local tIn = tweenService:Create(notif, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Position = UDim2.new(0, 0, 0, 0), BackgroundTransparency = 0.1})
+    tweenService:Create(stroke, TweenInfo.new(0.4), {Transparency = 0}):Play()
+    tweenService:Create(title, TweenInfo.new(0.4), {TextTransparency = 0}):Play()
+    tweenService:Create(desc, TweenInfo.new(0.4), {TextTransparency = 0}):Play()
+    tIn:Play()
+
+    task.delay(duration, function()
+        local tOut = tweenService:Create(notif, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {Position = UDim2.new(1, 50, 0, 0), BackgroundTransparency = 1})
+        tweenService:Create(stroke, TweenInfo.new(0.4), {Transparency = 1}):Play()
+        tweenService:Create(title, TweenInfo.new(0.4), {TextTransparency = 1}):Play()
+        tweenService:Create(desc, TweenInfo.new(0.4), {TextTransparency = 1}):Play()
+        tOut:Play()
+        tOut.Completed:Wait()
+        notif:Destroy()
+    end)
+end
+
 local tabs = {}
 local tabCount = 0
 
@@ -415,10 +491,12 @@ function _G.XeNOX:CreateTab(name)
         popupStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
         popupStroke.Parent = popup
 
-        local box = Instance.new("ImageLabel")
+        local box = Instance.new("ImageButton")
         box.Size = UDim2.new(0, 150, 0, 150)
         box.Position = UDim2.new(0, 10, 0, 10)
         box.Image = "rbxassetid://4155801252"
+        box.ImageColor3 = Color3.new(1, 1, 1) -- THIS fixes the gradient tint bug
+        box.AutoButtonColor = false
         box.ZIndex = 101
         box.Parent = popup
         
@@ -432,10 +510,11 @@ function _G.XeNOX:CreateTab(name)
         cursorSVStroke.Color = Color3.new(0, 0, 0)
         cursorSVStroke.Thickness = 1
 
-        local hue = Instance.new("ImageLabel")
+        local hue = Instance.new("ImageButton")
         hue.Size = UDim2.new(0, 20, 0, 150)
         hue.Position = UDim2.new(0, 170, 0, 10)
         hue.Image = "rbxassetid://3641079629"
+        hue.AutoButtonColor = false
         hue.ZIndex = 101
         hue.Parent = popup
         
@@ -464,14 +543,15 @@ function _G.XeNOX:CreateTab(name)
         
         local function upd()
             local c = Color3.fromHSV(curH, curS, curV)
-            box.ImageColor3 = Color3.fromHSV(curH, 1, 1)
+            -- We set BackgroundColor3 to the Hue, not the ImageColor3!
+            box.BackgroundColor3 = Color3.fromHSV(curH, 1, 1)
             previewBtn.BackgroundColor3 = c
             
             cursorSV.Position = UDim2.new(curS, -3, 1 - curV, -3)
-            cursorHue.Position = UDim2.new(0, -2, curH, -1) -- Fixed: Removed the inverted "1 - curH" math
+            cursorHue.Position = UDim2.new(0, -2, curH, -1) 
             
             local r, g, b = math.floor(c.R * 255), math.floor(c.G * 255), math.floor(c.B * 255)
-            textDisplay.Text = string.format("#%02X%02X%02X     %d, %d, %d", r, g, b, r, g, b)
+            textDisplay.Text = string.format("#%02X%02X%02X   %d, %d, %d", r, g, b, r, g, b)
             
             callback(c)
         end
@@ -485,51 +565,43 @@ function _G.XeNOX:CreateTab(name)
             end
         end)
 
-        local dH, dSV = false, false
+        local draggingHue, draggingSV = false, false
+        local dragLoop
 
         local function updateHSV()
-            -- Fixed: Using GetMouseLocation() to entirely bypass Roblox's 36-pixel GUI Inset bug
-            local mLoc = uis:GetMouseLocation()
-            local mx, my = mLoc.X, mLoc.Y
-            if dH then
-                -- Fixed: Removed the "1 -" math inversion so the colors map 1:1 correctly
-                curH = math.clamp((my - hue.AbsolutePosition.Y) / hue.AbsoluteSize.Y, 0, 1)
-                upd()
-            elseif dSV then
-                curS = math.clamp((mx - box.AbsolutePosition.X) / box.AbsoluteSize.X, 0, 1)
-                curV = 1 - math.clamp((my - box.AbsolutePosition.Y) / box.AbsoluteSize.Y, 0, 1)
-                upd()
+            -- We use plrMouse to guarantee standard screen coordinates regardless of executor gui insets
+            if draggingHue then
+                curH = math.clamp((plrMouse.Y - hue.AbsolutePosition.Y) / hue.AbsoluteSize.Y, 0, 1)
+            elseif draggingSV then
+                curS = math.clamp((plrMouse.X - box.AbsolutePosition.X) / box.AbsoluteSize.X, 0, 1)
+                curV = 1 - math.clamp((plrMouse.Y - box.AbsolutePosition.Y) / box.AbsoluteSize.Y, 0, 1)
             end
+            upd()
         end
 
-        hue.InputBegan:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.MouseButton1 and popup.Visible then
-                dH = true; updateHSV()
-            end
-        end)
+        local function startDrag()
+            if dragLoop then dragLoop:Disconnect() end
+            dragLoop = runService.RenderStepped:Connect(updateHSV)
+        end
+        
+        local function stopDrag()
+            if dragLoop then dragLoop:Disconnect(); dragLoop = nil end
+        end
 
-        box.InputBegan:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.MouseButton1 and popup.Visible then
-                dSV = true; updateHSV()
-            end
-        end)
+        hue.MouseButton1Down:Connect(function() draggingHue = true; startDrag() end)
+        box.MouseButton1Down:Connect(function() draggingSV = true; startDrag() end)
 
         uis.InputEnded:Connect(function(input)
             if input.UserInputType == Enum.UserInputType.MouseButton1 then
-                dH, dSV = false, false
+                draggingHue = false
+                draggingSV = false
+                stopDrag()
             end
         end)
 
-        uis.InputChanged:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.MouseMovement and popup.Visible then
-                if dH or dSV then updateHSV() end
-            end
-        end)
-        
         uis.InputBegan:Connect(function(input)
             if input.UserInputType == Enum.UserInputType.MouseButton1 and popup.Visible then
-                local mLoc = uis:GetMouseLocation()
-                local mx, my = mLoc.X, mLoc.Y
+                local mx, my = plrMouse.X, plrMouse.Y
                 local px, py = popup.AbsolutePosition.X, popup.AbsolutePosition.Y
                 local bx, by = previewBtn.AbsolutePosition.X, previewBtn.AbsolutePosition.Y
                 
@@ -567,7 +639,11 @@ function _G.XeNOX:CreateTab(name)
         for i, info in pairs(actions) do
             local btn = Instance.new("TextButton"); btn.Size = UDim2.new(0.3, 0, 0, 45); btn.Position = info.Pos; btn.Text = info.Text; btn.BackgroundColor3 = info.Color or shadeColor; btn.TextColor3 = Color3.new(1,1,1); btn.Font = globalFont; btn.Parent = container; Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 8)
             btn.MouseButton1Click:Connect(function()
-                if selectedConfig == "" then status.Text = "Error: Select a config first!" return end
+                if selectedConfig == "" then 
+                    status.Text = "Error: Select a config first!" 
+                    _G.XeNOX:Notify("Error", "Please select a config to interact with.", 3)
+                    return 
+                end
                 local path = GetPath(selectedConfig)
                 if i == "Load" and isfile(path) then
                     local data = HttpService:JSONDecode(readfile(path))
@@ -576,11 +652,26 @@ function _G.XeNOX:CreateTab(name)
                     rainCol = Color3.new(unpack(data.Colors.Rain)); trailCol = Color3.new(unpack(data.Colors.Trail)); blobCol = Color3.new(unpack(data.Colors.Blob)); matrixCol = Color3.new(unpack(data.Colors.Matrix)); hexCol = Color3.new(unpack(data.Colors.Hex)); glitchCol = Color3.new(unpack(data.Colors.Glitch))
                     if data.Keybind then menuKey = Enum.KeyCode[data.Keybind] end
                     status.Text = "Status: Loaded " .. selectedConfig
-                elseif i == "Update" then SaveSettings(selectedConfig); status.Text = "Status: Updated " .. selectedConfig
-                elseif i == "Delete" then if isfile(path) then delfile(path) end; status.Text = "Status: Deleted " .. selectedConfig; selectedConfig = ""; refreshList() end
+                    _G.XeNOX:Notify("Loaded", "Successfully loaded " .. selectedConfig, 3)
+                elseif i == "Update" then 
+                    SaveSettings(selectedConfig); status.Text = "Status: Updated " .. selectedConfig 
+                    _G.XeNOX:Notify("Updated", "Successfully updated " .. selectedConfig, 3)
+                elseif i == "Delete" then 
+                    if isfile(path) then delfile(path) end; status.Text = "Status: Deleted " .. selectedConfig; selectedConfig = ""; refreshList() 
+                    _G.XeNOX:Notify("Deleted", "Deleted config successfully.", 3)
+                end
             end)
         end
-        save.MouseButton1Click:Connect(function() if input.Text ~= "" then SaveSettings(input.Text); input.Text = ""; refreshList() end end)
+        save.MouseButton1Click:Connect(function() 
+            if input.Text ~= "" then 
+                SaveSettings(input.Text); 
+                _G.XeNOX:Notify("Created", "Successfully created config: " .. input.Text, 3)
+                input.Text = ""; 
+                refreshList() 
+            else
+                _G.XeNOX:Notify("Error", "Config name cannot be empty.", 3)
+            end 
+        end)
         refreshList()
     end
     
@@ -589,7 +680,9 @@ end
 
 local m = _G.XeNOX:CreateTab("Main")
 m:CreateLabel("Welcome to XeNOX Library")
-m:CreateButton("Example Button", function() print("Button Pressed") end)
+m:CreateButton("Example Button", function() 
+    _G.XeNOX:Notify("Test", "example button clicked successfully", 3)
+end)
 
 local s = _G.XeNOX:CreateTab("Settings")
 s:CreateConfigManager()
