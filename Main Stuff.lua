@@ -1,5 +1,4 @@
 local player = game.Players.LocalPlayer
-local mouse = player:GetMouse()
 local pGui = player:WaitForChild("PlayerGui")
 local tweenService = game:GetService("TweenService")
 local uis = game:GetService("UserInputService")
@@ -18,7 +17,6 @@ local blobsEnabled = false
 local matrixEnabled = false
 local hexEnabled = false
 local glitchEnabled = false 
---rip plasma btw cuz removed cuz problems
 
 local rainCol = Color3.fromRGB(255, 255, 255)
 local trailCol = Color3.fromRGB(0, 255, 255)
@@ -34,6 +32,7 @@ local LABEL_SIZE = 18
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = HttpService:GenerateGUID(false) 
 screenGui.ResetOnSpawn = false
+screenGui.IgnoreGuiInset = true 
 
 if gethui then
     screenGui.Parent = gethui()
@@ -55,27 +54,6 @@ mainFrame.ClipsDescendants = true
 mainFrame.Parent = screenGui
 Instance.new("UICorner", mainFrame).CornerRadius = UDim.new(0, 8)
 
-local dragging, dragInput, dragStart, startPos
-mainFrame.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        dragging = true
-        dragStart = input.Position
-        startPos = mainFrame.Position
-    end
-end)
-mainFrame.InputChanged:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseMovement then dragInput = input end
-end)
-uis.InputChanged:Connect(function(input)
-    if input == dragInput and dragging then
-        local delta = input.Position - dragStart
-        mainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-    end
-end)
-uis.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end
-end)
-
 local uiStroke = Instance.new("UIStroke")
 uiStroke.Thickness = 2
 uiStroke.Color = outlineColor
@@ -91,7 +69,29 @@ title.TextColor3 = mainTheme
 title.TextSize = TITLE_SIZE
 title.Font = Enum.Font.LuckiestGuy
 title.ZIndex = 5
+title.Active = true
 title.Parent = mainFrame
+
+local dragging, dragInput, dragStart, startPos
+title.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = true
+        dragStart = input.Position
+        startPos = mainFrame.Position
+    end
+end)
+title.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement then dragInput = input end
+end)
+uis.InputChanged:Connect(function(input)
+    if input == dragInput and dragging then
+        local delta = input.Position - dragStart
+        mainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+end)
+uis.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end
+end)
 
 local titleGlow = Instance.new("UIStroke")
 titleGlow.Thickness = 0
@@ -134,7 +134,7 @@ end
 local function UpdateShadeTheme(newShade)
     shadeColor = newShade
     for _, v in pairs(mainFrame:GetDescendants()) do
-        if v.Name == "TabBtn" or v.Name == "LabelElement" or v.Name == "ConfigBtn" or v.Name == "ToggleBG" or v.Name == "Button" or v.Name == "BindBtn" then
+        if v.Name == "TabBtn" or v.Name == "LabelElement" or v.Name == "ConfigBtn" or v.Name == "ToggleBG" or v.Name == "Button" or v.Name == "BindBtn" or v.Name == "ColorRow" then
             v.BackgroundColor3 = shadeColor
         end
     end
@@ -168,6 +168,8 @@ task.spawn(function()
         if not screenGui.Parent then break end
         if not mainFrame.Visible then continue end
 
+        local mLoc = uis:GetMouseLocation()
+
         if starsEnabled then
             local star = Instance.new("Frame")
             star.Size = UDim2.new(0, 1, 0, math.random(30, 80)); star.Position = UDim2.new(math.random(0, 100)/100, 0, -0.2, 0)
@@ -178,7 +180,7 @@ task.spawn(function()
 
         if trailsEnabled then
             local trail = Instance.new("Frame")
-            trail.Size = UDim2.new(0, 10, 0, 10); trail.Position = UDim2.new(0, mouse.X - mainFrame.AbsolutePosition.X - 5, 0, mouse.Y - mainFrame.AbsolutePosition.Y - 5)
+            trail.Size = UDim2.new(0, 10, 0, 10); trail.Position = UDim2.new(0, mLoc.X - mainFrame.AbsolutePosition.X - 5, 0, mLoc.Y - mainFrame.AbsolutePosition.Y - 5)
             trail.BackgroundColor3 = trailCol; trail.ZIndex = 2; trail.Parent = mainFrame
             Instance.new("UICorner", trail).CornerRadius = UDim.new(1, 0)
             tweenService:Create(trail, TweenInfo.new(0.4), {BackgroundTransparency = 1, Size = UDim2.new(0, 0, 0, 0)}):Play()
@@ -218,7 +220,8 @@ task.spawn(function()
                 local start = tick()
                 while tick() - start < 3 do
                     if not blob or not blob.Parent or not blobsEnabled then break end
-                    local diff = (blob.AbsolutePosition + blob.AbsoluteSize/2) - Vector2.new(mouse.X, mouse.Y)
+                    local currentMouse = uis:GetMouseLocation()
+                    local diff = (blob.AbsolutePosition + blob.AbsoluteSize/2) - currentMouse
                     if diff.Magnitude < 250 then
                         local push = diff.Unit * (1 - (diff.Magnitude / 250)) * 0.18
                         blob.Position = blob.Position:Lerp(UDim2.new(blob.Position.X.Scale + push.X, 0, blob.Position.Y.Scale + push.Y, 0), 0.45)
@@ -366,24 +369,177 @@ function _G.XeNOX:CreateTab(name)
     end
 
     function tabObj:CreateColorPicker(text, defaultColor, callback)
-        local cp = Instance.new("Frame")
-        cp.Size = UDim2.new(1,-20,0,180); cp.BackgroundColor3 = Color3.new(0,0,0); cp.BackgroundTransparency = 0.3; cp.Parent = page; Instance.new("UICorner", cp).CornerRadius = UDim.new(0, 8)
+        local cpRow = Instance.new("Frame")
+        cpRow.Name = "ColorRow"
+        cpRow.Size = UDim2.new(1, -20, 0, 45)
+        cpRow.BackgroundColor3 = shadeColor
+        cpRow.Parent = page
+        Instance.new("UICorner", cpRow).CornerRadius = UDim.new(0, 8)
+        
         local lb = Instance.new("TextLabel")
-        lb.Size = UDim2.new(1,-10,0,30); lb.Position = UDim2.new(0,10,0,5); lb.Text = text; lb.TextColor3 = Color3.new(1,1,1); lb.Font = globalFont; lb.TextSize = LABEL_SIZE - 2; lb.BackgroundTransparency = 1; lb.TextXAlignment = "Left"; lb.Parent = cp
-        local box = Instance.new("ImageLabel"); box.Size = UDim2.new(0,120,0,120); box.Position = UDim2.new(0,10,0,40); box.Image = "rbxassetid://4155801252"; box.Parent = cp
-        local hue = Instance.new("ImageLabel"); hue.Size = UDim2.new(0,20,0,120); hue.Position = UDim2.new(0,140,0,40); hue.Image = "rbxassetid://3641079629"; hue.Parent = cp
-        local preview = Instance.new("Frame"); preview.Size = UDim2.new(0, 30, 0, 30); preview.Position = UDim2.new(1, -40, 0, 5); preview.BackgroundColor3 = defaultColor; preview.Parent = cp; Instance.new("UICorner", preview).CornerRadius = UDim.new(0, 8)
+        lb.Size = UDim2.new(1, -60, 1, 0)
+        lb.Position = UDim2.new(0, 15, 0, 0)
+        lb.Text = text
+        lb.TextColor3 = Color3.new(1, 1, 1)
+        lb.Font = globalFont
+        lb.TextSize = LABEL_SIZE
+        lb.BackgroundTransparency = 1
+        lb.TextXAlignment = "Left"
+        lb.Parent = cpRow
+        
+        local previewBtn = Instance.new("TextButton")
+        previewBtn.Name = "PreviewBtn"
+        previewBtn.Size = UDim2.new(0, 30, 0, 30)
+        previewBtn.Position = UDim2.new(1, -40, 0.5, -15)
+        previewBtn.BackgroundColor3 = defaultColor
+        previewBtn.Text = ""
+        previewBtn.Parent = cpRow
+        Instance.new("UICorner", previewBtn).CornerRadius = UDim.new(0, 6)
+        
+        local previewStroke = Instance.new("UIStroke")
+        previewStroke.Color = Color3.new(0, 0, 0)
+        previewStroke.Thickness = 2
+        previewStroke.Parent = previewBtn
+
+        local popup = Instance.new("Frame")
+        popup.Size = UDim2.new(0, 200, 0, 200)
+        popup.BackgroundColor3 = Color3.fromRGB(25, 25, 25) 
+        popup.ZIndex = 100
+        popup.Visible = false
+        popup.Active = true 
+        popup.Parent = mainFrame
+        Instance.new("UICorner", popup).CornerRadius = UDim.new(0, 6)
+
+        local popupStroke = Instance.new("UIStroke")
+        popupStroke.Color = outlineColor
+        popupStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+        popupStroke.Parent = popup
+
+        local box = Instance.new("ImageLabel")
+        box.Size = UDim2.new(0, 150, 0, 150)
+        box.Position = UDim2.new(0, 10, 0, 10)
+        box.Image = "rbxassetid://4155801252"
+        box.ZIndex = 101
+        box.Parent = popup
+        
+        local cursorSV = Instance.new("Frame")
+        cursorSV.Size = UDim2.new(0, 6, 0, 6)
+        cursorSV.BackgroundColor3 = Color3.new(1, 1, 1)
+        cursorSV.ZIndex = 102
+        cursorSV.Parent = box
+        Instance.new("UICorner", cursorSV).CornerRadius = UDim.new(1, 0)
+        local cursorSVStroke = Instance.new("UIStroke", cursorSV)
+        cursorSVStroke.Color = Color3.new(0, 0, 0)
+        cursorSVStroke.Thickness = 1
+
+        local hue = Instance.new("ImageLabel")
+        hue.Size = UDim2.new(0, 20, 0, 150)
+        hue.Position = UDim2.new(0, 170, 0, 10)
+        hue.Image = "rbxassetid://3641079629"
+        hue.ZIndex = 101
+        hue.Parent = popup
+        
+        local cursorHue = Instance.new("Frame")
+        cursorHue.Size = UDim2.new(1, 4, 0, 3)
+        cursorHue.Position = UDim2.new(0, -2, 0, 0)
+        cursorHue.BackgroundColor3 = Color3.new(1, 1, 1)
+        cursorHue.ZIndex = 102
+        cursorHue.Parent = hue
+        local cursorHueStroke = Instance.new("UIStroke", cursorHue)
+        cursorHueStroke.Color = Color3.new(0, 0, 0)
+        cursorHueStroke.Thickness = 1
+
+        local textDisplay = Instance.new("TextLabel")
+        textDisplay.Size = UDim2.new(1, -20, 0, 30)
+        textDisplay.Position = UDim2.new(0, 10, 0, 165)
+        textDisplay.BackgroundTransparency = 1
+        textDisplay.TextColor3 = Color3.new(0.8, 0.8, 0.8)
+        textDisplay.Font = Enum.Font.Code
+        textDisplay.TextSize = 14
+        textDisplay.TextXAlignment = Enum.TextXAlignment.Left
+        textDisplay.ZIndex = 101
+        textDisplay.Parent = popup
+
         local curH, curS, curV = defaultColor:ToHSV()
+        
         local function upd()
-            local c = Color3.fromHSV(curH, curS, curV); box.ImageColor3 = Color3.fromHSV(curH, 1, 1); preview.BackgroundColor3 = c; callback(c)
+            local c = Color3.fromHSV(curH, curS, curV)
+            box.ImageColor3 = Color3.fromHSV(curH, 1, 1)
+            previewBtn.BackgroundColor3 = c
+            
+            cursorSV.Position = UDim2.new(curS, -3, 1 - curV, -3)
+            cursorHue.Position = UDim2.new(0, -2, curH, -1) -- Fixed: Removed the inverted "1 - curH" math
+            
+            local r, g, b = math.floor(c.R * 255), math.floor(c.G * 255), math.floor(c.B * 255)
+            textDisplay.Text = string.format("#%02X%02X%02X     %d, %d, %d", r, g, b, r, g, b)
+            
+            callback(c)
         end
+        upd()
+
+        previewBtn.MouseButton1Click:Connect(function()
+            popup.Visible = not popup.Visible
+            if popup.Visible then
+                local absPos = previewBtn.AbsolutePosition - mainFrame.AbsolutePosition
+                popup.Position = UDim2.new(0, absPos.X - 180, 0, absPos.Y + 40)
+            end
+        end)
+
         local dH, dSV = false, false
-        hue.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 then dH = true end end)
-        box.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 then dSV = true end end)
-        uis.InputEnded:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 then dH, dSV = false end end)
-        runService.RenderStepped:Connect(function()
-            if dH then curH = 1 - math.clamp((mouse.Y - hue.AbsolutePosition.Y) / hue.AbsoluteSize.Y, 0, 1); upd()
-            elseif dSV then curS = math.clamp((mouse.X - box.AbsolutePosition.X) / box.AbsoluteSize.X, 0, 1); curV = 1 - math.clamp((mouse.Y - box.AbsolutePosition.Y) / box.AbsoluteSize.Y, 0, 1); upd() end
+
+        local function updateHSV()
+            -- Fixed: Using GetMouseLocation() to entirely bypass Roblox's 36-pixel GUI Inset bug
+            local mLoc = uis:GetMouseLocation()
+            local mx, my = mLoc.X, mLoc.Y
+            if dH then
+                -- Fixed: Removed the "1 -" math inversion so the colors map 1:1 correctly
+                curH = math.clamp((my - hue.AbsolutePosition.Y) / hue.AbsoluteSize.Y, 0, 1)
+                upd()
+            elseif dSV then
+                curS = math.clamp((mx - box.AbsolutePosition.X) / box.AbsoluteSize.X, 0, 1)
+                curV = 1 - math.clamp((my - box.AbsolutePosition.Y) / box.AbsoluteSize.Y, 0, 1)
+                upd()
+            end
+        end
+
+        hue.InputBegan:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 and popup.Visible then
+                dH = true; updateHSV()
+            end
+        end)
+
+        box.InputBegan:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 and popup.Visible then
+                dSV = true; updateHSV()
+            end
+        end)
+
+        uis.InputEnded:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                dH, dSV = false, false
+            end
+        end)
+
+        uis.InputChanged:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseMovement and popup.Visible then
+                if dH or dSV then updateHSV() end
+            end
+        end)
+        
+        uis.InputBegan:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 and popup.Visible then
+                local mLoc = uis:GetMouseLocation()
+                local mx, my = mLoc.X, mLoc.Y
+                local px, py = popup.AbsolutePosition.X, popup.AbsolutePosition.Y
+                local bx, by = previewBtn.AbsolutePosition.X, previewBtn.AbsolutePosition.Y
+                
+                local inPopup = (mx >= px and mx <= px + popup.AbsoluteSize.X and my >= py and my <= py + popup.AbsoluteSize.Y)
+                local inBtn = (mx >= bx and mx <= bx + previewBtn.AbsoluteSize.X and my >= by and my <= by + previewBtn.AbsoluteSize.Y)
+                
+                if not inPopup and not inBtn then
+                    popup.Visible = false
+                end
+            end
         end)
     end
 
@@ -418,7 +574,7 @@ function _G.XeNOX:CreateTab(name)
                     UpdateUITheme(Color3.new(unpack(data.Theme))); UpdateShadeTheme(Color3.new(unpack(data.Shade))); UpdateOutlineTheme(Color3.new(unpack(data.Outline))); UpdateGlobalFont(Enum.Font[data.Font])
                     starsEnabled = data.States.Rain; trailsEnabled = data.States.Trail; blobsEnabled = data.States.Blob; matrixEnabled = data.States.Matrix; hexEnabled = data.States.Hex; glitchEnabled = data.States.Glitch
                     rainCol = Color3.new(unpack(data.Colors.Rain)); trailCol = Color3.new(unpack(data.Colors.Trail)); blobCol = Color3.new(unpack(data.Colors.Blob)); matrixCol = Color3.new(unpack(data.Colors.Matrix)); hexCol = Color3.new(unpack(data.Colors.Hex)); glitchCol = Color3.new(unpack(data.Colors.Glitch))
-                    if data.Keybind then menuKey = Enum.KeyCode[data.Keybind] end -- Fallback mapping for config keybind loads
+                    if data.Keybind then menuKey = Enum.KeyCode[data.Keybind] end
                     status.Text = "Status: Loaded " .. selectedConfig
                 elseif i == "Update" then SaveSettings(selectedConfig); status.Text = "Status: Updated " .. selectedConfig
                 elseif i == "Delete" then if isfile(path) then delfile(path) end; status.Text = "Status: Deleted " .. selectedConfig; selectedConfig = ""; refreshList() end
