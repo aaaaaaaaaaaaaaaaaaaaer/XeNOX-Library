@@ -1,10 +1,8 @@
 local HttpService = game:GetService("HttpService")
 local pGui = game.Players.LocalPlayer:WaitForChild("PlayerGui")
 
--- Unique ID for this library session to prevent conflicts
 local LIB_IDENTIFIER = "XeNOX_LIB_" .. HttpService:GenerateGUID(false)
 
--- Auto-delete existing instances to ensure only one is active
 for _, obj in pairs(gethui and gethui():GetChildren() or pGui:GetChildren()) do
     if obj:FindFirstChild("IsXeNOX") then
         obj:Destroy()
@@ -16,7 +14,6 @@ screenGui.Name = LIB_IDENTIFIER
 screenGui.ResetOnSpawn = false
 screenGui.IgnoreGuiInset = true 
 
--- Add a marker to identify our own GUI later
 local marker = Instance.new("Folder", screenGui)
 marker.Name = "IsXeNOX"
 
