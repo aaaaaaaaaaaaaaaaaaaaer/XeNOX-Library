@@ -248,8 +248,6 @@ closeBtn.MouseButton1Click:Connect(function()
     mainFrame:TweenSize(isMin and UDim2.new(0, 1000, 0, 50) or UDim2.new(0, 1000, 0, 750), "Out", "Quad", 0.3, true)
 end)
 
-
--- [[ NOTIFICATION SYSTEM ]] --
 local notifContainer = Instance.new("Frame")
 notifContainer.Name = "NotifContainer"
 notifContainer.Size = UDim2.new(0, 300, 1, -40)
