@@ -823,3 +823,30 @@ uis.InputBegan:Connect(function(input, gpe)
         end
     end
 end)
+local targetParent = gethui and gethui() or pGui
+
+-- 1. Check if a previous version exists in the global environment and destroy it
+if getgenv().XeNOX_ActiveUI and typeof(getgenv().XeNOX_ActiveUI) == "Instance" then
+    pcall(function()
+        getgenv().XeNOX_ActiveUI:Destroy()
+    end)
+end
+
+-- 2. Create the new UI with a completely random, anti-cheat safe name
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = HttpService:GenerateGUID(false) 
+screenGui.ResetOnSpawn = false
+screenGui.IgnoreGuiInset = true 
+
+-- 3. Save this new UI to the global environment so the NEXT execution can find it
+getgenv().XeNOX_ActiveUI = screenGui
+
+-- 4. Parent the UI securely
+if gethui then
+    screenGui.Parent = targetParent
+elseif syn and syn.protect_gui then
+    syn.protect_gui(screenGui)
+    screenGui.Parent = pGui
+else
+    screenGui.Parent = pGui
+end
