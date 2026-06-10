@@ -32,9 +32,6 @@ local TITLE_SIZE = 22
 local TAB_SIZE = 16
 local LABEL_SIZE = 18
 
--- =============================================================================
--- PERFORMANCE CACHE & OBJECT POOLING SYSTEM
--- =============================================================================
 local uiCache = {
     Shade = {},
     Button = {},
@@ -66,9 +63,6 @@ local function ReturnToPool(effectType, obj)
     table.insert(pool[effectType], obj)
 end
 
--- =============================================================================
--- THEME & INITIALIZATION SETUP
--- =============================================================================
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = HttpService:GenerateGUID(false) 
 screenGui.ResetOnSpawn = false
@@ -135,7 +129,6 @@ title.ZIndex = 5
 title.Active = true
 title.Parent = mainFrame
 
--- OPTIMIZED DRAGGING ENGINE (Removes input leaks dynamically)
 local dragging, dragInput, dragStart, startPos
 local dragConnection
 
@@ -185,7 +178,6 @@ task.spawn(function()
     end
 end)
 
--- HIGH PERFORMANCE THEME SYSTEMS (Iterates cached structures rather than running GetDescendants)
 local function UpdateGlobalFont(newFont)
     globalFont = newFont
     local valid = {}
@@ -269,9 +261,6 @@ local function SaveSettings(name)
     pcall(function() writefile(GetPath(name), HttpService:JSONEncode(data)) end)
 end
 
--- =============================================================================
--- REFACTORED BACKGROUND RENDERING LOOP (Frame-rate linked with object pools)
--- =============================================================================
 task.spawn(function()
     while task.wait(0.03) do 
         if not screenGui.Parent then break end
@@ -404,7 +393,6 @@ local activeNotifs = {}
 function _G.XeNOX:Notify(titleText, descText, duration)
     duration = duration or 3
     
-    -- Spam prevention: Limit maximum active visual notifications to 4
     if #activeNotifs >= 4 then
         local oldest = table.remove(activeNotifs, 1)
         if oldest and oldest.Parent then oldest:Destroy() end
@@ -879,7 +867,6 @@ function _G.XeNOX:CreateTab(name)
                 end
                 local path = GetPath(selectedConfig)
                 
-                -- HARDENED CONFIG HANDLING (Protects logic against manually corrupted json profiles)
                 if i == "Load" and isfile(path) then
                     local success, data = pcall(function() return HttpService:JSONDecode(readfile(path)) end)
                     if not success or not data then
@@ -921,9 +908,6 @@ function _G.XeNOX:CreateTab(name)
     return tabObj
 end
 
--- =============================================================================
--- INTERFACE MOUNTING
--- =============================================================================
 local m = _G.XeNOX:CreateTab("Main")
 m:CreateLabel("Welcome to XeNOX Library")
 m:CreateButton("Example Button", function() 
