@@ -375,7 +375,7 @@ closeBtn.MouseButton1Click:Connect(function()
 end)
 
 local notifContainer = Instance.new("Frame")
-notifContainer.Name = "NotifContainer"
+notifContainer.Name = HttpService:GenerateGUID(false)
 notifContainer.Size = UDim2.new(0, 300, 1, -40)
 notifContainer.Position = UDim2.new(1, -320, 0, 20)
 notifContainer.BackgroundTransparency = 1
@@ -387,10 +387,10 @@ notifLayout.VerticalAlignment = Enum.VerticalAlignment.Bottom
 notifLayout.Padding = UDim.new(0, 10)
 notifLayout.Parent = notifContainer
 
-_G.XeNOX = {}
+local XeNOX = {}
 local activeNotifs = {}
 
-function _G.XeNOX:Notify(titleText, descText, duration)
+function XeNOX:Notify(titleText, descText, duration)
     duration = duration or 3
     
     if #activeNotifs >= 4 then
@@ -460,7 +460,7 @@ end
 local tabs = {}
 local tabCount = 0
 
-function _G.XeNOX:CreateTab(name)
+function XeNOX:CreateTab(name)
     tabCount = tabCount + 1
     local tabID = tabCount
     
@@ -862,7 +862,7 @@ function _G.XeNOX:CreateTab(name)
             btn.MouseButton1Click:Connect(function()
                 if selectedConfig == "" then 
                     status.Text = "Error: Select a config first!" 
-                    _G.XeNOX:Notify("Error", "Please select a config to interact with.", 3)
+                    XeNOX:Notify("Error", "Please select a config to interact with.", 3)
                     return 
                 end
                 local path = GetPath(selectedConfig)
@@ -871,7 +871,7 @@ function _G.XeNOX:CreateTab(name)
                     local success, data = pcall(function() return HttpService:JSONDecode(readfile(path)) end)
                     if not success or not data then
                         status.Text = "Error: Config corrupted!"
-                        _G.XeNOX:Notify("Error", "Config profile structure is corrupted or unreadable.", 3)
+                        XeNOX:Notify("Error", "Config profile structure is corrupted or unreadable.", 3)
                         return
                     end
                     
@@ -882,24 +882,24 @@ function _G.XeNOX:CreateTab(name)
                     rainCol = Color3.new(unpack(data.Colors.Rain)); trailCol = Color3.new(unpack(data.Colors.Trail)); blobCol = Color3.new(unpack(data.Colors.Blob)); matrixCol = Color3.new(unpack(data.Colors.Matrix)); hexCol = Color3.new(unpack(data.Colors.Hex)); glitchCol = Color3.new(unpack(data.Colors.Glitch))
                     if data.Keybind then menuKey = Enum.KeyCode[data.Keybind] end
                     status.Text = "Status: Loaded " .. selectedConfig
-                    _G.XeNOX:Notify("Loaded", "Successfully loaded " .. selectedConfig, 3)
+                    XeNOX:Notify("Loaded", "Successfully loaded " .. selectedConfig, 3)
                 elseif i == "Update" then 
                     SaveSettings(selectedConfig); status.Text = "Status: Updated " .. selectedConfig 
-                    _G.XeNOX:Notify("Updated", "Successfully updated " .. selectedConfig, 3)
+                    XeNOX:Notify("Updated", "Successfully updated " .. selectedConfig, 3)
                 elseif i == "Delete" then 
                     if isfile(path) then pcall(delfile, path) end; status.Text = "Status: Deleted " .. selectedConfig; selectedConfig = ""; refreshList() 
-                    _G.XeNOX:Notify("Deleted", "Deleted config successfully.", 3)
+                    XeNOX:Notify("Deleted", "Deleted config successfully.", 3)
                 end
             end)
         end
         save.MouseButton1Click:Connect(function() 
             if input.Text ~= "" then 
                 SaveSettings(input.Text); 
-                _G.XeNOX:Notify("Created", "Successfully created config: " .. input.Text, 3)
+                XeNOX:Notify("Created", "Successfully created config: " .. input.Text, 3)
                 input.Text = ""; 
                 refreshList() 
             else
-                _G.XeNOX:Notify("Error", "Config name cannot be empty.", 3)
+                XeNOX:Notify("Error", "Config name cannot be empty.", 3)
             end 
         end)
         refreshList()
@@ -908,13 +908,13 @@ function _G.XeNOX:CreateTab(name)
     return tabObj
 end
 
-local m = _G.XeNOX:CreateTab("Main")
+local m = XeNOX:CreateTab("Main")
 m:CreateLabel("Welcome to XeNOX Library")
 m:CreateButton("Example Button", function() 
-    _G.XeNOX:Notify("Test", "Example button clicked successfully", 3)
+    XeNOX:Notify("Test", "Example button clicked successfully", 3)
 end)
 
-local s = _G.XeNOX:CreateTab("Settings")
+local s = XeNOX:CreateTab("Settings")
 s:CreateConfigManager()
 s:CreateLabel("BACKGROUND EFFECTS")
 s:CreateToggle("Enable Rain", false, function(t) starsEnabled = t end)
@@ -957,3 +957,5 @@ uis.InputBegan:Connect(function(input, gpe)
         end
     end
 end)
+
+return XeNOX
