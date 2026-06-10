@@ -32,6 +32,43 @@ local TITLE_SIZE = 22
 local TAB_SIZE = 16
 local LABEL_SIZE = 18
 
+-- =============================================================================
+-- PERFORMANCE CACHE & OBJECT POOLING SYSTEM
+-- =============================================================================
+local uiCache = {
+    Shade = {},
+    Button = {},
+    ButtonOutline = {},
+    TextElements = {}
+}
+
+local pool = { Star = {}, Trail = {}, Matrix = {}, Hex = {}, Glitch = {}, Blob = {} }
+
+local function GetFromPool(effectType, instanceType)
+    if #pool[effectType] > 0 then
+        local obj = table.remove(pool[effectType])
+        if obj:IsA("Frame") or obj:IsA("ImageLabel") or obj:IsA("TextLabel") then
+            obj.BackgroundTransparency = 0
+            obj.Size = UDim2.new(0, 0, 0, 0)
+        end
+        if obj:IsA("TextLabel") then obj.TextTransparency = 0 end
+        if obj:IsA("ImageLabel") then obj.ImageTransparency = 0 end
+        obj.Visible = true
+        return obj
+    else
+        return Instance.new(instanceType)
+    end
+end
+
+local function ReturnToPool(effectType, obj)
+    obj.Visible = false
+    obj.Parent = nil
+    table.insert(pool[effectType], obj)
+end
+
+-- =============================================================================
+-- THEME & INITIALIZATION SETUP
+-- =============================================================================
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = HttpService:GenerateGUID(false) 
 screenGui.ResetOnSpawn = false
@@ -74,6 +111,7 @@ local function ApplyButtonStroke(btn)
     stroke.Thickness = 1
     stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
     stroke.Parent = btn
+    table.insert(uiCache.ButtonOutline, stroke)
 end
 
 local function ApplyButtonInteraction(btn)
@@ -97,25 +135,37 @@ title.ZIndex = 5
 title.Active = true
 title.Parent = mainFrame
 
+-- OPTIMIZED DRAGGING ENGINE (Removes input leaks dynamically)
 local dragging, dragInput, dragStart, startPos
+local dragConnection
+
 title.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then
         dragging = true
         dragStart = input.Position
         startPos = mainFrame.Position
+        
+        dragConnection = uis.InputChanged:Connect(function(changedInput)
+            if changedInput == dragInput and dragging then
+                local delta = changedInput.Position - dragStart
+                mainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+            end
+        end)
     end
 end)
+
 title.InputChanged:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseMovement then dragInput = input end
 end)
-uis.InputChanged:Connect(function(input)
-    if input == dragInput and dragging then
-        local delta = input.Position - dragStart
-        mainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-    end
-end)
+
 uis.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then 
+        dragging = false 
+        if dragConnection then
+            dragConnection:Disconnect()
+            dragConnection = nil
+        end
+    end
 end)
 
 local titleGlow = Instance.new("UIStroke")
@@ -135,13 +185,17 @@ task.spawn(function()
     end
 end)
 
+-- HIGH PERFORMANCE THEME SYSTEMS (Iterates cached structures rather than running GetDescendants)
 local function UpdateGlobalFont(newFont)
     globalFont = newFont
-    for _, v in pairs(mainFrame:GetDescendants()) do
-        if (v:IsA("TextLabel") or v:IsA("TextButton") or v:IsA("TextBox")) and v.Name ~= "Title" then
+    local valid = {}
+    for _, v in ipairs(uiCache.TextElements) do
+        if v and v.Parent then
             v.Font = newFont
+            table.insert(valid, v)
         end
     end
+    uiCache.TextElements = valid
 end
 
 local function UpdateUITheme(color)
@@ -158,29 +212,38 @@ end
 
 local function UpdateButtonTheme(color)
     buttonColor = color
-    for _, v in pairs(mainFrame:GetDescendants()) do
-        if v.Name == "TabBtn" or v.Name == "CustomButton" or v.Name == "ActionBtn" or v.Name == "ConfigBtn" then
+    local valid = {}
+    for _, v in ipairs(uiCache.Button) do
+        if v and v.Parent then
             v.BackgroundColor3 = color
+            table.insert(valid, v)
         end
     end
+    uiCache.Button = valid
 end
 
 local function UpdateButtonOutlineTheme(color)
     buttonOutlineColor = color
-    for _, v in pairs(mainFrame:GetDescendants()) do
-        if v:IsA("UIStroke") and v.Name == "ButtonStroke" then
+    local valid = {}
+    for _, v in ipairs(uiCache.ButtonOutline) do
+        if v and v.Parent then
             v.Color = color
+            table.insert(valid, v)
         end
     end
+    uiCache.ButtonOutline = valid
 end
 
 local function UpdateShadeTheme(newShade)
     shadeColor = newShade
-    for _, v in pairs(mainFrame:GetDescendants()) do
-        if v.Name == "LabelElement" or v.Name == "ButtonRow" or v.Name == "BindBtn" or v.Name == "ColorRow" then
-            v.BackgroundColor3 = shadeColor
+    local valid = {}
+    for _, v in ipairs(uiCache.Shade) do
+        if v and v.Parent then
+            v.BackgroundColor3 = newShade
+            table.insert(valid, v)
         end
     end
+    uiCache.Shade = valid
 end
 
 local folderName = "XeNOX_Configs"
@@ -206,61 +269,91 @@ local function SaveSettings(name)
     pcall(function() writefile(GetPath(name), HttpService:JSONEncode(data)) end)
 end
 
+-- =============================================================================
+-- REFACTORED BACKGROUND RENDERING LOOP (Frame-rate linked with object pools)
+-- =============================================================================
 task.spawn(function()
-    local t = 0
     while task.wait(0.03) do 
-        t = t + 0.05
         if not screenGui.Parent then break end
         if not mainFrame.Visible then continue end
 
         local mLoc = uis:GetMouseLocation()
 
         if starsEnabled then
-            local star = Instance.new("Frame")
-            star.Size = UDim2.new(0, 1, 0, math.random(30, 80)); star.Position = UDim2.new(math.random(0, 100)/100, 0, -0.2, 0)
-            star.BackgroundColor3 = rainCol; star.ZIndex = 1; star.Parent = mainFrame
+            local star = GetFromPool("Star", "Frame")
+            star.Size = UDim2.new(0, 1, 0, math.random(30, 80))
+            star.Position = UDim2.new(math.random(0, 100)/100, 0, -0.2, 0)
+            star.BackgroundColor3 = rainCol
+            star.ZIndex = 1
+            star.Parent = mainFrame
             tweenService:Create(star, TweenInfo.new(0.6, Enum.EasingStyle.Linear), {Position = UDim2.new(star.Position.X.Scale, 0, 1.2, 0), BackgroundTransparency = 1}):Play()
-            game:GetService("Debris"):AddItem(star, 0.6)
+            task.delay(0.6, function() ReturnToPool("Star", star) end)
         end
 
         if trailsEnabled then
-            local trail = Instance.new("Frame")
-            trail.Size = UDim2.new(0, 10, 0, 10); trail.Position = UDim2.new(0, mLoc.X - mainFrame.AbsolutePosition.X - 5, 0, mLoc.Y - mainFrame.AbsolutePosition.Y - 5)
-            trail.BackgroundColor3 = trailCol; trail.ZIndex = 2; trail.Parent = mainFrame
-            Instance.new("UICorner", trail).CornerRadius = UDim.new(1, 0)
+            local trail = GetFromPool("Trail", "Frame")
+            local corner = trail:FindFirstChildOfClass("UICorner") or Instance.new("UICorner", trail)
+            corner.CornerRadius = UDim.new(1, 0)
+            trail.Size = UDim2.new(0, 10, 0, 10)
+            trail.Position = UDim2.new(0, mLoc.X - mainFrame.AbsolutePosition.X - 5, 0, mLoc.Y - mainFrame.AbsolutePosition.Y - 5)
+            trail.BackgroundColor3 = trailCol
+            trail.ZIndex = 2
+            trail.Parent = mainFrame
             tweenService:Create(trail, TweenInfo.new(0.4), {BackgroundTransparency = 1, Size = UDim2.new(0, 0, 0, 0)}):Play()
-            game:GetService("Debris"):AddItem(trail, 0.4)
+            task.delay(0.4, function() ReturnToPool("Trail", trail) end)
         end
 
         if matrixEnabled and math.random(1, 5) == 1 then
-            local char = Instance.new("TextLabel")
-            char.Size = UDim2.new(0, 20, 0, 20); char.Position = UDim2.new(math.random(0, 100)/100, 0, -0.1, 0)
-            char.BackgroundTransparency = 1; char.Text = string.char(math.random(33, 126))
-            char.TextColor3 = matrixCol; char.Font = Enum.Font.Code; char.TextSize = 15; char.ZIndex = 1; char.Parent = mainFrame
+            local char = GetFromPool("Matrix", "TextLabel")
+            char.Size = UDim2.new(0, 20, 0, 20)
+            char.Position = UDim2.new(math.random(0, 100)/100, 0, -0.1, 0)
+            char.BackgroundTransparency = 1
+            char.Text = string.char(math.random(33, 126))
+            char.TextColor3 = matrixCol
+            char.Font = Enum.Font.Code
+            char.TextSize = 15
+            char.ZIndex = 1
+            char.Parent = mainFrame
             tweenService:Create(char, TweenInfo.new(math.random(1, 3), Enum.EasingStyle.Linear), {Position = UDim2.new(char.Position.X.Scale, 0, 1.1, 0), TextTransparency = 1}):Play()
-            game:GetService("Debris"):AddItem(char, 3)
+            task.delay(3, function() ReturnToPool("Matrix", char) end)
         end
 
         if hexEnabled and math.random(1, 15) == 1 then
-            local hex = Instance.new("ImageLabel")
-            hex.Size = UDim2.new(0, 0, 0, 0); hex.Position = UDim2.new(math.random(0, 100)/100, 0, math.random(0, 100)/100, 0)
-            hex.Image = "rbxassetid://6073628820"; hex.ImageColor3 = hexCol; hex.BackgroundTransparency = 1; hex.ImageTransparency = 0.8; hex.ZIndex = 1; hex.Parent = mainFrame
+            local hex = GetFromPool("Hex", "ImageLabel")
+            hex.Size = UDim2.new(0, 0, 0, 0)
+            hex.Position = UDim2.new(math.random(0, 100)/100, 0, math.random(0, 100)/100, 0)
+            hex.Image = "rbxassetid://6073628820"
+            hex.ImageColor3 = hexCol
+            hex.BackgroundTransparency = 1
+            hex.ImageTransparency = 0.8
+            hex.Rotation = 0
+            hex.ZIndex = 1
+            hex.Parent = mainFrame
             local size = math.random(50, 150)
             tweenService:Create(hex, TweenInfo.new(2), {Size = UDim2.new(0, size, 0, size), ImageTransparency = 1, Rotation = 180}):Play()
-            game:GetService("Debris"):AddItem(hex, 2)
+            task.delay(2, function() ReturnToPool("Hex", hex) end)
         end
 
-        if glitchEnabled and math.random(1,10) == 1 then
-            local g = Instance.new("Frame")
-            g.Size = UDim2.new(0, math.random(20, 100), 0, 2); g.Position = UDim2.new(math.random(0,100)/100, 0, math.random(0,100)/100, 0)
-            g.BackgroundColor3 = glitchCol; g.BackgroundTransparency = 0.5; g.Parent = mainFrame
-            task.delay(0.1, function() g:Destroy() end)
+        if glitchEnabled and math.random(1, 10) == 1 then
+            local g = GetFromPool("Glitch", "Frame")
+            g.Size = UDim2.new(0, math.random(20, 100), 0, 2)
+            g.Position = UDim2.new(math.random(0, 100)/100, 0, math.random(0, 100)/100, 0)
+            g.BackgroundColor3 = glitchCol
+            g.BackgroundTransparency = 0.5
+            g.Parent = mainFrame
+            task.delay(0.1, function() ReturnToPool("Glitch", g) end)
         end
 
         if blobsEnabled then
-            local blob = Instance.new("ImageLabel")
-            blob.Size = UDim2.new(math.random(2,5)/10, 0, math.random(2,5)/10, 0); blob.Position = UDim2.new(math.random(-1, 9)/10, 0, math.random(-1, 9)/10, 0)
-            blob.Image = "rbxassetid://232918622"; blob.ImageColor3 = blobCol; blob.BackgroundTransparency = 1; blob.ImageTransparency = 0.93; blob.ZIndex = 1; blob.Parent = mainFrame
+            local blob = GetFromPool("Blob", "ImageLabel")
+            blob.Size = UDim2.new(math.random(2, 5)/10, 0, math.random(2, 5)/10, 0)
+            blob.Position = UDim2.new(math.random(-1, 9)/10, 0, math.random(-1, 9)/10, 0)
+            blob.Image = "rbxassetid://232918622"
+            blob.ImageColor3 = blobCol
+            blob.BackgroundTransparency = 1
+            blob.ImageTransparency = 0.93
+            blob.ZIndex = 1
+            blob.Parent = mainFrame
             task.spawn(function()
                 local start = tick()
                 while tick() - start < 3 do
@@ -273,7 +366,7 @@ task.spawn(function()
                     end
                     task.wait()
                 end
-                if blob then blob:Destroy() end
+                ReturnToPool("Blob", blob)
             end)
         end
     end
@@ -306,10 +399,17 @@ notifLayout.Padding = UDim.new(0, 10)
 notifLayout.Parent = notifContainer
 
 _G.XeNOX = {}
+local activeNotifs = {}
 
 function _G.XeNOX:Notify(titleText, descText, duration)
     duration = duration or 3
     
+    -- Spam prevention: Limit maximum active visual notifications to 4
+    if #activeNotifs >= 4 then
+        local oldest = table.remove(activeNotifs, 1)
+        if oldest and oldest.Parent then oldest:Destroy() end
+    end
+
     local notif = Instance.new("Frame")
     notif.Size = UDim2.new(1, 0, 0, 65)
     notif.BackgroundColor3 = shadeColor
@@ -323,17 +423,17 @@ function _G.XeNOX:Notify(titleText, descText, duration)
     stroke.Thickness = 2
     stroke.Transparency = 1
 
-    local title = Instance.new("TextLabel", notif)
-    title.Size = UDim2.new(1, -20, 0, 25)
-    title.Position = UDim2.new(0, 10, 0, 5)
-    title.BackgroundTransparency = 1
-    title.Text = titleText
-    title.TextColor3 = mainTheme
-    title.TextXAlignment = Enum.TextXAlignment.Left
-    title.Font = globalFont
-    title.TextSize = 18
-    title.TextTransparency = 1
-    title.ZIndex = 106
+    local titleLbl = Instance.new("TextLabel", notif)
+    titleLbl.Size = UDim2.new(1, -20, 0, 25)
+    titleLbl.Position = UDim2.new(0, 10, 0, 5)
+    titleLbl.BackgroundTransparency = 1
+    titleLbl.Text = titleText
+    titleLbl.TextColor3 = mainTheme
+    titleLbl.TextXAlignment = Enum.TextXAlignment.Left
+    titleLbl.Font = globalFont
+    titleLbl.TextSize = 18
+    titleLbl.TextTransparency = 1
+    titleLbl.ZIndex = 106
 
     local desc = Instance.new("TextLabel", notif)
     desc.Size = UDim2.new(1, -20, 0, 25)
@@ -348,17 +448,20 @@ function _G.XeNOX:Notify(titleText, descText, duration)
     desc.ZIndex = 106
 
     notif.Parent = notifContainer
+    table.insert(activeNotifs, notif)
 
     local tIn = tweenService:Create(notif, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Position = UDim2.new(0, 0, 0, 0), BackgroundTransparency = 0.1})
     tweenService:Create(stroke, TweenInfo.new(0.4), {Transparency = 0}):Play()
-    tweenService:Create(title, TweenInfo.new(0.4), {TextTransparency = 0}):Play()
+    tweenService:Create(titleLbl, TweenInfo.new(0.4), {TextTransparency = 0}):Play()
     tweenService:Create(desc, TweenInfo.new(0.4), {TextTransparency = 0}):Play()
     tIn:Play()
 
     task.delay(duration, function()
+        if not notif or not notif.Parent then return end
+        table.remove(activeNotifs, table.find(activeNotifs, notif) or 1)
         local tOut = tweenService:Create(notif, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {Position = UDim2.new(1, 50, 0, 0), BackgroundTransparency = 1})
         tweenService:Create(stroke, TweenInfo.new(0.4), {Transparency = 1}):Play()
-        tweenService:Create(title, TweenInfo.new(0.4), {TextTransparency = 1}):Play()
+        tweenService:Create(titleLbl, TweenInfo.new(0.4), {TextTransparency = 1}):Play()
         tweenService:Create(desc, TweenInfo.new(0.4), {TextTransparency = 1}):Play()
         tOut:Play()
         tOut.Completed:Wait()
@@ -384,6 +487,9 @@ function _G.XeNOX:CreateTab(name)
     tabBtn.TextSize = TAB_SIZE
     tabBtn.Parent = mainFrame
     Instance.new("UICorner", tabBtn).CornerRadius = UDim.new(0, 8)
+    
+    table.insert(uiCache.Button, tabBtn)
+    table.insert(uiCache.TextElements, tabBtn)
     ApplyButtonStroke(tabBtn)
     ApplyButtonInteraction(tabBtn)
 
@@ -411,6 +517,7 @@ function _G.XeNOX:CreateTab(name)
         btnFrame.BackgroundTransparency = 0.5
         btnFrame.Parent = page
         Instance.new("UICorner", btnFrame).CornerRadius = UDim.new(0, 8)
+        table.insert(uiCache.Shade, btnFrame)
 
         local btn = Instance.new("TextButton")
         btn.Name = "CustomButton"
@@ -423,6 +530,9 @@ function _G.XeNOX:CreateTab(name)
         btn.TextSize = TAB_SIZE
         btn.Parent = btnFrame
         Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
+        
+        table.insert(uiCache.Button, btn)
+        table.insert(uiCache.TextElements, btn)
         ApplyButtonStroke(btn)
         ApplyButtonInteraction(btn)
 
@@ -440,6 +550,9 @@ function _G.XeNOX:CreateTab(name)
         local l = Instance.new("TextLabel")
         l.Name = "LabelElement"; l.Size = UDim2.new(1, -20, 0, 45); l.BackgroundColor3 = shadeColor; l.Text = text; l.TextColor3 = Color3.new(1,1,1); l.Font = globalFont; l.TextSize = LABEL_SIZE; l.Parent = page
         Instance.new("UICorner", l).CornerRadius = UDim.new(0, 8)
+        
+        table.insert(uiCache.Shade, l)
+        table.insert(uiCache.TextElements, l)
     end
 
     function tabObj:CreateToggle(text, default, callback)
@@ -449,6 +562,7 @@ function _G.XeNOX:CreateTab(name)
         
         local lb = Instance.new("TextLabel")
         lb.Size = UDim2.new(1, -60, 1, 0); lb.Position = UDim2.new(0, 15, 0, 0); lb.Text = text; lb.TextColor3 = Color3.new(1,1,1); lb.Font = globalFont; lb.TextSize = LABEL_SIZE; lb.BackgroundTransparency = 1; lb.TextXAlignment = "Left"; lb.Parent = tgl
+        table.insert(uiCache.TextElements, lb)
         
         local bg = Instance.new("TextButton")
         bg.Name = "ToggleBG"; bg.Size = UDim2.new(0, 45, 0, 25); bg.Position = UDim2.new(1, -55, 0.5, -12); bg.BackgroundColor3 = enabled and buttonColor or shadeColor; bg.Text = ""; bg.Parent = tgl; Instance.new("UICorner", bg).CornerRadius = UDim.new(1,0)
@@ -475,9 +589,13 @@ function _G.XeNOX:CreateTab(name)
         
         local lb = Instance.new("TextLabel")
         lb.Size = UDim2.new(1, -160, 1, 0); lb.Position = UDim2.new(0, 15, 0, 0); lb.Text = text; lb.TextColor3 = Color3.new(1,1,1); lb.Font = globalFont; lb.TextSize = LABEL_SIZE; lb.BackgroundTransparency = 1; lb.TextXAlignment = "Left"; lb.Parent = kbFrame
+        table.insert(uiCache.TextElements, lb)
         
         local btn = Instance.new("TextButton")
         btn.Name = "BindBtn"; btn.Size = UDim2.new(0, 120, 0, 30); btn.Position = UDim2.new(1, -135, 0.5, -15); btn.BackgroundColor3 = shadeColor; btn.Text = currentKey.Name; btn.TextColor3 = Color3.new(1,1,1); btn.Font = globalFont; btn.TextSize = TAB_SIZE; btn.Parent = kbFrame; Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
+        
+        table.insert(uiCache.Shade, btn)
+        table.insert(uiCache.TextElements, btn)
         ApplyButtonStroke(btn)
         ApplyButtonInteraction(btn)
 
@@ -504,8 +622,11 @@ function _G.XeNOX:CreateTab(name)
     function tabObj:CreateFontPicker(text, callback)
         local fp = Instance.new("Frame")
         fp.Size = UDim2.new(1, -20, 0, 120); fp.BackgroundColor3 = Color3.new(0,0,0); fp.BackgroundTransparency = 0.5; fp.Parent = page; Instance.new("UICorner", fp).CornerRadius = UDim.new(0, 8)
+        
         local lb = Instance.new("TextLabel")
         lb.Size = UDim2.new(1, -20, 0, 30); lb.Position = UDim2.new(0, 10, 0, 5); lb.Text = text; lb.TextColor3 = Color3.new(1,1,1); lb.Font = globalFont; lb.TextSize = LABEL_SIZE; lb.BackgroundTransparency = 1; lb.TextXAlignment = "Left"; lb.Parent = fp
+        table.insert(uiCache.TextElements, lb)
+        
         local container = Instance.new("ScrollingFrame")
         container.Size = UDim2.new(1, -20, 0, 70); container.Position = UDim2.new(0, 10, 0, 40); container.BackgroundTransparency = 0.8; container.BackgroundColor3 = Color3.new(0,0,0); container.ScrollBarThickness = 4; container.CanvasSize = UDim2.new(2, 0, 0, 0); container.Parent = fp
         local listLayout = Instance.new("UIListLayout", container); listLayout.FillDirection = Enum.FillDirection.Horizontal; listLayout.Padding = UDim.new(0, 10)
@@ -514,6 +635,9 @@ function _G.XeNOX:CreateTab(name)
             local b = Instance.new("TextButton")
             b.Name = "ActionBtn"
             b.Size = UDim2.new(0, 100, 0, 40); b.Text = f.Name; b.Font = f; b.BackgroundColor3 = buttonColor; b.TextColor3 = Color3.new(0,0,0); b.Parent = container; Instance.new("UICorner", b).CornerRadius = UDim.new(0, 8)
+            
+            table.insert(uiCache.Button, b)
+            table.insert(uiCache.TextElements, b)
             ApplyButtonStroke(b)
             ApplyButtonInteraction(b)
             b.MouseButton1Click:Connect(function() callback(f) end)
@@ -526,8 +650,8 @@ function _G.XeNOX:CreateTab(name)
         cpRow.Size = UDim2.new(1, -20, 0, 45)
         cpRow.BackgroundColor3 = shadeColor
         cpRow.Parent = page
-
         Instance.new("UICorner", cpRow).CornerRadius = UDim.new(0, 8)
+        table.insert(uiCache.Shade, cpRow)
         
         local lb = Instance.new("TextLabel")
         lb.Size = UDim2.new(1, -60, 1, 0)
@@ -539,6 +663,7 @@ function _G.XeNOX:CreateTab(name)
         lb.BackgroundTransparency = 1
         lb.TextXAlignment = "Left"
         lb.Parent = cpRow
+        table.insert(uiCache.TextElements, lb)
         
         local previewBtn = Instance.new("TextButton")
         previewBtn.Name = "PreviewBtn"
@@ -626,6 +751,7 @@ function _G.XeNOX:CreateTab(name)
         textDisplay.TextXAlignment = Enum.TextXAlignment.Left
         textDisplay.ZIndex = 101
         textDisplay.Parent = popup
+        table.insert(uiCache.TextElements, textDisplay)
 
         local curH, curS, curV = defaultColor:ToHSV()
         
@@ -704,9 +830,16 @@ function _G.XeNOX:CreateTab(name)
     function tabObj:CreateConfigManager()
         local container = Instance.new("Frame")
         container.Size = UDim2.new(1, -20, 0, 340); container.BackgroundColor3 = Color3.new(0,0,0); container.BackgroundTransparency = 0.5; container.Parent = page; Instance.new("UICorner", container).CornerRadius = UDim.new(0, 8)
+        
         local status = Instance.new("TextLabel"); status.Size = UDim2.new(1, 0, 0, 20); status.Position = UDim2.new(0, 0, 1, -25); status.BackgroundTransparency = 1; status.Text = "Status: Idle"; status.TextColor3 = Color3.new(0.7,0.7,0.7); status.Font = globalFont; status.TextSize = 14; status.Parent = container
+        table.insert(uiCache.TextElements, status)
+        
         local input = Instance.new("TextBox"); input.Size = UDim2.new(0.6, 0, 0, 40); input.Position = UDim2.new(0, 10, 0, 10); input.PlaceholderText = "New Config Name..."; input.BackgroundColor3 = Color3.fromRGB(30,30,30); input.TextColor3 = Color3.new(1,1,1); input.Font = globalFont; input.TextSize = 20; input.Parent = container; Instance.new("UICorner", input).CornerRadius = UDim.new(0, 2)
+        table.insert(uiCache.TextElements, input)
+        
         local save = Instance.new("TextButton"); save.Name = "ActionBtn"; save.Size = UDim2.new(0.35, -5, 0, 40); save.Position = UDim2.new(0.6, 15, 0, 10); save.Text = "CREATE"; save.BackgroundColor3 = buttonColor; save.TextColor3 = Color3.new(0,0,0); save.Font = globalFont; save.TextSize = 20; save.Parent = container; Instance.new("UICorner", save).CornerRadius = UDim.new(0, 2)
+        table.insert(uiCache.Button, save)
+        table.insert(uiCache.TextElements, save)
         ApplyButtonStroke(save)
         ApplyButtonInteraction(save)
 
@@ -720,6 +853,9 @@ function _G.XeNOX:CreateTab(name)
                     for _, file in pairs(files) do
                         local name = file:gsub(folderName.."/", ""):gsub(".json", ""):gsub(folderName.."\\", "")
                         local b = Instance.new("TextButton"); b.Name = "ConfigBtn"; b.Size = UDim2.new(1, 0, 0, 35); b.Text = name; b.BackgroundColor3 = buttonColor; b.TextColor3 = Color3.new(0,0,0); b.Font = globalFont; b.Parent = list; Instance.new("UICorner", b).CornerRadius = UDim.new(0, 8)
+                        
+                        table.insert(uiCache.Button, b)
+                        table.insert(uiCache.TextElements, b)
                         ApplyButtonStroke(b)
                         ApplyButtonInteraction(b)
                         b.MouseButton1Click:Connect(function() selectedConfig = name; for _, x in pairs(list:GetChildren()) do if x:IsA("TextButton") then x.BackgroundColor3 = buttonColor end end; b.BackgroundColor3 = Color3.fromRGB(200, 200, 200); status.Text = "Selected: " .. name end)
@@ -730,6 +866,9 @@ function _G.XeNOX:CreateTab(name)
         local actions = { Load = {Pos = UDim2.new(0, 10, 0, 210), Text = "LOAD"}, Update = {Pos = UDim2.new(0.34, 10, 0, 210), Text = "UPDATE"}, Delete = {Pos = UDim2.new(0.68, 10, 0, 210), Text = "DELETE"} }
         for i, info in pairs(actions) do
             local btn = Instance.new("TextButton"); btn.Name = "ActionBtn"; btn.Size = UDim2.new(0.3, 0, 0, 45); btn.Position = info.Pos; btn.Text = info.Text; btn.BackgroundColor3 = buttonColor; btn.TextColor3 = Color3.new(0,0,0); btn.Font = globalFont; btn.Parent = container; Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 8)
+            
+            table.insert(uiCache.Button, btn)
+            table.insert(uiCache.TextElements, btn)
             ApplyButtonStroke(btn)
             ApplyButtonInteraction(btn)
             btn.MouseButton1Click:Connect(function()
@@ -739,8 +878,16 @@ function _G.XeNOX:CreateTab(name)
                     return 
                 end
                 local path = GetPath(selectedConfig)
+                
+                -- HARDENED CONFIG HANDLING (Protects logic against manually corrupted json profiles)
                 if i == "Load" and isfile(path) then
-                    local data = HttpService:JSONDecode(readfile(path))
+                    local success, data = pcall(function() return HttpService:JSONDecode(readfile(path)) end)
+                    if not success or not data then
+                        status.Text = "Error: Config corrupted!"
+                        _G.XeNOX:Notify("Error", "Config profile structure is corrupted or unreadable.", 3)
+                        return
+                    end
+                    
                     UpdateUITheme(Color3.new(unpack(data.Theme))); UpdateShadeTheme(Color3.new(unpack(data.Shade))); UpdateOutlineTheme(Color3.new(unpack(data.Outline))); UpdateGlobalFont(Enum.Font[data.Font])
                     if data.Button then UpdateButtonTheme(Color3.new(unpack(data.Button))) end
                     if data.ButtonOutline then UpdateButtonOutlineTheme(Color3.new(unpack(data.ButtonOutline))) end
@@ -753,7 +900,7 @@ function _G.XeNOX:CreateTab(name)
                     SaveSettings(selectedConfig); status.Text = "Status: Updated " .. selectedConfig 
                     _G.XeNOX:Notify("Updated", "Successfully updated " .. selectedConfig, 3)
                 elseif i == "Delete" then 
-                    if isfile(path) then delfile(path) end; status.Text = "Status: Deleted " .. selectedConfig; selectedConfig = ""; refreshList() 
+                    if isfile(path) then pcall(delfile, path) end; status.Text = "Status: Deleted " .. selectedConfig; selectedConfig = ""; refreshList() 
                     _G.XeNOX:Notify("Deleted", "Deleted config successfully.", 3)
                 end
             end)
@@ -774,6 +921,9 @@ function _G.XeNOX:CreateTab(name)
     return tabObj
 end
 
+-- =============================================================================
+-- INTERFACE MOUNTING
+-- =============================================================================
 local m = _G.XeNOX:CreateTab("Main")
 m:CreateLabel("Welcome to XeNOX Library")
 m:CreateButton("Example Button", function() 
