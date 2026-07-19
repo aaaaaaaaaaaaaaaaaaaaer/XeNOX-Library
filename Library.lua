@@ -245,6 +245,100 @@ function XELIB:MakeWindow(config)
     local menuKey = Enum.KeyCode.RightControl
     local menuOpen = true
     local isMinimized = false
+
+    -- ==================== SAVE SYSTEM ====================
+    local saveId = config.SaveId or config.Name or "XeNOX_Default"
+    local autoSave = config.AutoSave ~= false
+    local configPath = "XeNOX_Configs/" .. saveId:gsub("[^%w_]", "_") .. ".json"
+    local saveData = {
+        toggles = {},
+        sliders = {},
+        dropdowns = {},
+        inputs = {},
+        keybinds = {},
+        colors = {},
+        theme = {},
+        effects = {},
+        effectColors = {},
+        menuKey = nil
+    }
+
+    local function EnsureFolder()
+        if makefolder and not isfolder("XeNOX_Configs") then
+            pcall(function() makefolder("XeNOX_Configs") end)
+        end
+    end
+
+    local function SaveConfig()
+        if not writefile then return end
+        EnsureFolder()
+        local success, json = pcall(function()
+            return HttpService:JSONEncode(saveData)
+        end)
+        if success then
+            pcall(function() writefile(configPath, json) end)
+        end
+    end
+
+    local function LoadConfig()
+        if not isfile or not readfile then return nil end
+        if not isfile(configPath) then return nil end
+        local success, data = pcall(function()
+            return HttpService:JSONDecode(readfile(configPath))
+        end)
+        if success and type(data) == "table" then
+            return data
+        end
+        return nil
+    end
+
+    local loadedConfig = LoadConfig() or {}
+
+    -- Apply loaded theme/effects/keybind before UI creation
+    if loadedConfig.effects then
+        for k, v in pairs(loadedConfig.effects) do
+            if effects[k] ~= nil then effects[k] = v end
+        end
+    end
+    if loadedConfig.effectColors then
+        for k, v in pairs(loadedConfig.effectColors) do
+            if effectColors[k] and type(v) == "table" and v.R and v.G and v.B then
+                effectColors[k] = Color3.fromRGB(v.R, v.G, v.B)
+            end
+        end
+    end
+    if loadedConfig.theme then
+        for k, v in pairs(loadedConfig.theme) do
+            if k == "Font" and type(v) == "string" then
+                for _, f in ipairs({Enum.Font.SourceSansBold, Enum.Font.Roboto, Enum.Font.GothamBold, Enum.Font.Arcade, Enum.Font.Code, Enum.Font.SciFi}) do
+                    if f.Name == v then theme.Font = f; break end
+                end
+            elseif theme[k] and type(v) == "table" and v.R and v.G and v.B then
+                theme[k] = Color3.fromRGB(v.R, v.G, v.B)
+            end
+        end
+    end
+    if loadedConfig.menuKey and type(loadedConfig.menuKey) == "string" then
+        local ok, key = pcall(function() return Enum.KeyCode[loadedConfig.menuKey] end)
+        if ok and key then menuKey = key end
+    end
+
+    Window._loadedConfig = loadedConfig
+    Window._saveData = saveData
+    Window._saveConfigFunc = SaveConfig
+    Window._debounceSave = nil
+
+    local function DebouncedSave()
+        if not autoSave then return end
+        if Window._debounceSave then
+            task.cancel(Window._debounceSave)
+        end
+        Window._debounceSave = task.delay(0.5, function()
+            SaveConfig()
+            Window._debounceSave = nil
+        end)
+    end
+    -- ==================== /SAVE SYSTEM ====================
     local tabs = {}
     local tabCount = 0
     local activeNotifs = {}
@@ -979,7 +1073,8 @@ function XELIB:MakeWindow(config)
             end)
         end
         function Tab:AddToggle(text, default, callback)
-            local enabled = default or false
+            local saved = loadedConfig.toggles and loadedConfig.toggles[text]
+            local enabled = (saved ~= nil) and saved or (default or false)
             local frame = Instance.new("Frame")
             frame.Size = UDim2.new(1, -20, 0, 0)
             frame.BackgroundColor3 = Color3.new(0, 0, 0)
@@ -1033,7 +1128,8 @@ function XELIB:MakeWindow(config)
             end)
         end
         function Tab:AddSlider(text, min, max, default, callback)
-            local value = default or min
+            local saved = loadedConfig.sliders and loadedConfig.sliders[text]
+            local value = saved or default or min
             local frame = Instance.new("Frame")
             frame.Size = UDim2.new(1, -20, 0, 0)
             frame.BackgroundColor3 = Color3.new(0, 0, 0)
@@ -1093,6 +1189,8 @@ function XELIB:MakeWindow(config)
                 if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
                     local pos = math.clamp((input.Position.X - track.AbsolutePosition.X) / track.AbsoluteSize.X, 0, 1)
                     value = math.floor(min + (pos * (max - min)))
+                    saveData.sliders[text] = value
+                    DebouncedSave()
                     lb.Text = text .. ": " .. tostring(value)
                     Tween(fill, ANIM.Fast, {Size = UDim2.new(pos, 0, 1, 0)})
                     Tween(knob, ANIM.Fast, {Position = UDim2.new(pos, -7, 0.5, -7)})
@@ -1101,7 +1199,8 @@ function XELIB:MakeWindow(config)
             end)
         end
         function Tab:AddDropdown(text, options, callback)
-            local selected = options[1] or ""
+            local saved = loadedConfig.dropdowns and loadedConfig.dropdowns[text]
+            local selected = saved or options[1] or ""
             local open = false
             local frame = Instance.new("Frame")
             frame.Size = UDim2.new(1, -20, 0, 0)
@@ -1177,6 +1276,8 @@ function XELIB:MakeWindow(config)
                 end)
                 optBtn.MouseButton1Click:Connect(function()
                     selected = opt
+                    saveData.dropdowns[text] = selected
+                    DebouncedSave()
                     btn.Text = selected
                     open = false
                     Tween(dropFrame, ANIM.Normal, {Size = UDim2.new(0, 120, 0, 0), BackgroundTransparency = 1})
@@ -1214,7 +1315,8 @@ function XELIB:MakeWindow(config)
             end)
         end
         function Tab:AddInput(text, default, callback)
-            local frame = Instance.new("Frame")
+            local saved = loadedConfig.inputs and loadedConfig.inputs[text]
+            local inputDefault = saved or default or ""
             frame.Size = UDim2.new(1, -20, 0, 0)
             frame.BackgroundColor3 = Color3.new(0, 0, 0)
             frame.BackgroundTransparency = 1
@@ -1236,7 +1338,7 @@ function XELIB:MakeWindow(config)
             box.Size = UDim2.new(0, 120, 0, 30)
             box.Position = UDim2.new(1, -135, 0.5, -15)
             box.BackgroundColor3 = theme.Shade
-            box.Text = default or ""
+            box.Text = inputDefault
             box.TextColor3 = Color3.new(1, 1, 1)
             box.Font = theme.Font
             box.TextSize = 14
@@ -1260,6 +1362,8 @@ function XELIB:MakeWindow(config)
                 Tween(box, ANIM.Spring, {Size = UDim2.new(0, 130, 0, 34), Position = UDim2.new(1, -140, 0.5, -17)})
             end)
             box.FocusLost:Connect(function()
+                saveData.inputs[text] = box.Text
+                DebouncedSave()
                 Tween(box, ANIM.Normal, {BackgroundColor3 = theme.Shade})
                 Tween(boxStroke, ANIM.Normal, {Thickness = 1, Color = theme.Outline})
                 Tween(box, ANIM.Spring, {Size = UDim2.new(0, 120, 0, 30), Position = UDim2.new(1, -135, 0.5, -15)})
@@ -1267,7 +1371,8 @@ function XELIB:MakeWindow(config)
             end)
         end
         function Tab:AddKeybind(text, defaultKey, callback)
-            local currentKey = defaultKey or Enum.KeyCode.Unknown
+            local saved = loadedConfig.keybinds and loadedConfig.keybinds[text]
+            local currentKey = saved and Enum.KeyCode[saved] or defaultKey or Enum.KeyCode.Unknown
             local listening = false
             local frame = Instance.new("Frame")
             frame.Size = UDim2.new(1, -20, 0, 0)
@@ -1331,6 +1436,8 @@ function XELIB:MakeWindow(config)
                         conn:Disconnect()
                         listening = false
                         currentKey = input.KeyCode
+                        saveData.keybinds[text] = currentKey.Name
+                        DebouncedSave()
                         btn.Text = currentKey.Name
                         btn.TextColor3 = Color3.new(1, 1, 1)
                         Tween(btn, ANIM.Spring, {Size = UDim2.new(0, 120, 0, 30), Position = UDim2.new(1, -135, 0.5, -15)})
@@ -1351,6 +1458,10 @@ function XELIB:MakeWindow(config)
             end)
         end
         function Tab:AddColorPicker(text, defaultColor, callback)
+            local saved = loadedConfig.colors and loadedConfig.colors[text]
+            if saved and type(saved) == "table" and saved.R and saved.G and saved.B then
+                defaultColor = Color3.fromRGB(saved.R, saved.G, saved.B)
+            end
             defaultColor = defaultColor or Color3.fromRGB(255, 255, 255)
             local curH, curS, curV = defaultColor:ToHSV()
             local frame = Instance.new("Frame")
@@ -1468,6 +1579,8 @@ function XELIB:MakeWindow(config)
                 cursorHue.Position = UDim2.new(0, -2, curH, -1)
                 local r, g, b = math.floor(c.R * 255), math.floor(c.G * 255), math.floor(c.B * 255)
                 txt.Text = string.format("#%02X%02X%02X   %d, %d, %d", r, g, b, r, g, b)
+                saveData.colors[text] = {R = r, G = g, B = b}
+                DebouncedSave()
                 if callback then callback(c) end
             end
             update()
@@ -1566,20 +1679,20 @@ function XELIB:MakeWindow(config)
         spacer.LayoutOrder = 999997
         spacer.Parent = tabContainer
         settingsTab:AddLabel("BACKGROUND EFFECTS")
-        settingsTab:AddToggle("Enable Rain", false, function(t) effects.Rain = t end)
-        settingsTab:AddColorPicker("Rain Color", effectColors.Rain, function(c) effectColors.Rain = c end)
-        settingsTab:AddToggle("Enable Mouse Trail", false, function(t) effects.Trail = t end)
-        settingsTab:AddColorPicker("Trail Color", effectColors.Trail, function(c) effectColors.Trail = c end)
-        settingsTab:AddToggle("Enable Interactive Blobs", false, function(t) effects.Blob = t end)
-        settingsTab:AddColorPicker("Blob Color", effectColors.Blob, function(c) effectColors.Blob = c end)
-        settingsTab:AddToggle("Enable Matrix Rain", false, function(t) effects.Matrix = t end)
-        settingsTab:AddColorPicker("Matrix Color", effectColors.Matrix, function(c) effectColors.Matrix = c end)
-        settingsTab:AddToggle("Enable Floating Hexagons", false, function(t) effects.Hex = t end)
-        settingsTab:AddColorPicker("Hex Color", effectColors.Hex, function(c) effectColors.Hex = c end)
-        settingsTab:AddToggle("Enable Glitch Blocks", false, function(t) effects.Glitch = t end)
-        settingsTab:AddColorPicker("Glitch Color", effectColors.Glitch, function(c) effectColors.Glitch = c end)
+        settingsTab:AddToggle("Enable Rain", effects.Rain, function(t) effects.Rain = t saveData.effects.Rain = t DebouncedSave() end)
+        settingsTab:AddColorPicker("Rain Color", effectColors.Rain, function(c) effectColors.Rain = c saveData.effectColors.Rain = {R = math.floor(c.R * 255), G = math.floor(c.G * 255), B = math.floor(c.B * 255)} DebouncedSave() end)
+        settingsTab:AddToggle("Enable Mouse Trail", effects.Trail, function(t) effects.Trail = t saveData.effects.Trail = t DebouncedSave() end)
+        settingsTab:AddColorPicker("Trail Color", effectColors.Trail, function(c) effectColors.Trail = c saveData.effectColors.Trail = {R = math.floor(c.R * 255), G = math.floor(c.G * 255), B = math.floor(c.B * 255)} DebouncedSave() end)
+        settingsTab:AddToggle("Enable Interactive Blobs", effects.Blob, function(t) effects.Blob = t saveData.effects.Blob = t DebouncedSave() end)
+        settingsTab:AddColorPicker("Blob Color", effectColors.Blob, function(c) effectColors.Blob = c saveData.effectColors.Blob = {R = math.floor(c.R * 255), G = math.floor(c.G * 255), B = math.floor(c.B * 255)} DebouncedSave() end)
+        settingsTab:AddToggle("Enable Matrix Rain", effects.Matrix, function(t) effects.Matrix = t saveData.effects.Matrix = t DebouncedSave() end)
+        settingsTab:AddColorPicker("Matrix Color", effectColors.Matrix, function(c) effectColors.Matrix = c saveData.effectColors.Matrix = {R = math.floor(c.R * 255), G = math.floor(c.G * 255), B = math.floor(c.B * 255)} DebouncedSave() end)
+        settingsTab:AddToggle("Enable Floating Hexagons", effects.Hex, function(t) effects.Hex = t saveData.effects.Hex = t DebouncedSave() end)
+        settingsTab:AddColorPicker("Hex Color", effectColors.Hex, function(c) effectColors.Hex = c saveData.effectColors.Hex = {R = math.floor(c.R * 255), G = math.floor(c.G * 255), B = math.floor(c.B * 255)} DebouncedSave() end)
+        settingsTab:AddToggle("Enable Glitch Blocks", effects.Glitch, function(t) effects.Glitch = t saveData.effects.Glitch = t DebouncedSave() end)
+        settingsTab:AddColorPicker("Glitch Color", effectColors.Glitch, function(c) effectColors.Glitch = c saveData.effectColors.Glitch = {R = math.floor(c.R * 255), G = math.floor(c.G * 255), B = math.floor(c.B * 255)} DebouncedSave() end)
         settingsTab:AddLabel("APPEARANCE")
-        settingsTab:AddKeybind("Menu Toggle Key", menuKey, function(newKey) menuKey = newKey end)
+        settingsTab:AddKeybind("Menu Toggle Key", menuKey, function(newKey) menuKey = newKey saveData.menuKey = newKey.Name DebouncedSave() end)
         local fonts = {Enum.Font.SourceSansBold, Enum.Font.Roboto, Enum.Font.GothamBold, Enum.Font.Arcade, Enum.Font.Code, Enum.Font.SciFi}
         local fontNames = {}
         for _, f in ipairs(fonts) do table.insert(fontNames, f.Name) end
@@ -1587,6 +1700,8 @@ function XELIB:MakeWindow(config)
             for _, f in ipairs(fonts) do
                 if f.Name == selected then
                     theme.Font = f
+                    saveData.theme.Font = f.Name
+                    DebouncedSave()
                     for _, v in ipairs(uiCache.Text) do
                         if v and v.Parent then
                             Tween(v, ANIM.Fast, {TextTransparency = 1})
@@ -1604,12 +1719,16 @@ function XELIB:MakeWindow(config)
         end)
         settingsTab:AddColorPicker("Main Theme", theme.Main, function(c)
             theme.Main = c
+            saveData.theme.Main = {R = math.floor(c.R * 255), G = math.floor(c.G * 255), B = math.floor(c.B * 255)}
+            DebouncedSave()
             Tween(mainFrame, ANIM.Normal, {BackgroundColor3 = c})
             Tween(titleLbl, ANIM.Normal, {TextColor3 = c})
             Tween(mainStroke, ANIM.Normal, {Color = c})
         end)
         settingsTab:AddColorPicker("UI Outline Color", theme.Outline, function(c)
             theme.Outline = c
+            saveData.theme.Outline = {R = math.floor(c.R * 255), G = math.floor(c.G * 255), B = math.floor(c.B * 255)}
+            DebouncedSave()
             Tween(mainStroke, ANIM.Normal, {Color = c})
             for _, v in ipairs(uiCache.ButtonOutline) do
                 if v and v.Parent then Tween(v, ANIM.Normal, {Color = c}) end
@@ -1617,23 +1736,57 @@ function XELIB:MakeWindow(config)
         end)
         settingsTab:AddColorPicker("Shade Color", theme.Shade, function(c)
             theme.Shade = c
+            saveData.theme.Shade = {R = math.floor(c.R * 255), G = math.floor(c.G * 255), B = math.floor(c.B * 255)}
+            DebouncedSave()
             for _, v in ipairs(uiCache.Shade) do
                 if v and v.Parent then Tween(v, ANIM.Normal, {BackgroundColor3 = c}) end
             end
         end)
         settingsTab:AddColorPicker("Button Color", theme.Button, function(c)
             theme.Button = c
+            saveData.theme.Button = {R = math.floor(c.R * 255), G = math.floor(c.G * 255), B = math.floor(c.B * 255)}
+            DebouncedSave()
             for _, v in ipairs(uiCache.Button) do
                 if v and v.Parent then Tween(v, ANIM.Normal, {BackgroundColor3 = c}) end
             end
         end)
         settingsTab:AddColorPicker("Button Outline Color", theme.ButtonOutline, function(c)
             theme.ButtonOutline = c
+            saveData.theme.ButtonOutline = {R = math.floor(c.R * 255), G = math.floor(c.G * 255), B = math.floor(c.B * 255)}
+            DebouncedSave()
             for _, v in ipairs(uiCache.ButtonOutline) do
                 if v and v.Parent then Tween(v, ANIM.Normal, {Color = c}) end
             end
         end)
     end
+    function Window:SaveConfig()
+        SaveConfig()
+    end
+
+    function Window:LoadConfig()
+        return LoadConfig()
+    end
+
+    function Window:ResetConfig()
+        if isfile and isfile(configPath) then
+            pcall(function() delfile(configPath) end)
+        end
+        saveData.toggles = {}
+        saveData.sliders = {}
+        saveData.dropdowns = {}
+        saveData.inputs = {}
+        saveData.keybinds = {}
+        saveData.colors = {}
+        saveData.theme = {}
+        saveData.effects = {}
+        saveData.effectColors = {}
+        saveData.menuKey = nil
+    end
+
+    function Window:GetConfigPath()
+        return configPath
+    end
+
     return Window
 end
 return XELIB
