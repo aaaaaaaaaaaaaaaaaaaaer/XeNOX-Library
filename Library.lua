@@ -111,7 +111,6 @@ function XELIB:MakeWindow(config)
     local Loading_Text = config.IntroText or "LOADING"
     local Loading_Icon = config.IntroIcon or ""
     local Loading_Speed = config.IntroSpeed or 1
-    local hasToggle = config.Toggle ~= false
     local isPremium = config.IsPremium == true
     local iconAsset = config.Icon or ""
     local rainbowMain = config.RainbowMainFrame == true
