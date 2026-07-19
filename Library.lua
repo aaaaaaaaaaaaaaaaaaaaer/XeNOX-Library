@@ -221,7 +221,6 @@ function XELIB:MakeWindow(config)
     local menuOpen = true
     local isMinimized = false
 
-    -- ==================== SAVE SYSTEM ====================
     local saveId = config.SaveId or config.Name or "XeNOX_Default"
     local autoSave = config.AutoSave ~= false
     local configFolder = "XeNOX_Configs/" .. saveId:gsub("[^%w_]", "_")
@@ -306,7 +305,6 @@ function XELIB:MakeWindow(config)
 
     local loadedConfig = LoadConfig() or {}
 
-    -- Apply loaded theme/effects/keybind before UI creation
     if loadedConfig.effects then
         for k, v in pairs(loadedConfig.effects) do
             if effects[k] ~= nil then effects[k] = v end
@@ -357,7 +355,6 @@ function XELIB:MakeWindow(config)
             Window._debounceSave = nil
         end)
     end
-    -- ==================== /SAVE SYSTEM ====================
     local tabs = {}
     local tabCount = 0
     local activeNotifs = {}
@@ -1341,9 +1338,10 @@ function XELIB:MakeWindow(config)
         function Tab:AddInput(text, default, callback)
             local saved = loadedConfig.inputs and loadedConfig.inputs[text]
             local inputDefault = saved or default or ""
-            frame.Size = UDim2.new(1, -20, 0, 0)
+            local frame = Instance.new("Frame")
+            frame.Size = UDim2.new(1, -20, 0, 50)
             frame.BackgroundColor3 = Color3.new(0, 0, 0)
-            frame.BackgroundTransparency = 1
+            frame.BackgroundTransparency = 0.5
             frame.Parent = page
             Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 8)
             local lb = Instance.new("TextLabel")
@@ -1355,7 +1353,7 @@ function XELIB:MakeWindow(config)
             lb.TextSize = 18
             lb.BackgroundTransparency = 1
             lb.TextXAlignment = Enum.TextXAlignment.Left
-            lb.TextTransparency = 1
+            lb.TextTransparency = 0
             lb.Parent = frame
             table.insert(uiCache.Text, lb)
             local box = Instance.new("TextBox")
@@ -1367,7 +1365,7 @@ function XELIB:MakeWindow(config)
             box.Font = theme.Font
             box.TextSize = 14
             box.ClearTextOnFocus = false
-            box.TextTransparency = 1
+            box.TextTransparency = 0
             box.Parent = frame
             Instance.new("UICorner", box).CornerRadius = UDim.new(0, 6)
             table.insert(uiCache.Shade, box)
@@ -1375,11 +1373,6 @@ function XELIB:MakeWindow(config)
             local boxStroke = Instance.new("UIStroke", box)
             boxStroke.Color = theme.Outline
             boxStroke.Thickness = 1
-            boxStroke.Transparency = 1
-            frame.Size = UDim2.new(1, -20, 0, 50)
-            frame.BackgroundTransparency = 0.5
-            lb.TextTransparency = 0
-            box.TextTransparency = 0
             boxStroke.Transparency = 0
             box.Focused:Connect(function()
                 Tween(box, ANIM.Normal, {BackgroundColor3 = Color3.fromRGB(theme.Shade.R * 255 + 15, theme.Shade.G * 255 + 15, theme.Shade.B * 255 + 15)})
@@ -1696,10 +1689,8 @@ function XELIB:MakeWindow(config)
         sp.LayoutOrder = 999997
         sp.Parent = tabContainer
 
-        -- VERSION LABEL (proves you have the latest file)
         settingsTab:AddLabel("XeNOX v2.2 - Save System Active")
 
-        -- CONFIG MANAGEMENT
         settingsTab:AddLabel("CONFIG MANAGEMENT")
 
         settingsTab:AddToggle("Auto Save", autoSave, function(t)
@@ -1747,7 +1738,6 @@ function XELIB:MakeWindow(config)
             end
         end)
 
-        -- BACKGROUND EFFECTS
         settingsTab:AddLabel("BACKGROUND EFFECTS")
         settingsTab:AddToggle("Enable Rain", effects.Rain, function(t) effects.Rain = t saveData.effects.Rain = t DebouncedSave() end)
         settingsTab:AddColorPicker("Rain Color", effectColors.Rain, function(c) effectColors.Rain = c saveData.effectColors.Rain = {R = math.floor(c.R * 255), G = math.floor(c.G * 255), B = math.floor(c.B * 255)} DebouncedSave() end)
@@ -1762,7 +1752,6 @@ function XELIB:MakeWindow(config)
         settingsTab:AddToggle("Enable Glitch Blocks", effects.Glitch, function(t) effects.Glitch = t saveData.effects.Glitch = t DebouncedSave() end)
         settingsTab:AddColorPicker("Glitch Color", effectColors.Glitch, function(c) effectColors.Glitch = c saveData.effectColors.Glitch = {R = math.floor(c.R * 255), G = math.floor(c.G * 255), B = math.floor(c.B * 255)} DebouncedSave() end)
 
-        -- APPEARANCE
         settingsTab:AddLabel("APPEARANCE")
         settingsTab:AddKeybind("Menu Toggle Key", menuKey, function(newKey) menuKey = newKey saveData.menuKey = newKey.Name DebouncedSave() end)
 
@@ -1838,7 +1827,6 @@ function XELIB:MakeWindow(config)
             end
         end)
 
-        -- Ensure Settings tab canvas is scrollable
         task.delay(0.1, function()
             if settingsData and settingsData.Page then
                 settingsData.Page.CanvasSize = UDim2.new(0, 0, 0, 3000)
