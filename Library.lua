@@ -224,6 +224,7 @@ function XELIB:MakeWindow(config)
     -- ==================== SAVE SYSTEM ====================
     local saveId = config.SaveId or config.Name or "XeNOX_Default"
     local autoSave = config.AutoSave ~= false
+    local autoLoad = config.AutoLoad == true
     local configFolder = "XeNOX_Configs/" .. saveId:gsub("[^%w_]", "_")
     local defaultConfigPath = configFolder .. "/default.json"
     local activeConfigName = "default"
@@ -237,7 +238,10 @@ function XELIB:MakeWindow(config)
         theme = {},
         effects = {},
         effectColors = {},
-        menuKey = nil
+        menuKey = nil,
+        _autoSave = nil,
+        _autoLoad = nil,
+        _activeConfigName = nil
     }
 
     local function EnsureFolder()
@@ -322,6 +326,9 @@ function XELIB:MakeWindow(config)
     end
     if loadedConfig._autoSave ~= nil then
         autoSave = loadedConfig._autoSave
+    end
+    if loadedConfig._autoLoad ~= nil then
+        autoLoad = loadedConfig._autoLoad
     end
     if loadedConfig._activeConfigName and type(loadedConfig._activeConfigName) == "string" then
         activeConfigName = loadedConfig._activeConfigName
@@ -1832,6 +1839,14 @@ function XELIB:MakeWindow(config)
             DebouncedSave()
         end)
 
+        -- Auto Load Toggle
+        settingsTab:AddToggle("Auto Load", autoLoad, function(t)
+            autoLoad = t
+            saveData._autoLoad = t
+            saveData._activeConfigName = activeConfigName
+            DebouncedSave()
+        end)
+
         -- ACTIVE CONFIG CARD
         local activeCard = Instance.new("Frame")
         activeCard.Size = UDim2.new(1, -20, 0, 0)
@@ -2256,6 +2271,17 @@ function XELIB:MakeWindow(config)
         return GetConfigPath(name or activeConfigName)
     end
 
+
+    -- AUTO LOAD: If enabled, apply the active config after UI is fully built
+    if autoLoad then
+        local data = LoadConfig(activeConfigName)
+        if data then
+            loadedConfig = data
+            Window._loadedConfig = data
+            ApplyConfig(data)
+            Window:Notify("Auto Load", "Applied config '" .. activeConfigName .. "' automatically!", 3)
+        end
+    end
     return Window
 end
 return XELIB
