@@ -362,26 +362,7 @@ function XELIB:MakeWindow(config)
     closeBtn.ZIndex = 20
     closeBtn.Parent = titleBar
 
-    closeBtn.MouseButton1Click:Connect(function()
-        isMinimized = not isMinimized
-        if isMinimized then
-            savedPos = mainFrame.Position
-            savedSize = mainFrame.Size
-            tabContainer.Visible = false
-            contentFrame.Visible = false
-            Tween(mainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-                Size = UDim2.new(0, 700, 0, 45),
-                Position = UDim2.new(0.5, -350, 0.5, -22)
-            })
-        else
-            tabContainer.Visible = true
-            contentFrame.Visible = true
-            Tween(mainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-                Size = savedSize,
-                Position = savedPos
-            })
-        end
-    end)
+
 
     local destroyBtn = Instance.new("TextButton")
     destroyBtn.Size = UDim2.new(0, 30, 0, 30)
@@ -423,6 +404,27 @@ function XELIB:MakeWindow(config)
     contentFrame.Position = UDim2.new(0, 170, 0, 50)
     contentFrame.BackgroundTransparency = 1
     contentFrame.Parent = mainFrame
+
+    closeBtn.MouseButton1Click:Connect(function()
+        isMinimized = not isMinimized
+        if isMinimized then
+            savedPos = mainFrame.Position
+            savedSize = mainFrame.Size
+            tabContainer.Visible = false
+            contentFrame.Visible = false
+            Tween(mainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                Size = UDim2.new(0, 700, 0, 45),
+                Position = UDim2.new(0.5, -350, 0.5, -22)
+            })
+        else
+            tabContainer.Visible = true
+            contentFrame.Visible = true
+            Tween(mainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                Size = savedSize,
+                Position = savedPos
+            })
+        end
+    end)
 
     local notifContainer = Instance.new("Frame")
     notifContainer.Size = UDim2.new(0, 280, 1, -20)
