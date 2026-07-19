@@ -1834,42 +1834,58 @@ function XELIB:MakeWindow(config)
 
         local configList = ListConfigs()
         if #configList == 0 then configList = {"default"} end
-        local currentConfigName = configList[1] or "default"
+        local selectedConfigName = configList[1] or "default"
+        local newConfigName = ""
 
+        settingsTab:AddLabel("SELECT EXISTING CONFIG")
         settingsTab:AddDropdown("Saved Configs", configList, function(name)
-            currentConfigName = name
+            selectedConfigName = name
+        end)
+
+        settingsTab:AddButton("Refresh Config List", function()
+            configList = ListConfigs()
+            if #configList == 0 then configList = {"default"} end
+            Window:Notify("Refreshed", #configList .. " config(s) found.", 2)
+        end)
+
+        settingsTab:AddLabel("CREATE / RENAME CONFIG")
+        settingsTab:AddInput("Type New Config Name", "", function(txt)
+            newConfigName = txt:gsub("[^%w_]", "_")
         end)
 
         settingsTab:AddButton("Load Config (Live)", function()
-            if currentConfigName == "" then currentConfigName = "default" end
-            local newData = LoadConfig(currentConfigName)
+            local target = selectedConfigName
+            if target == "" then target = "default" end
+            local newData = LoadConfig(target)
             if newData then
                 loadedConfig = newData
                 Window._loadedConfig = newData
-                activeConfigName = currentConfigName
+                activeConfigName = target
                 ApplyConfig(newData)
-                Window:Notify("Config Applied", "Loaded and applied '" .. currentConfigName .. "' live!", 3)
+                Window:Notify("Config Applied", "Loaded and applied '" .. target .. "' live!", 3)
             else
-                Window:Notify("Not Found", "No config named '" .. currentConfigName .. "'.", 2)
+                Window:Notify("Not Found", "No config named '" .. target .. "'.", 2)
             end
         end)
 
         settingsTab:AddButton("Save Config", function()
-            if currentConfigName == "" then currentConfigName = "default" end
-            activeConfigName = currentConfigName
-            SaveConfig(currentConfigName)
-            Window:Notify("Config Saved", "Saved '" .. currentConfigName .. "' successfully.", 2)
+            local target = newConfigName ~= "" and newConfigName or selectedConfigName
+            if target == "" then target = "default" end
+            activeConfigName = target
+            SaveConfig(target)
+            Window:Notify("Config Saved", "Saved '" .. target .. "' successfully.", 2)
         end)
 
         settingsTab:AddButton("Delete Config", function()
-            if currentConfigName == "" or currentConfigName == "default" then
+            local target = selectedConfigName
+            if target == "" or target == "default" then
                 Window:Notify("Error", "Cannot delete default config.", 2)
                 return
             end
-            if DeleteConfig(currentConfigName) then
-                Window:Notify("Deleted", "Config '" .. currentConfigName .. "' removed.", 2)
+            if DeleteConfig(target) then
+                Window:Notify("Deleted", "Config '" .. target .. "' removed.", 2)
             else
-                Window:Notify("Not Found", "Config '" .. currentConfigName .. "' does not exist.", 2)
+                Window:Notify("Not Found", "Config '" .. target .. "' does not exist.", 2)
             end
         end)
         settingsTab:AddLabel("BACKGROUND EFFECTS")
