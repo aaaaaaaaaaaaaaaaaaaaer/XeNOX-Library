@@ -975,15 +975,14 @@ function XELIB:MakeWindow(config)
         page.ScrollBarImageColor3 = theme.Main
         page.Visible = (tabID == 1)
         page.Parent = contentFrame
-        page.CanvasSize = UDim2.new(0, 0, 0, 0)
-        page.ScrollBarImageTransparency = 1
-        Tween(page, TweenInfo.new(0.5), {ScrollBarImageTransparency = 0})
+        page.CanvasSize = UDim2.new(0, 0, 0, 2000)
+        page.ScrollBarImageTransparency = 0
         local layout = Instance.new("UIListLayout", page)
         layout.Padding = UDim.new(0, 10)
         layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
         layout.SortOrder = Enum.SortOrder.LayoutOrder
         layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-            Tween(page, ANIM.Fast, {CanvasSize = UDim2.new(0, 0, 0, layout.AbsoluteContentSize.Y + 20)})
+            page.CanvasSize = UDim2.new(0, 0, 0, layout.AbsoluteContentSize.Y + 20)
         end)
         tabs[tabID] = {Page = page, Btn = tabBtn}
         tabBtn.MouseButton1Click:Connect(function()
@@ -1094,7 +1093,12 @@ function XELIB:MakeWindow(config)
         end
         function Tab:AddToggle(text, default, callback)
             local saved = loadedConfig.toggles and loadedConfig.toggles[text]
-            local enabled = (saved ~= nil) and saved or (default or false)
+            local enabled
+            if saved ~= nil then
+                enabled = saved
+            else
+                enabled = default or false
+            end
             local frame = Instance.new("Frame")
             frame.Size = UDim2.new(1, -20, 0, 0)
             frame.BackgroundColor3 = Color3.new(0, 0, 0)
@@ -1372,10 +1376,11 @@ function XELIB:MakeWindow(config)
             boxStroke.Color = theme.Outline
             boxStroke.Thickness = 1
             boxStroke.Transparency = 1
-            Tween(frame, ANIM.Bounce, {Size = UDim2.new(1, -20, 0, 50), BackgroundTransparency = 0.5})
-            Tween(lb, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, false, 0.1), {TextTransparency = 0})
-            Tween(box, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, false, 0.15), {TextTransparency = 0})
-            Tween(boxStroke, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, false, 0.2), {Transparency = 0})
+            frame.Size = UDim2.new(1, -20, 0, 50)
+            frame.BackgroundTransparency = 0.5
+            lb.TextTransparency = 0
+            box.TextTransparency = 0
+            boxStroke.Transparency = 0
             box.Focused:Connect(function()
                 Tween(box, ANIM.Normal, {BackgroundColor3 = Color3.fromRGB(theme.Shade.R * 255 + 15, theme.Shade.G * 255 + 15, theme.Shade.B * 255 + 15)})
                 Tween(boxStroke, ANIM.Normal, {Thickness = 2, Color = theme.Main})
@@ -1671,51 +1676,40 @@ function XELIB:MakeWindow(config)
         end
         return Tab
     end
-    if hasSettings then
+        if hasSettings then
         local settingsTab = Window:AddTab("Settings")
-
-        -- Force Settings to the bottom of the tab list
         local settingsData = tabs[tabCount]
         settingsData.Btn.LayoutOrder = 999999
 
-        -- Add a visual separator before Settings
-        local separator = Instance.new("Frame")
-        separator.Name = "SettingsSeparator"
-        separator.Size = UDim2.new(1, -10, 0, 1)
-        separator.Position = UDim2.new(0, 5, 0, 0)
-        separator.BackgroundColor3 = theme.Outline
-        separator.BackgroundTransparency = 0.6
-        separator.LayoutOrder = 999998
-        separator.Parent = tabContainer
+        local sep = Instance.new("Frame")
+        sep.Size = UDim2.new(1, -10, 0, 1)
+        sep.Position = UDim2.new(0, 5, 0, 0)
+        sep.BackgroundColor3 = theme.Outline
+        sep.BackgroundTransparency = 0.6
+        sep.LayoutOrder = 999998
+        sep.Parent = tabContainer
+        Instance.new("UICorner", sep).CornerRadius = UDim.new(1, 0)
 
-        local sepCorner = Instance.new("UICorner", separator)
-        sepCorner.CornerRadius = UDim.new(1, 0)
+        local sp = Instance.new("Frame")
+        sp.Size = UDim2.new(1, 0, 0, 4)
+        sp.BackgroundTransparency = 1
+        sp.LayoutOrder = 999997
+        sp.Parent = tabContainer
 
-        -- Small spacer for breathing room
-        local spacer = Instance.new("Frame")
-        spacer.Name = "SettingsSpacer"
-        spacer.Size = UDim2.new(1, 0, 0, 4)
-        spacer.BackgroundTransparency = 1
-        spacer.LayoutOrder = 999997
-        spacer.Parent = tabContainer
+        -- VERSION LABEL (proves you have the latest file)
+        settingsTab:AddLabel("XeNOX v2.2 - Save System Active")
 
+        -- CONFIG MANAGEMENT
         settingsTab:AddLabel("CONFIG MANAGEMENT")
 
         settingsTab:AddToggle("Auto Save", autoSave, function(t)
             autoSave = t
             saveData._autoSave = t
+            saveData._activeConfigName = activeConfigName
             DebouncedSave()
         end)
 
         local currentConfigName = "default"
-
-        local function RefreshConfigList()
-            local configs = ListConfigs()
-            if #configs == 0 then
-                configs = {"default"}
-            end
-            return configs
-        end
 
         settingsTab:AddInput("Config Name", "default", function(txt)
             currentConfigName = txt:gsub("[^%w_]", "_")
@@ -1753,6 +1747,7 @@ function XELIB:MakeWindow(config)
             end
         end)
 
+        -- BACKGROUND EFFECTS
         settingsTab:AddLabel("BACKGROUND EFFECTS")
         settingsTab:AddToggle("Enable Rain", effects.Rain, function(t) effects.Rain = t saveData.effects.Rain = t DebouncedSave() end)
         settingsTab:AddColorPicker("Rain Color", effectColors.Rain, function(c) effectColors.Rain = c saveData.effectColors.Rain = {R = math.floor(c.R * 255), G = math.floor(c.G * 255), B = math.floor(c.B * 255)} DebouncedSave() end)
@@ -1766,11 +1761,15 @@ function XELIB:MakeWindow(config)
         settingsTab:AddColorPicker("Hex Color", effectColors.Hex, function(c) effectColors.Hex = c saveData.effectColors.Hex = {R = math.floor(c.R * 255), G = math.floor(c.G * 255), B = math.floor(c.B * 255)} DebouncedSave() end)
         settingsTab:AddToggle("Enable Glitch Blocks", effects.Glitch, function(t) effects.Glitch = t saveData.effects.Glitch = t DebouncedSave() end)
         settingsTab:AddColorPicker("Glitch Color", effectColors.Glitch, function(c) effectColors.Glitch = c saveData.effectColors.Glitch = {R = math.floor(c.R * 255), G = math.floor(c.G * 255), B = math.floor(c.B * 255)} DebouncedSave() end)
+
+        -- APPEARANCE
         settingsTab:AddLabel("APPEARANCE")
         settingsTab:AddKeybind("Menu Toggle Key", menuKey, function(newKey) menuKey = newKey saveData.menuKey = newKey.Name DebouncedSave() end)
+
         local fonts = {Enum.Font.SourceSansBold, Enum.Font.Roboto, Enum.Font.GothamBold, Enum.Font.Arcade, Enum.Font.Code, Enum.Font.SciFi}
         local fontNames = {}
         for _, f in ipairs(fonts) do table.insert(fontNames, f.Name) end
+
         settingsTab:AddDropdown("Global Font", fontNames, function(selected)
             for _, f in ipairs(fonts) do
                 if f.Name == selected then
@@ -1792,6 +1791,7 @@ function XELIB:MakeWindow(config)
                 end
             end
         end)
+
         settingsTab:AddColorPicker("Main Theme", theme.Main, function(c)
             theme.Main = c
             saveData.theme.Main = {R = math.floor(c.R * 255), G = math.floor(c.G * 255), B = math.floor(c.B * 255)}
@@ -1800,6 +1800,7 @@ function XELIB:MakeWindow(config)
             Tween(titleLbl, ANIM.Normal, {TextColor3 = c})
             Tween(mainStroke, ANIM.Normal, {Color = c})
         end)
+
         settingsTab:AddColorPicker("UI Outline Color", theme.Outline, function(c)
             theme.Outline = c
             saveData.theme.Outline = {R = math.floor(c.R * 255), G = math.floor(c.G * 255), B = math.floor(c.B * 255)}
@@ -1809,6 +1810,7 @@ function XELIB:MakeWindow(config)
                 if v and v.Parent then Tween(v, ANIM.Normal, {Color = c}) end
             end
         end)
+
         settingsTab:AddColorPicker("Shade Color", theme.Shade, function(c)
             theme.Shade = c
             saveData.theme.Shade = {R = math.floor(c.R * 255), G = math.floor(c.G * 255), B = math.floor(c.B * 255)}
@@ -1817,6 +1819,7 @@ function XELIB:MakeWindow(config)
                 if v and v.Parent then Tween(v, ANIM.Normal, {BackgroundColor3 = c}) end
             end
         end)
+
         settingsTab:AddColorPicker("Button Color", theme.Button, function(c)
             theme.Button = c
             saveData.theme.Button = {R = math.floor(c.R * 255), G = math.floor(c.G * 255), B = math.floor(c.B * 255)}
@@ -1825,12 +1828,20 @@ function XELIB:MakeWindow(config)
                 if v and v.Parent then Tween(v, ANIM.Normal, {BackgroundColor3 = c}) end
             end
         end)
+
         settingsTab:AddColorPicker("Button Outline Color", theme.ButtonOutline, function(c)
             theme.ButtonOutline = c
             saveData.theme.ButtonOutline = {R = math.floor(c.R * 255), G = math.floor(c.G * 255), B = math.floor(c.B * 255)}
             DebouncedSave()
             for _, v in ipairs(uiCache.ButtonOutline) do
                 if v and v.Parent then Tween(v, ANIM.Normal, {Color = c}) end
+            end
+        end)
+
+        -- Ensure Settings tab canvas is scrollable
+        task.delay(0.1, function()
+            if settingsData and settingsData.Page then
+                settingsData.Page.CanvasSize = UDim2.new(0, 0, 0, 3000)
             end
         end)
     end
