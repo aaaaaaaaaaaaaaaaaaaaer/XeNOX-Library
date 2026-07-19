@@ -1944,7 +1944,7 @@ function XELIB:MakeWindow(config)
 
                 -- Config name
                 local nameLbl = Instance.new("TextLabel")
-                nameLbl.Size = UDim2.new(1, -140, 1, 0)
+                nameLbl.Size = UDim2.new(1, -200, 1, 0)
                 nameLbl.Position = UDim2.new(0, 14, 0, 0)
                 nameLbl.BackgroundTransparency = 1
                 nameLbl.Text = name .. (isActive and "  ●" or "")
@@ -1956,15 +1956,31 @@ function XELIB:MakeWindow(config)
                 nameLbl.Parent = row
                 table.insert(uiCache.Text, nameLbl)
 
-                -- Load button
+                -- Select button (sets as active target, does NOT load)
+                local selBtn = Instance.new("TextButton")
+                selBtn.Size = UDim2.new(0, 46, 0, 28)
+                selBtn.Position = UDim2.new(1, -168, 0.5, -14)
+                selBtn.BackgroundColor3 = isActive and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(120, 120, 120)
+                selBtn.Text = "SEL"
+                selBtn.TextColor3 = Color3.new(0, 0, 0)
+                selBtn.Font = theme.Font
+                selBtn.TextSize = 11
+                selBtn.AutoButtonColor = false
+                selBtn.Parent = row
+                Instance.new("UICorner", selBtn).CornerRadius = UDim.new(0, 6)
+                local selStroke = Instance.new("UIStroke", selBtn)
+                selStroke.Color = isActive and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(150, 150, 150)
+                selStroke.Thickness = 1
+
+                -- Load button (loads and applies)
                 local loadBtn = Instance.new("TextButton")
-                loadBtn.Size = UDim2.new(0, 52, 0, 30)
-                loadBtn.Position = UDim2.new(1, -112, 0.5, -15)
+                loadBtn.Size = UDim2.new(0, 52, 0, 28)
+                loadBtn.Position = UDim2.new(1, -114, 0.5, -14)
                 loadBtn.BackgroundColor3 = Color3.fromRGB(80, 220, 120)
                 loadBtn.Text = "LOAD"
                 loadBtn.TextColor3 = Color3.new(0, 0, 0)
                 loadBtn.Font = theme.Font
-                loadBtn.TextSize = 12
+                loadBtn.TextSize = 11
                 loadBtn.AutoButtonColor = false
                 loadBtn.Parent = row
                 Instance.new("UICorner", loadBtn).CornerRadius = UDim.new(0, 6)
@@ -1974,13 +1990,13 @@ function XELIB:MakeWindow(config)
 
                 -- Delete button
                 local delBtn = Instance.new("TextButton")
-                delBtn.Size = UDim2.new(0, 52, 0, 30)
-                delBtn.Position = UDim2.new(1, -56, 0.5, -15)
+                delBtn.Size = UDim2.new(0, 52, 0, 28)
+                delBtn.Position = UDim2.new(1, -56, 0.5, -14)
                 delBtn.BackgroundColor3 = Color3.fromRGB(255, 70, 70)
                 delBtn.Text = "DEL"
                 delBtn.TextColor3 = Color3.new(0, 0, 0)
                 delBtn.Font = theme.Font
-                delBtn.TextSize = 12
+                delBtn.TextSize = 11
                 delBtn.AutoButtonColor = false
                 delBtn.Parent = row
                 Instance.new("UICorner", delBtn).CornerRadius = UDim.new(0, 6)
@@ -2002,20 +2018,42 @@ function XELIB:MakeWindow(config)
                     Tween(rowStroke, ANIM.Fast, {Thickness = isActive and 2 or 1})
                 end)
 
+                -- Select button interactions
+                selBtn.MouseEnter:Connect(function()
+                    Tween(selBtn, ANIM.Fast, {BackgroundTransparency = 0.2, Size = UDim2.new(0, 50, 0, 30), Position = UDim2.new(1, -170, 0.5, -15)})
+                    Tween(selStroke, ANIM.Fast, {Thickness = 2})
+                end)
+                selBtn.MouseLeave:Connect(function()
+                    Tween(selBtn, ANIM.Fast, {BackgroundTransparency = 0, Size = UDim2.new(0, 46, 0, 28), Position = UDim2.new(1, -168, 0.5, -14)})
+                    Tween(selStroke, ANIM.Fast, {Thickness = 1})
+                end)
+                selBtn.MouseButton1Down:Connect(function()
+                    Tween(selBtn, ANIM.Fast, {BackgroundColor3 = Color3.new(1, 1, 1), Size = UDim2.new(0, 44, 0, 26), Position = UDim2.new(1, -166, 0.5, -13)})
+                end)
+                selBtn.MouseButton1Up:Connect(function()
+                    Tween(selBtn, ANIM.Spring, {BackgroundColor3 = isActive and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(120, 120, 120), Size = UDim2.new(0, 46, 0, 28), Position = UDim2.new(1, -168, 0.5, -14)})
+                end)
+                selBtn.MouseButton1Click:Connect(function()
+                    activeConfigName = name
+                    activeNameLbl.Text = activeConfigName
+                    Window:Notify("Config Selected", "'" .. name .. "' is now the active target.", 2)
+                    RefreshConfigList()
+                end)
+
                 -- Load button interactions
                 loadBtn.MouseEnter:Connect(function()
-                    Tween(loadBtn, ANIM.Fast, {BackgroundTransparency = 0.2, Size = UDim2.new(0, 56, 0, 32), Position = UDim2.new(1, -114, 0.5, -16)})
+                    Tween(loadBtn, ANIM.Fast, {BackgroundTransparency = 0.2, Size = UDim2.new(0, 56, 0, 30), Position = UDim2.new(1, -116, 0.5, -15)})
                     Tween(loadStroke, ANIM.Fast, {Thickness = 2})
                 end)
                 loadBtn.MouseLeave:Connect(function()
-                    Tween(loadBtn, ANIM.Fast, {BackgroundTransparency = 0, Size = UDim2.new(0, 52, 0, 30), Position = UDim2.new(1, -112, 0.5, -15)})
+                    Tween(loadBtn, ANIM.Fast, {BackgroundTransparency = 0, Size = UDim2.new(0, 52, 0, 28), Position = UDim2.new(1, -114, 0.5, -14)})
                     Tween(loadStroke, ANIM.Fast, {Thickness = 1})
                 end)
                 loadBtn.MouseButton1Down:Connect(function()
-                    Tween(loadBtn, ANIM.Fast, {BackgroundColor3 = Color3.new(1, 1, 1), Size = UDim2.new(0, 48, 0, 28), Position = UDim2.new(1, -110, 0.5, -14)})
+                    Tween(loadBtn, ANIM.Fast, {BackgroundColor3 = Color3.new(1, 1, 1), Size = UDim2.new(0, 48, 0, 26), Position = UDim2.new(1, -112, 0.5, -13)})
                 end)
                 loadBtn.MouseButton1Up:Connect(function()
-                    Tween(loadBtn, ANIM.Spring, {BackgroundColor3 = Color3.fromRGB(80, 220, 120), Size = UDim2.new(0, 52, 0, 30), Position = UDim2.new(1, -112, 0.5, -15)})
+                    Tween(loadBtn, ANIM.Spring, {BackgroundColor3 = Color3.fromRGB(80, 220, 120), Size = UDim2.new(0, 52, 0, 28), Position = UDim2.new(1, -114, 0.5, -14)})
                 end)
                 loadBtn.MouseButton1Click:Connect(function()
                     local newData = LoadConfig(name)
@@ -2034,18 +2072,18 @@ function XELIB:MakeWindow(config)
 
                 -- Delete button interactions
                 delBtn.MouseEnter:Connect(function()
-                    Tween(delBtn, ANIM.Fast, {BackgroundTransparency = 0.2, Size = UDim2.new(0, 56, 0, 32), Position = UDim2.new(1, -58, 0.5, -16)})
+                    Tween(delBtn, ANIM.Fast, {BackgroundTransparency = 0.2, Size = UDim2.new(0, 56, 0, 30), Position = UDim2.new(1, -58, 0.5, -15)})
                     Tween(delStroke, ANIM.Fast, {Thickness = 2})
                 end)
                 delBtn.MouseLeave:Connect(function()
-                    Tween(delBtn, ANIM.Fast, {BackgroundTransparency = 0, Size = UDim2.new(0, 52, 0, 30), Position = UDim2.new(1, -56, 0.5, -15)})
+                    Tween(delBtn, ANIM.Fast, {BackgroundTransparency = 0, Size = UDim2.new(0, 52, 0, 28), Position = UDim2.new(1, -56, 0.5, -14)})
                     Tween(delStroke, ANIM.Fast, {Thickness = 1})
                 end)
                 delBtn.MouseButton1Down:Connect(function()
-                    Tween(delBtn, ANIM.Fast, {BackgroundColor3 = Color3.new(1, 1, 1), Size = UDim2.new(0, 48, 0, 28), Position = UDim2.new(1, -54, 0.5, -14)})
+                    Tween(delBtn, ANIM.Fast, {BackgroundColor3 = Color3.new(1, 1, 1), Size = UDim2.new(0, 48, 0, 26), Position = UDim2.new(1, -54, 0.5, -13)})
                 end)
                 delBtn.MouseButton1Up:Connect(function()
-                    Tween(delBtn, ANIM.Spring, {BackgroundColor3 = Color3.fromRGB(255, 70, 70), Size = UDim2.new(0, 52, 0, 30), Position = UDim2.new(1, -56, 0.5, -15)})
+                    Tween(delBtn, ANIM.Spring, {BackgroundColor3 = Color3.fromRGB(255, 70, 70), Size = UDim2.new(0, 52, 0, 28), Position = UDim2.new(1, -56, 0.5, -14)})
                 end)
                 delBtn.MouseButton1Click:Connect(function()
                     if name == "default" then
@@ -2075,70 +2113,132 @@ function XELIB:MakeWindow(config)
             listContainer.Size = UDim2.new(1, -20, 0, math.max(#list * 52, 0))
         end
 
-        -- CREATE NEW CONFIG
-        settingsTab:AddLabel("Create New Config")
+        -- ==================== CONFIG ACTIONS ====================
+        settingsTab:AddLabel("Config Actions")
+        settingsTab:AddParagraph("Create New", "Type a name below, then click CREATE NEW to save current settings as a brand new config file.")
 
         local newConfigName = ""
-        settingsTab:AddInput("Config Name", "", function(txt)
+        settingsTab:AddInput("New Config Name", "", function(txt)
             newConfigName = txt:gsub("[^%w_]", "_")
         end)
 
-        -- Save button
-        local saveFrame = Instance.new("Frame")
-        saveFrame.Size = UDim2.new(1, -20, 0, 0)
-        saveFrame.BackgroundColor3 = theme.Shade
-        saveFrame.BackgroundTransparency = 0.5
-        saveFrame.Parent = settingsData.Page
-        Instance.new("UICorner", saveFrame).CornerRadius = UDim.new(0, 8)
-        table.insert(uiCache.Shade, saveFrame)
+        -- CREATE NEW button (blue)
+        local createFrame = Instance.new("Frame")
+        createFrame.Size = UDim2.new(1, -20, 0, 0)
+        createFrame.BackgroundColor3 = theme.Shade
+        createFrame.BackgroundTransparency = 0.5
+        createFrame.Parent = settingsData.Page
+        Instance.new("UICorner", createFrame).CornerRadius = UDim.new(0, 8)
+        table.insert(uiCache.Shade, createFrame)
 
-        local saveBtn = Instance.new("TextButton")
-        saveBtn.Size = UDim2.new(1, -16, 1, -16)
-        saveBtn.Position = UDim2.new(0, 8, 0, 8)
-        saveBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 255)
-        saveBtn.Text = "SAVE CONFIG"
-        saveBtn.TextColor3 = Color3.new(0, 0, 0)
-        saveBtn.Font = theme.Font
-        saveBtn.TextSize = 16
-        saveBtn.Parent = saveFrame
-        saveBtn.AutoButtonColor = false
+        local createBtn = Instance.new("TextButton")
+        createBtn.Size = UDim2.new(1, -16, 1, -16)
+        createBtn.Position = UDim2.new(0, 8, 0, 8)
+        createBtn.BackgroundColor3 = Color3.fromRGB(0, 180, 255)
+        createBtn.Text = "➕  CREATE NEW CONFIG"
+        createBtn.TextColor3 = Color3.new(0, 0, 0)
+        createBtn.Font = theme.Font
+        createBtn.TextSize = 15
+        createBtn.Parent = createFrame
+        createBtn.AutoButtonColor = false
 
-        Instance.new("UICorner", saveBtn).CornerRadius = UDim.new(0, 6)
-        local saveStroke = Instance.new("UIStroke", saveBtn)
-        saveStroke.Color = Color3.fromRGB(0, 200, 255)
-        saveStroke.Thickness = 1
-        saveStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-        table.insert(uiCache.ButtonOutline, saveStroke)
+        Instance.new("UICorner", createBtn).CornerRadius = UDim.new(0, 6)
+        local createStroke = Instance.new("UIStroke", createBtn)
+        createStroke.Color = Color3.fromRGB(0, 220, 255)
+        createStroke.Thickness = 1
+        createStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+        table.insert(uiCache.ButtonOutline, createStroke)
 
-        saveBtn.MouseEnter:Connect(function()
-            Tween(saveBtn, ANIM.Fast, {BackgroundTransparency = 0.2, Size = UDim2.new(1, -12, 1, -12), Position = UDim2.new(0, 6, 0, 6)})
-            Tween(saveStroke, ANIM.Fast, {Thickness = 2})
+        createBtn.MouseEnter:Connect(function()
+            Tween(createBtn, ANIM.Fast, {BackgroundTransparency = 0.2, Size = UDim2.new(1, -12, 1, -12), Position = UDim2.new(0, 6, 0, 6)})
+            Tween(createStroke, ANIM.Fast, {Thickness = 2})
         end)
-        saveBtn.MouseLeave:Connect(function()
-            Tween(saveBtn, ANIM.Fast, {BackgroundTransparency = 0, Size = UDim2.new(1, -16, 1, -16), Position = UDim2.new(0, 8, 0, 8)})
-            Tween(saveStroke, ANIM.Fast, {Thickness = 1})
+        createBtn.MouseLeave:Connect(function()
+            Tween(createBtn, ANIM.Fast, {BackgroundTransparency = 0, Size = UDim2.new(1, -16, 1, -16), Position = UDim2.new(0, 8, 0, 8)})
+            Tween(createStroke, ANIM.Fast, {Thickness = 1})
         end)
-        saveBtn.MouseButton1Down:Connect(function()
-            Tween(saveBtn, ANIM.Fast, {BackgroundColor3 = Color3.new(1, 1, 1), Size = UDim2.new(1, -20, 1, -20), Position = UDim2.new(0, 10, 0, 10)})
-            CreateRipple(saveBtn, Vector2.new(saveBtn.AbsoluteSize.X / 2, saveBtn.AbsoluteSize.Y / 2))
+        createBtn.MouseButton1Down:Connect(function()
+            Tween(createBtn, ANIM.Fast, {BackgroundColor3 = Color3.new(1, 1, 1), Size = UDim2.new(1, -20, 1, -20), Position = UDim2.new(0, 10, 0, 10)})
+            CreateRipple(createBtn, Vector2.new(createBtn.AbsoluteSize.X / 2, createBtn.AbsoluteSize.Y / 2))
         end)
-        saveBtn.MouseButton1Up:Connect(function()
-            Tween(saveBtn, ANIM.Spring, {BackgroundColor3 = Color3.fromRGB(0, 200, 255), Size = UDim2.new(1, -16, 1, -16), Position = UDim2.new(0, 8, 0, 8)})
+        createBtn.MouseButton1Up:Connect(function()
+            Tween(createBtn, ANIM.Spring, {BackgroundColor3 = Color3.fromRGB(0, 180, 255), Size = UDim2.new(1, -16, 1, -16), Position = UDim2.new(0, 8, 0, 8)})
         end)
-        saveBtn.MouseButton1Click:Connect(function()
-            local target = newConfigName ~= "" and newConfigName or "default"
+        createBtn.MouseButton1Click:Connect(function()
+            local target = newConfigName ~= "" and newConfigName or nil
+            if not target then
+                Window:Notify("Error", "Type a config name first!", 2)
+                return
+            end
             activeConfigName = target
             SaveConfig(target)
             activeNameLbl.Text = activeConfigName
-            Window:Notify("Config Saved", "Saved '" .. target .. "' successfully!", 3)
+            Window:Notify("Config Created", "New config '" .. target .. "' created and activated!", 3)
             RefreshConfigList()
         end)
 
-        Tween(saveFrame, ANIM.Bounce, {Size = UDim2.new(1, -20, 0, 54)})
+        Tween(createFrame, ANIM.Bounce, {Size = UDim2.new(1, -20, 0, 54)})
+
+        -- Separator
+        local sep2 = Instance.new("Frame")
+        sep2.Size = UDim2.new(1, -40, 0, 1)
+        sep2.BackgroundColor3 = theme.Outline
+        sep2.BackgroundTransparency = 0.4
+        sep2.Parent = settingsData.Page
+
+        settingsTab:AddParagraph("Save Active", "Click below to overwrite the currently active config with your current settings.")
+
+        -- SAVE ACTIVE button (green)
+        local saveActiveFrame = Instance.new("Frame")
+        saveActiveFrame.Size = UDim2.new(1, -20, 0, 0)
+        saveActiveFrame.BackgroundColor3 = theme.Shade
+        saveActiveFrame.BackgroundTransparency = 0.5
+        saveActiveFrame.Parent = settingsData.Page
+        Instance.new("UICorner", saveActiveFrame).CornerRadius = UDim.new(0, 8)
+        table.insert(uiCache.Shade, saveActiveFrame)
+
+        local saveActiveBtn = Instance.new("TextButton")
+        saveActiveBtn.Size = UDim2.new(1, -16, 1, -16)
+        saveActiveBtn.Position = UDim2.new(0, 8, 0, 8)
+        saveActiveBtn.BackgroundColor3 = Color3.fromRGB(80, 220, 120)
+        saveActiveBtn.Text = "💾  SAVE ACTIVE CONFIG"
+        saveActiveBtn.TextColor3 = Color3.new(0, 0, 0)
+        saveActiveBtn.Font = theme.Font
+        saveActiveBtn.TextSize = 15
+        saveActiveBtn.Parent = saveActiveFrame
+        saveActiveBtn.AutoButtonColor = false
+
+        Instance.new("UICorner", saveActiveBtn).CornerRadius = UDim.new(0, 6)
+        local saveActiveStroke = Instance.new("UIStroke", saveActiveBtn)
+        saveActiveStroke.Color = Color3.fromRGB(100, 255, 150)
+        saveActiveStroke.Thickness = 1
+        saveActiveStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+        table.insert(uiCache.ButtonOutline, saveActiveStroke)
+
+        saveActiveBtn.MouseEnter:Connect(function()
+            Tween(saveActiveBtn, ANIM.Fast, {BackgroundTransparency = 0.2, Size = UDim2.new(1, -12, 1, -12), Position = UDim2.new(0, 6, 0, 6)})
+            Tween(saveActiveStroke, ANIM.Fast, {Thickness = 2})
+        end)
+        saveActiveBtn.MouseLeave:Connect(function()
+            Tween(saveActiveBtn, ANIM.Fast, {BackgroundTransparency = 0, Size = UDim2.new(1, -16, 1, -16), Position = UDim2.new(0, 8, 0, 8)})
+            Tween(saveActiveStroke, ANIM.Fast, {Thickness = 1})
+        end)
+        saveActiveBtn.MouseButton1Down:Connect(function()
+            Tween(saveActiveBtn, ANIM.Fast, {BackgroundColor3 = Color3.new(1, 1, 1), Size = UDim2.new(1, -20, 1, -20), Position = UDim2.new(0, 10, 0, 10)})
+            CreateRipple(saveActiveBtn, Vector2.new(saveActiveBtn.AbsoluteSize.X / 2, saveActiveBtn.AbsoluteSize.Y / 2))
+        end)
+        saveActiveBtn.MouseButton1Up:Connect(function()
+            Tween(saveActiveBtn, ANIM.Spring, {BackgroundColor3 = Color3.fromRGB(80, 220, 120), Size = UDim2.new(1, -16, 1, -16), Position = UDim2.new(0, 8, 0, 8)})
+        end)
+        saveActiveBtn.MouseButton1Click:Connect(function()
+            SaveConfig(activeConfigName)
+            Window:Notify("Config Saved", "Overwritten '" .. activeConfigName .. "' with current settings!", 3)
+        end)
+
+        Tween(saveActiveFrame, ANIM.Bounce, {Size = UDim2.new(1, -20, 0, 54)})
 
         -- Populate list on first open
         RefreshConfigList()
-
         -- ==================== BACKGROUND EFFECTS ====================
         settingsTab:AddLabel("BACKGROUND EFFECTS")
         settingsTab:AddToggle("Enable Rain", effects.Rain, function(t) effects.Rain = t saveData.effects.Rain = t DebouncedSave() end)
