@@ -1389,10 +1389,10 @@ function XELIB:MakeWindow(config)
             local popup = Instance.new("Frame")
             popup.Size = UDim2.new(0, 0, 0, 0)
             popup.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
-            popup.ZIndex = 100
+            popup.ZIndex = 1000
             popup.Visible = false
             popup.Active = true
-            popup.Parent = mainFrame
+            popup.Parent = screenGui
             popup.AnchorPoint = Vector2.new(0.5, 0)
             Instance.new("UICorner", popup).CornerRadius = UDim.new(0, 6)
             local pStroke = Instance.new("UIStroke", popup)
@@ -1405,13 +1405,13 @@ function XELIB:MakeWindow(config)
             box.Image = "rbxassetid://4155801252"
             box.ImageColor3 = Color3.new(1, 1, 1)
             box.AutoButtonColor = false
-            box.ZIndex = 101
+            box.ZIndex = 1001
             box.Parent = popup
             box.ImageTransparency = 1
             local cursorSV = Instance.new("Frame")
             cursorSV.Size = UDim2.new(0, 6, 0, 6)
             cursorSV.BackgroundColor3 = Color3.new(1, 1, 1)
-            cursorSV.ZIndex = 102
+            cursorSV.ZIndex = 1002
             cursorSV.Parent = box
             cursorSV.BackgroundTransparency = 1
             Instance.new("UICorner", cursorSV).CornerRadius = UDim.new(1, 0)
@@ -1424,7 +1424,7 @@ function XELIB:MakeWindow(config)
             hue.BackgroundColor3 = Color3.new(1, 1, 1)
             hue.Text = ""
             hue.AutoButtonColor = false
-            hue.ZIndex = 101
+            hue.ZIndex = 1001
             hue.Parent = popup
             hue.BackgroundTransparency = 1
             local grad = Instance.new("UIGradient", hue)
@@ -1442,7 +1442,7 @@ function XELIB:MakeWindow(config)
             cursorHue.Size = UDim2.new(1, 4, 0, 3)
             cursorHue.Position = UDim2.new(0, -2, 0, 0)
             cursorHue.BackgroundColor3 = Color3.new(1, 1, 1)
-            cursorHue.ZIndex = 102
+            cursorHue.ZIndex = 1002
             cursorHue.Parent = hue
             cursorHue.BackgroundTransparency = 1
             local hStroke = Instance.new("UIStroke", cursorHue)
@@ -1456,7 +1456,7 @@ function XELIB:MakeWindow(config)
             txt.Font = Enum.Font.Code
             txt.TextSize = 14
             txt.TextXAlignment = Enum.TextXAlignment.Left
-            txt.ZIndex = 101
+            txt.ZIndex = 1001
             txt.TextTransparency = 1
             txt.Parent = popup
             table.insert(uiCache.Text, txt)
@@ -1474,7 +1474,7 @@ function XELIB:MakeWindow(config)
             preview.MouseButton1Click:Connect(function()
                 popup.Visible = not popup.Visible
                 if popup.Visible then
-                    local abs = preview.AbsolutePosition - mainFrame.AbsolutePosition
+                    local abs = preview.AbsolutePosition
                     popup.Position = UDim2.new(0, abs.X + 15, 0, abs.Y + 40)
                     popup.Size = UDim2.new(0, 0, 0, 0)
                     Tween(popup, ANIM.Bounce, {Size = UDim2.new(0, 200, 0, 200)})
