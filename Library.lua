@@ -523,6 +523,7 @@ function XELIB:MakeWindow(config)
     titleBar.Size = UDim2.new(1, 0, 0, 45)
     titleBar.BackgroundTransparency = 1
     titleBar.ZIndex = 5
+    titleBar.Active = true
     titleBar.Parent = mainFrame
     local titleLbl = Instance.new("TextLabel")
     titleLbl.Size = UDim2.new(1, -120, 0, 25)
