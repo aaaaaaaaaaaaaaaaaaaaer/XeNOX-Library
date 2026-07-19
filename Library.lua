@@ -249,7 +249,9 @@ function XELIB:MakeWindow(config)
     -- ==================== SAVE SYSTEM ====================
     local saveId = config.SaveId or config.Name or "XeNOX_Default"
     local autoSave = config.AutoSave ~= false
-    local configPath = "XeNOX_Configs/" .. saveId:gsub("[^%w_]", "_") .. ".json"
+    local configFolder = "XeNOX_Configs/" .. saveId:gsub("[^%w_]", "_")
+    local defaultConfigPath = configFolder .. "/default.json"
+    local activeConfigName = "default"
     local saveData = {
         toggles = {},
         sliders = {},
@@ -264,32 +266,67 @@ function XELIB:MakeWindow(config)
     }
 
     local function EnsureFolder()
-        if makefolder and not isfolder("XeNOX_Configs") then
-            pcall(function() makefolder("XeNOX_Configs") end)
+        if makefolder then
+            pcall(function()
+                if not isfolder("XeNOX_Configs") then makefolder("XeNOX_Configs") end
+                if not isfolder(configFolder) then makefolder(configFolder) end
+            end)
         end
     end
 
-    local function SaveConfig()
+    local function GetConfigPath(name)
+        return configFolder .. "/" .. name:gsub("[^%w_]", "_") .. ".json"
+    end
+
+    local function ListConfigs()
+        local list = {}
+        if not isfolder or not isfolder(configFolder) then return list end
+        local success, files = pcall(function()
+            return listfiles(configFolder)
+        end)
+        if not success or type(files) ~= "table" then return list end
+        for _, path in ipairs(files) do
+            local name = path:match("([^/\]+)%.json$")
+            if name then table.insert(list, name) end
+        end
+        return list
+    end
+
+    local function SaveConfig(name)
+        name = name or activeConfigName
         if not writefile then return end
         EnsureFolder()
+        local path = GetConfigPath(name)
         local success, json = pcall(function()
             return HttpService:JSONEncode(saveData)
         end)
         if success then
-            pcall(function() writefile(configPath, json) end)
+            pcall(function() writefile(path, json) end)
         end
     end
 
-    local function LoadConfig()
+    local function LoadConfig(name)
+        name = name or activeConfigName
         if not isfile or not readfile then return nil end
-        if not isfile(configPath) then return nil end
+        local path = GetConfigPath(name)
+        if not isfile(path) then return nil end
         local success, data = pcall(function()
-            return HttpService:JSONDecode(readfile(configPath))
+            return HttpService:JSONDecode(readfile(path))
         end)
         if success and type(data) == "table" then
             return data
         end
         return nil
+    end
+
+    local function DeleteConfig(name)
+        if not isfile then return false end
+        local path = GetConfigPath(name)
+        if isfile(path) then
+            pcall(function() delfile(path) end)
+            return true
+        end
+        return false
     end
 
     local loadedConfig = LoadConfig() or {}
@@ -306,6 +343,12 @@ function XELIB:MakeWindow(config)
                 effectColors[k] = Color3.fromRGB(v.R, v.G, v.B)
             end
         end
+    end
+    if loadedConfig._autoSave ~= nil then
+        autoSave = loadedConfig._autoSave
+    end
+    if loadedConfig._activeConfigName and type(loadedConfig._activeConfigName) == "string" then
+        activeConfigName = loadedConfig._activeConfigName
     end
     if loadedConfig.theme then
         for k, v in pairs(loadedConfig.theme) do
@@ -330,11 +373,12 @@ function XELIB:MakeWindow(config)
 
     local function DebouncedSave()
         if not autoSave then return end
+        saveData._activeConfigName = activeConfigName
         if Window._debounceSave then
             task.cancel(Window._debounceSave)
         end
         Window._debounceSave = task.delay(0.5, function()
-            SaveConfig()
+            SaveConfig(activeConfigName)
             Window._debounceSave = nil
         end)
     end
@@ -1759,17 +1803,34 @@ function XELIB:MakeWindow(config)
             end
         end)
     end
-    function Window:SaveConfig()
-        SaveConfig()
+    function Window:SaveConfig(name)
+        SaveConfig(name)
     end
 
-    function Window:LoadConfig()
-        return LoadConfig()
+    function Window:LoadConfig(name)
+        return LoadConfig(name)
+    end
+
+    function Window:DeleteConfig(name)
+        return DeleteConfig(name)
+    end
+
+    function Window:ListConfigs()
+        return ListConfigs()
+    end
+
+    function Window:SetActiveConfig(name)
+        activeConfigName = name
+    end
+
+    function Window:GetActiveConfig()
+        return activeConfigName
     end
 
     function Window:ResetConfig()
-        if isfile and isfile(configPath) then
-            pcall(function() delfile(configPath) end)
+        local path = GetConfigPath(activeConfigName)
+        if isfile and isfile(path) then
+            pcall(function() delfile(path) end)
         end
         saveData.toggles = {}
         saveData.sliders = {}
@@ -1783,8 +1844,8 @@ function XELIB:MakeWindow(config)
         saveData.menuKey = nil
     end
 
-    function Window:GetConfigPath()
-        return configPath
+    function Window:GetConfigPath(name)
+        return GetConfigPath(name or activeConfigName)
     end
 
     return Window
