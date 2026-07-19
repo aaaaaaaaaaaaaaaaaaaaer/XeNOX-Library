@@ -1540,6 +1540,31 @@ function XELIB:MakeWindow(config)
     end
     if hasSettings then
         local settingsTab = Window:AddTab("Settings")
+
+        -- Force Settings to the bottom of the tab list
+        local settingsData = tabs[tabCount]
+        settingsData.Btn.LayoutOrder = 999999
+
+        -- Add a visual separator before Settings
+        local separator = Instance.new("Frame")
+        separator.Name = "SettingsSeparator"
+        separator.Size = UDim2.new(1, -10, 0, 1)
+        separator.Position = UDim2.new(0, 5, 0, 0)
+        separator.BackgroundColor3 = theme.Outline
+        separator.BackgroundTransparency = 0.6
+        separator.LayoutOrder = 999998
+        separator.Parent = tabContainer
+
+        local sepCorner = Instance.new("UICorner", separator)
+        sepCorner.CornerRadius = UDim.new(1, 0)
+
+        -- Small spacer for breathing room
+        local spacer = Instance.new("Frame")
+        spacer.Name = "SettingsSpacer"
+        spacer.Size = UDim2.new(1, 0, 0, 4)
+        spacer.BackgroundTransparency = 1
+        spacer.LayoutOrder = 999997
+        spacer.Parent = tabContainer
         settingsTab:AddLabel("BACKGROUND EFFECTS")
         settingsTab:AddToggle("Enable Rain", false, function(t) effects.Rain = t end)
         settingsTab:AddColorPicker("Rain Color", effectColors.Rain, function(c) effectColors.Rain = c end)
