@@ -145,8 +145,6 @@ function XELIB:MakeWindow(config)
     local menuKey = Enum.KeyCode.RightControl
     local menuOpen = true
     local isMinimized = false
-    local originalPos = mainFrame.Position
-    local originalSize = mainFrame.Size
     local tabs = {}
     local tabCount = 0
     local activeNotifs = {}
