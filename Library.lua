@@ -221,6 +221,7 @@ function XELIB:MakeWindow(config)
     local menuOpen = true
     local isMinimized = false
 
+    -- ==================== SAVE SYSTEM ====================
     local saveId = config.SaveId or config.Name or "XeNOX_Default"
     local autoSave = config.AutoSave ~= false
     local configFolder = "XeNOX_Configs/" .. saveId:gsub("[^%w_]", "_")
@@ -305,6 +306,7 @@ function XELIB:MakeWindow(config)
 
     local loadedConfig = LoadConfig() or {}
 
+    -- Apply loaded theme/effects/keybind before UI creation
     if loadedConfig.effects then
         for k, v in pairs(loadedConfig.effects) do
             if effects[k] ~= nil then effects[k] = v end
@@ -344,6 +346,16 @@ function XELIB:MakeWindow(config)
     Window._saveConfigFunc = SaveConfig
     Window._debounceSave = nil
 
+    local uiRegistry = {
+        toggles = {},
+        sliders = {},
+        dropdowns = {},
+        inputs = {},
+        keybinds = {},
+        colors = {},
+    }
+    Window._uiRegistry = uiRegistry
+
     local function DebouncedSave()
         if not autoSave then return end
         saveData._activeConfigName = activeConfigName
@@ -355,6 +367,117 @@ function XELIB:MakeWindow(config)
             Window._debounceSave = nil
         end)
     end
+    -- ==================== /SAVE SYSTEM ====================
+    local function ApplyConfig(data)
+        if type(data) ~= "table" then return end
+        if data.toggles then
+            for text, value in pairs(data.toggles) do
+                local entry = uiRegistry.toggles[text]
+                if entry and entry.bg and entry.bg.Parent then
+                    entry.enabled = value
+                    local targetColor = value and theme.Button or theme.Shade
+                    Tween(entry.bg, ANIM.Normal, {BackgroundColor3 = targetColor})
+                    Tween(entry.ball, ANIM.Spring, {Position = value and UDim2.new(1, -21, 0.5, -8) or UDim2.new(0, 4, 0.5, -8)})
+                    if entry.ballGlow then Tween(entry.ballGlow, ANIM.Normal, {Color = targetColor}) end
+                    if entry.callback then pcall(function() entry.callback(value) end) end
+                end
+            end
+        end
+        if data.sliders then
+            for text, value in pairs(data.sliders) do
+                local entry = uiRegistry.sliders[text]
+                if entry and entry.track and entry.track.Parent and entry.min and entry.max then
+                    entry.value = value
+                    local pos = (value - entry.min) / (entry.max - entry.min)
+                    entry.lb.Text = text .. ": " .. tostring(value)
+                    Tween(entry.fill, ANIM.Normal, {Size = UDim2.new(pos, 0, 1, 0)})
+                    Tween(entry.knob, ANIM.Normal, {Position = UDim2.new(pos, -7, 0.5, -7)})
+                    if entry.callback then pcall(function() entry.callback(value) end) end
+                end
+            end
+        end
+        if data.dropdowns then
+            for text, value in pairs(data.dropdowns) do
+                local entry = uiRegistry.dropdowns[text]
+                if entry and entry.btn and entry.btn.Parent then
+                    entry.selected = value
+                    entry.btn.Text = value
+                    if entry.callback then pcall(function() entry.callback(value) end) end
+                end
+            end
+        end
+        if data.inputs then
+            for text, value in pairs(data.inputs) do
+                local entry = uiRegistry.inputs[text]
+                if entry and entry.box and entry.box.Parent then
+                    entry.box.Text = value
+                    if entry.callback then pcall(function() entry.callback(value) end) end
+                end
+            end
+        end
+        if data.keybinds then
+            for text, keyName in pairs(data.keybinds) do
+                local entry = uiRegistry.keybinds[text]
+                if entry and entry.btn and entry.btn.Parent then
+                    local ok, key = pcall(function() return Enum.KeyCode[keyName] end)
+                    if ok and key then
+                        entry.currentKey = key
+                        entry.btn.Text = key.Name
+                        if entry.callback then pcall(function() entry.callback(key) end) end
+                    end
+                end
+            end
+        end
+        if data.colors then
+            for text, cData in pairs(data.colors) do
+                local entry = uiRegistry.colors[text]
+                if entry and entry.preview and entry.preview.Parent and type(cData) == "table" and cData.R then
+                    local c = Color3.fromRGB(cData.R, cData.G, cData.B)
+                    entry.preview.BackgroundColor3 = c
+                    entry.curH, entry.curS, entry.curV = c:ToHSV()
+                    if entry.callback then pcall(function() entry.callback(c) end) end
+                end
+            end
+        end
+        if data.effects then
+            for k, v in pairs(data.effects) do if effects[k] ~= nil then effects[k] = v end end
+        end
+        if data.effectColors then
+            for k, v in pairs(data.effectColors) do
+                if effectColors[k] and type(v) == "table" and v.R then
+                    effectColors[k] = Color3.fromRGB(v.R, v.G, v.B)
+                end
+            end
+        end
+        if data.theme then
+            for k, v in pairs(data.theme) do
+                if k == "Font" and type(v) == "string" then
+                    for _, f in ipairs({Enum.Font.SourceSansBold, Enum.Font.Roboto, Enum.Font.GothamBold, Enum.Font.Arcade, Enum.Font.Code, Enum.Font.SciFi}) do
+                        if f.Name == v then
+                            theme.Font = f
+                            for _, lbl in ipairs(uiCache.Text) do if lbl and lbl.Parent then lbl.Font = f end end
+                            break
+                        end
+                    end
+                elseif theme[k] and type(v) == "table" and v.R then
+                    theme[k] = Color3.fromRGB(v.R, v.G, v.B)
+                end
+            end
+            mainFrame.BackgroundColor3 = theme.Main
+            titleLbl.TextColor3 = theme.Main
+            mainStroke.Color = theme.Outline
+            for _, v in ipairs(uiCache.Shade) do if v and v.Parent then v.BackgroundColor3 = theme.Shade end end
+            for _, v in ipairs(uiCache.Button) do if v and v.Parent then v.BackgroundColor3 = theme.Button end end
+            for _, v in ipairs(uiCache.ButtonOutline) do if v and v.Parent then v.Color = theme.ButtonOutline end end
+        end
+        if data.menuKey and type(data.menuKey) == "string" then
+            local ok, key = pcall(function() return Enum.KeyCode[data.menuKey] end)
+            if ok and key then menuKey = key end
+        end
+        if data._autoSave ~= nil then autoSave = data._autoSave end
+        if data._activeConfigName and type(data._activeConfigName) == "string" then activeConfigName = data._activeConfigName end
+    end
+    Window._applyConfig = ApplyConfig
     local tabs = {}
     local tabCount = 0
     local activeNotifs = {}
@@ -1135,6 +1258,7 @@ function XELIB:MakeWindow(config)
             ballGlow.Transparency = 0.5
             Tween(frame, ANIM.Bounce, {Size = UDim2.new(1, -20, 0, 50), BackgroundTransparency = 0.5})
             Tween(lb, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, false, 0.1), {TextTransparency = 0})
+            uiRegistry.toggles[text] = {enabled = enabled, bg = bg, ball = ball, ballGlow = ballGlow, callback = callback}
             bg.MouseButton1Click:Connect(function()
                 enabled = not enabled
                 local targetColor = enabled and theme.Button or theme.Shade
@@ -1191,6 +1315,7 @@ function XELIB:MakeWindow(config)
             knobStroke.Thickness = 2
             Tween(frame, ANIM.Bounce, {Size = UDim2.new(1, -20, 0, 60), BackgroundTransparency = 0.5})
             Tween(lb, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, false, 0.1), {TextTransparency = 0})
+            uiRegistry.sliders[text] = {value = value, lb = lb, fill = fill, knob = knob, track = track, min = min, max = max, callback = callback}
             local dragging = false
             track.InputBegan:Connect(function(input)
                 if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
@@ -1212,6 +1337,7 @@ function XELIB:MakeWindow(config)
                     value = math.floor(min + (pos * (max - min)))
                     saveData.sliders[text] = value
                     DebouncedSave()
+                    uiRegistry.sliders[text].value = value
                     lb.Text = text .. ": " .. tostring(value)
                     Tween(fill, ANIM.Fast, {Size = UDim2.new(pos, 0, 1, 0)})
                     Tween(knob, ANIM.Fast, {Position = UDim2.new(pos, -7, 0.5, -7)})
@@ -1311,6 +1437,7 @@ function XELIB:MakeWindow(config)
             end
             Tween(frame, ANIM.Bounce, {Size = UDim2.new(1, -20, 0, 50), BackgroundTransparency = 0.5})
             Tween(lb, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, false, 0.1), {TextTransparency = 0})
+            uiRegistry.dropdowns[text] = {selected = selected, btn = btn, callback = callback}
             btn.MouseButton1Click:Connect(function()
                 open = not open
                 local h = math.min(#options * 30, 150)
@@ -1374,6 +1501,7 @@ function XELIB:MakeWindow(config)
             boxStroke.Color = theme.Outline
             boxStroke.Thickness = 1
             boxStroke.Transparency = 0
+            uiRegistry.inputs[text] = {box = box, callback = callback}
             box.Focused:Connect(function()
                 Tween(box, ANIM.Normal, {BackgroundColor3 = Color3.fromRGB(theme.Shade.R * 255 + 15, theme.Shade.G * 255 + 15, theme.Shade.B * 255 + 15)})
                 Tween(boxStroke, ANIM.Normal, {Thickness = 2, Color = theme.Main})
@@ -1432,6 +1560,7 @@ function XELIB:MakeWindow(config)
             Tween(lb, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, false, 0.1), {TextTransparency = 0})
             Tween(btn, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, false, 0.15), {TextTransparency = 0})
             Tween(btnStroke, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, false, 0.2), {Transparency = 0})
+            uiRegistry.keybinds[text] = {currentKey = currentKey, btn = btn, callback = callback}
             local pulseConn
             btn.MouseButton1Click:Connect(function()
                 if listening then return end
@@ -1515,6 +1644,7 @@ function XELIB:MakeWindow(config)
             Tween(frame, ANIM.Bounce, {Size = UDim2.new(1, -20, 0, 50), BackgroundTransparency = 0})
             Tween(lb, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, false, 0.1), {TextTransparency = 0})
             Tween(preview, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out, 0, false, 0.15), {Size = UDim2.new(0, 30, 0, 30)})
+            uiRegistry.colors[text] = {preview = preview, callback = callback, curH = curH, curS = curS, curV = curV}
             local popup = Instance.new("Frame")
             popup.Size = UDim2.new(0, 0, 0, 0)
             popup.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
@@ -1689,8 +1819,10 @@ function XELIB:MakeWindow(config)
         sp.LayoutOrder = 999997
         sp.Parent = tabContainer
 
+        -- VERSION LABEL (proves you have the latest file)
         settingsTab:AddLabel("XeNOX v2.2 - Save System Active")
 
+        -- CONFIG MANAGEMENT
         settingsTab:AddLabel("CONFIG MANAGEMENT")
 
         settingsTab:AddToggle("Auto Save", autoSave, function(t)
@@ -1700,10 +1832,26 @@ function XELIB:MakeWindow(config)
             DebouncedSave()
         end)
 
-        local currentConfigName = "default"
+        local configList = ListConfigs()
+        if #configList == 0 then configList = {"default"} end
+        local currentConfigName = configList[1] or "default"
 
-        settingsTab:AddInput("Config Name", "default", function(txt)
-            currentConfigName = txt:gsub("[^%w_]", "_")
+        settingsTab:AddDropdown("Saved Configs", configList, function(name)
+            currentConfigName = name
+        end)
+
+        settingsTab:AddButton("Load Config (Live)", function()
+            if currentConfigName == "" then currentConfigName = "default" end
+            local newData = LoadConfig(currentConfigName)
+            if newData then
+                loadedConfig = newData
+                Window._loadedConfig = newData
+                activeConfigName = currentConfigName
+                ApplyConfig(newData)
+                Window:Notify("Config Applied", "Loaded and applied '" .. currentConfigName .. "' live!", 3)
+            else
+                Window:Notify("Not Found", "No config named '" .. currentConfigName .. "'.", 2)
+            end
         end)
 
         settingsTab:AddButton("Save Config", function()
@@ -1711,19 +1859,6 @@ function XELIB:MakeWindow(config)
             activeConfigName = currentConfigName
             SaveConfig(currentConfigName)
             Window:Notify("Config Saved", "Saved '" .. currentConfigName .. "' successfully.", 2)
-        end)
-
-        settingsTab:AddButton("Load Config", function()
-            if currentConfigName == "" then currentConfigName = "default" end
-            local newData = LoadConfig(currentConfigName)
-            if newData then
-                loadedConfig = newData
-                Window._loadedConfig = newData
-                activeConfigName = currentConfigName
-                Window:Notify("Config Loaded", "Loaded '" .. currentConfigName .. "'. Restart to apply.", 3)
-            else
-                Window:Notify("Not Found", "No config named '" .. currentConfigName .. "'.", 2)
-            end
         end)
 
         settingsTab:AddButton("Delete Config", function()
@@ -1737,7 +1872,6 @@ function XELIB:MakeWindow(config)
                 Window:Notify("Not Found", "Config '" .. currentConfigName .. "' does not exist.", 2)
             end
         end)
-
         settingsTab:AddLabel("BACKGROUND EFFECTS")
         settingsTab:AddToggle("Enable Rain", effects.Rain, function(t) effects.Rain = t saveData.effects.Rain = t DebouncedSave() end)
         settingsTab:AddColorPicker("Rain Color", effectColors.Rain, function(c) effectColors.Rain = c saveData.effectColors.Rain = {R = math.floor(c.R * 255), G = math.floor(c.G * 255), B = math.floor(c.B * 255)} DebouncedSave() end)
@@ -1752,6 +1886,7 @@ function XELIB:MakeWindow(config)
         settingsTab:AddToggle("Enable Glitch Blocks", effects.Glitch, function(t) effects.Glitch = t saveData.effects.Glitch = t DebouncedSave() end)
         settingsTab:AddColorPicker("Glitch Color", effectColors.Glitch, function(c) effectColors.Glitch = c saveData.effectColors.Glitch = {R = math.floor(c.R * 255), G = math.floor(c.G * 255), B = math.floor(c.B * 255)} DebouncedSave() end)
 
+        -- APPEARANCE
         settingsTab:AddLabel("APPEARANCE")
         settingsTab:AddKeybind("Menu Toggle Key", menuKey, function(newKey) menuKey = newKey saveData.menuKey = newKey.Name DebouncedSave() end)
 
@@ -1827,6 +1962,7 @@ function XELIB:MakeWindow(config)
             end
         end)
 
+        -- Ensure Settings tab canvas is scrollable
         task.delay(0.1, function()
             if settingsData and settingsData.Page then
                 settingsData.Page.CanvasSize = UDim2.new(0, 0, 0, 3000)
