@@ -94,9 +94,9 @@ function XELIB:MakeWindow(config)
         pcall(function() getgenv().XELIB_ActiveGui:Destroy() end)
         getgenv().XELIB_ActiveGui = nil
     end
-    if getgenv().XELIB_ActiveIntro and typeof(getgenv().XELIB_ActiveIntro) == "Instance" then
-        pcall(function() getgenv().XELIB_ActiveIntro:Destroy() end)
-        getgenv().XELIB_ActiveIntro = nil
+    if getgenv().XELIB_ActiveLoading and typeof(getgenv().XELIB_ActiveLoading) == "Instance" then
+        pcall(function() getgenv().XELIB_ActiveLoading:Destroy() end)
+        getgenv().XELIB_ActiveLoading = nil
     end
     if getgenv().XELIB_ToggleBtn and typeof(getgenv().XELIB_ToggleBtn) == "Instance" then
         pcall(function() getgenv().XELIB_ToggleBtn:Destroy() end)
@@ -108,9 +108,9 @@ function XELIB:MakeWindow(config)
     local subTitle = config.SubTitle or ""
     local hasSettings = config.Setting ~= false
     local hasIntro = config.Intro == true
-    local introText = config.IntroText or "LOADING"
-    local introIcon = config.IntroIcon or ""
-    local introSpeed = config.IntroSpeed or 1
+    local Loading_Text = config.IntroText or "LOADING"
+    local Loading_Icon = config.IntroIcon or ""
+    local Loading_Speed = config.IntroSpeed or 1
     local hasToggle = config.Toggle ~= false
     local isPremium = config.IsPremium == true
     local iconAsset = config.Icon or ""
@@ -164,42 +164,48 @@ function XELIB:MakeWindow(config)
         screenGui.Parent = CoreGui
     end
     getgenv().XELIB_ActiveGui = screenGui
-    getgenv().XELIB_ActiveGui = screenGui
     if hasIntro then
-        local introGui = Instance.new("ScreenGui")
-        introGui.Name = RandomString(12)
-        introGui.ResetOnSpawn = false
-        introGui.IgnoreGuiInset = true
-        introGui.Parent = screenGui.Parent
-        getgenv().XELIB_ActiveIntro = introGui
-        getgenv().XELIB_ActiveIntro = introGui
-        local introFrame = Instance.new("Frame")
-        introFrame.Size = UDim2.new(1, 0, 1, 0)
-        introFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 15)
-        introFrame.Parent = introGui
-        local introCorner = Instance.new("UICorner", introFrame)
-        introCorner.CornerRadius = UDim.new(0, 0)
-        local introStroke = Instance.new("UIStroke", introFrame)
-        introStroke.Thickness = 2
-        introStroke.Color = theme.Main
+        local Loading_Screen = Instance.new("ScreenGui")
+        Loading_Screen.Name = RandomString(12)
+        Loading_Screen.ResetOnSpawn = false
+        Loading_Screen.IgnoreGuiInset = true
+        if gethui then
+            Loading_Screen.Parent = gethui()
+        elseif syn and syn.protect_gui then
+            syn.protect_gui(Loading_Screen)
+            Loading_Screen.Parent = PlayerGui
+        else
+            Loading_Screen.Parent = CoreGui
+        end
+        getgenv().XELIB_ActiveLoading = Loading_Screen
+        getgenv().XELIB_ActiveLoading = Loading_Screen
+        local Loading_Frame = Instance.new("Frame")
+        Loading_Frame.Size = UDim2.new(1, 0, 1, 0)
+        Loading_Frame.BackgroundColor3 = Color3.fromRGB(10, 10, 15)
+        Loading_Frame.Parent = Loading_Screen
+        local Loading_Corner = Instance.new("UICorner", Loading_Frame)
+        Loading_Corner.CornerRadius = UDim.new(0, 0)
+        local Loading_Stroke = Instance.new("UIStroke", Loading_Frame)
+        Loading_Stroke.Thickness = 2
+        Loading_Stroke.Color = theme.Main
         if rainbowMain then
-            RainbowStroke(introStroke)
+            RainbowStroke(Loading_Stroke)
         end
         local iconImg = Instance.new("ImageLabel")
         iconImg.Size = UDim2.new(0, 80, 0, 80)
         iconImg.Position = UDim2.new(0.5, -40, 0.4, -40)
         iconImg.BackgroundTransparency = 1
-        iconImg.Image = introIcon
-        iconImg.Parent = introFrame
+        iconImg.Image = Loading_Icon
+        iconImg.Parent = Loading_Frame
         local titleLbl = Instance.new("TextLabel")
         titleLbl.Size = UDim2.new(1, 0, 0, 40)
         titleLbl.Position = UDim2.new(0, 0, 0.55, 0)
         titleLbl.BackgroundTransparency = 1
-        titleLbl.Text = introText
+        titleLbl.Text = Loading_Text
         titleLbl.TextColor3 = theme.Main
         titleLbl.Font = Enum.Font.LuckiestGuy
         titleLbl.TextSize = 32
-        titleLbl.Parent = introFrame
+        titleLbl.Parent = Loading_Frame
         local subLbl = Instance.new("TextLabel")
         subLbl.Size = UDim2.new(1, 0, 0, 25)
         subLbl.Position = UDim2.new(0, 0, 0.62, 0)
@@ -208,28 +214,28 @@ function XELIB:MakeWindow(config)
         subLbl.TextColor3 = Color3.fromRGB(200, 200, 200)
         subLbl.Font = theme.Font
         subLbl.TextSize = 18
-        subLbl.Parent = introFrame
+        subLbl.Parent = Loading_Frame
         local barBg = Instance.new("Frame")
         barBg.Size = UDim2.new(0, 200, 0, 6)
         barBg.Position = UDim2.new(0.5, -100, 0.7, 0)
         barBg.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
-        barBg.Parent = introFrame
+        barBg.Parent = Loading_Frame
         Instance.new("UICorner", barBg).CornerRadius = UDim.new(1, 0)
         local barFill = Instance.new("Frame")
         barFill.Size = UDim2.new(0, 0, 1, 0)
         barFill.BackgroundColor3 = theme.Main
         barFill.Parent = barBg
         Instance.new("UICorner", barFill).CornerRadius = UDim.new(1, 0)
-        Tween(barFill, TweenInfo.new(introSpeed, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = UDim2.new(1, 0, 1, 0)})
-        task.wait(introSpeed + 0.2)
-        Tween(introFrame, TweenInfo.new(0.3), {BackgroundTransparency = 1})
+        Tween(barFill, TweenInfo.new(Loading_Speed, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = UDim2.new(1, 0, 1, 0)})
+        task.wait(Loading_Speed + 0.2)
+        Tween(Loading_Frame, TweenInfo.new(0.3), {BackgroundTransparency = 1})
         Tween(iconImg, TweenInfo.new(0.3), {ImageTransparency = 1})
         Tween(titleLbl, TweenInfo.new(0.3), {TextTransparency = 1})
         Tween(subLbl, TweenInfo.new(0.3), {TextTransparency = 1})
         Tween(barBg, TweenInfo.new(0.3), {BackgroundTransparency = 1})
         Tween(barFill, TweenInfo.new(0.3), {BackgroundTransparency = 1})
         task.wait(0.35)
-        introGui:Destroy()
+        Loading_Screen:Destroy()
     end
     local mainFrame = Instance.new("Frame")
     mainFrame.Name = RandomString(16)
