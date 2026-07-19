@@ -1837,7 +1837,7 @@ function XELIB:MakeWindow(config)
         activeCard.Size = UDim2.new(1, -20, 0, 0)
         activeCard.BackgroundColor3 = theme.Shade
         activeCard.BackgroundTransparency = 1
-        activeCard.Parent = settingsTab.Page
+        activeCard.Parent = settingsData.Page
         Instance.new("UICorner", activeCard).CornerRadius = UDim.new(0, 8)
         table.insert(uiCache.Shade, activeCard)
 
@@ -1883,7 +1883,7 @@ function XELIB:MakeWindow(config)
         local listContainer = Instance.new("Frame")
         listContainer.Size = UDim2.new(1, -20, 0, 0)
         listContainer.BackgroundTransparency = 1
-        listContainer.Parent = settingsTab.Page
+        listContainer.Parent = settingsData.Page
 
         local listLayout = Instance.new("UIListLayout", listContainer)
         listLayout.Padding = UDim.new(0, 6)
@@ -2063,7 +2063,7 @@ function XELIB:MakeWindow(config)
         saveFrame.Size = UDim2.new(1, -20, 0, 0)
         saveFrame.BackgroundColor3 = theme.Shade
         saveFrame.BackgroundTransparency = 0.5
-        saveFrame.Parent = settingsTab.Page
+        saveFrame.Parent = settingsData.Page
         Instance.new("UICorner", saveFrame).CornerRadius = UDim.new(0, 8)
         table.insert(uiCache.Shade, saveFrame)
 
@@ -2259,5 +2259,3 @@ function XELIB:MakeWindow(config)
     return Window
 end
 return XELIB
-
-print("lif")
