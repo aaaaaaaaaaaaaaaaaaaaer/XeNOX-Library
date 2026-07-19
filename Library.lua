@@ -320,12 +320,24 @@ function XELIB:MakeWindow(config)
     closeBtn.MouseButton1Click:Connect(function()
         isMinimized = not isMinimized
         if isMinimized then
-            Tween(mainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = UDim2.new(0, 700, 0, 45)})
+            originalPos = mainFrame.Position
+            originalSize = mainFrame.Size
+            Tween(mainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                Size = UDim2.new(0, 700, 0, 45),
+                Position = UDim2.new(0.5, -350, 0.5, -22)
+            }):Play()
+            tabContainer.Visible = false
+            contentFrame.Visible = false
         else
-            Tween(mainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = UDim2.new(0, 700, 0, 500)})
+            Tween(mainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                Size = originalSize,
+                Position = originalPos
+            }):Play()
+            tabContainer.Visible = true
+            contentFrame.Visible = true
         end
     end)
-    local destroyBtn = Instance.new("TextButton")
+        local destroyBtn = Instance.new("TextButton")
     destroyBtn.Size = UDim2.new(0, 30, 0, 30)
     destroyBtn.Position = UDim2.new(1, -70, 0, 8)
     destroyBtn.BackgroundTransparency = 1
