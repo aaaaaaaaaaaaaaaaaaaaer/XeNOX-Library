@@ -41,33 +41,23 @@ local function MakeDraggable(frame, handle)
     local dragStart = nil
     local startPos = nil
     local connection = nil
-    local velocity = Vector2.new(0, 0)
-    local lastPos = nil
-    local lastTime = nil
-    handle.InputBegan:Connect(function(input)
+
+    handle.InputBegan:Connect(function(input, gpe)
+        if gpe then return end
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             dragging = true
             dragStart = input.Position
             startPos = frame.Position
-            lastPos = input.Position
-            lastTime = tick()
-            velocity = Vector2.new(0, 0)
-            Tween(frame, ANIM.Fast, {Size = UDim2.new(frame.Size.X.Scale, frame.Size.X.Offset * 0.998, frame.Size.Y.Scale, frame.Size.Y.Offset * 0.998)})
+
             connection = UserInputService.InputChanged:Connect(function(changed)
                 if dragging and (changed.UserInputType == Enum.UserInputType.MouseMovement or changed.UserInputType == Enum.UserInputType.Touch) then
                     local delta = changed.Position - dragStart
                     frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-                    local now = tick()
-                    local dt = now - lastTime
-                    if dt > 0 then
-                        velocity = (changed.Position - lastPos) / dt
-                    end
-                    lastPos = changed.Position
-                    lastTime = now
                 end
             end)
         end
     end)
+
     UserInputService.InputEnded:Connect(function(input)
         if (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) and dragging then
             dragging = false
@@ -75,21 +65,6 @@ local function MakeDraggable(frame, handle)
                 connection:Disconnect()
                 connection = nil
             end
-            Tween(frame, ANIM.Spring, {Size = UDim2.new(frame.Size.X.Scale, frame.Size.X.Offset / 0.998, frame.Size.Y.Scale, frame.Size.Y.Offset / 0.998)})
-            local inertiaConn
-            local decay = 0.9
-            inertiaConn = RunService.RenderStepped:Connect(function()
-                if dragging or velocity.Magnitude < 1 then
-                    inertiaConn:Disconnect()
-                    return
-                end
-                local current = frame.Position
-                frame.Position = UDim2.new(
-                    current.X.Scale, current.X.Offset + velocity.X * 0.016,
-                    current.Y.Scale, current.Y.Offset + velocity.Y * 0.016
-                )
-                velocity = velocity * decay
-            end)
         end
     end)
 end
@@ -1723,6 +1698,61 @@ function XELIB:MakeWindow(config)
         spacer.BackgroundTransparency = 1
         spacer.LayoutOrder = 999997
         spacer.Parent = tabContainer
+
+        settingsTab:AddLabel("CONFIG MANAGEMENT")
+
+        settingsTab:AddToggle("Auto Save", autoSave, function(t)
+            autoSave = t
+            saveData._autoSave = t
+            DebouncedSave()
+        end)
+
+        local currentConfigName = "default"
+
+        local function RefreshConfigList()
+            local configs = ListConfigs()
+            if #configs == 0 then
+                configs = {"default"}
+            end
+            return configs
+        end
+
+        settingsTab:AddInput("Config Name", "default", function(txt)
+            currentConfigName = txt:gsub("[^%w_]", "_")
+        end)
+
+        settingsTab:AddButton("Save Config", function()
+            if currentConfigName == "" then currentConfigName = "default" end
+            activeConfigName = currentConfigName
+            SaveConfig(currentConfigName)
+            Window:Notify("Config Saved", "Saved '" .. currentConfigName .. "' successfully.", 2)
+        end)
+
+        settingsTab:AddButton("Load Config", function()
+            if currentConfigName == "" then currentConfigName = "default" end
+            local newData = LoadConfig(currentConfigName)
+            if newData then
+                loadedConfig = newData
+                Window._loadedConfig = newData
+                activeConfigName = currentConfigName
+                Window:Notify("Config Loaded", "Loaded '" .. currentConfigName .. "'. Restart to apply.", 3)
+            else
+                Window:Notify("Not Found", "No config named '" .. currentConfigName .. "'.", 2)
+            end
+        end)
+
+        settingsTab:AddButton("Delete Config", function()
+            if currentConfigName == "" or currentConfigName == "default" then
+                Window:Notify("Error", "Cannot delete default config.", 2)
+                return
+            end
+            if DeleteConfig(currentConfigName) then
+                Window:Notify("Deleted", "Config '" .. currentConfigName .. "' removed.", 2)
+            else
+                Window:Notify("Not Found", "Config '" .. currentConfigName .. "' does not exist.", 2)
+            end
+        end)
+
         settingsTab:AddLabel("BACKGROUND EFFECTS")
         settingsTab:AddToggle("Enable Rain", effects.Rain, function(t) effects.Rain = t saveData.effects.Rain = t DebouncedSave() end)
         settingsTab:AddColorPicker("Rain Color", effectColors.Rain, function(c) effectColors.Rain = c saveData.effectColors.Rain = {R = math.floor(c.R * 255), G = math.floor(c.G * 255), B = math.floor(c.B * 255)} DebouncedSave() end)
