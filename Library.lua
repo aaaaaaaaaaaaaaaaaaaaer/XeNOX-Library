@@ -241,7 +241,8 @@ function XELIB:MakeWindow(config)
         menuKey = nil,
         _autoSave = nil,
         _autoLoad = nil,
-        _activeConfigName = nil
+        _activeConfigName = nil,
+        custom = {}
     }
 
     local function EnsureFolder()
@@ -329,6 +330,9 @@ function XELIB:MakeWindow(config)
     end
     if loadedConfig._autoLoad ~= nil then
         autoLoad = loadedConfig._autoLoad
+    end
+    if loadedConfig.custom and type(loadedConfig.custom) == "table" then
+        saveData.custom = loadedConfig.custom
     end
     if loadedConfig._activeConfigName and type(loadedConfig._activeConfigName) == "string" then
         activeConfigName = loadedConfig._activeConfigName
@@ -484,6 +488,12 @@ function XELIB:MakeWindow(config)
         end
         if data._autoSave ~= nil then autoSave = data._autoSave end
         if data._activeConfigName and type(data._activeConfigName) == "string" then activeConfigName = data._activeConfigName end
+        if data.custom and type(data.custom) == "table" then
+            saveData.custom = data.custom
+            for _, cb in ipairs(Window._configCallbacks or {}) do
+                pcall(function() cb(data.custom) end)
+            end
+        end
     end
     Window._applyConfig = ApplyConfig
     local tabs = {}
@@ -2282,6 +2292,55 @@ function XELIB:MakeWindow(config)
             Window:Notify("Auto Load", "Applied config '" .. activeConfigName .. "' automatically!", 3)
         end
     end
+
+    -- ==================== EXTERNAL SCRIPT SAVE API ====================
+    Window._configCallbacks = {}
+
+    function Window:SetCustomData(key, value)
+        if type(key) ~= "string" then return end
+        saveData.custom[key] = value
+        DebouncedSave()
+    end
+
+    function Window:GetCustomData(key, default)
+        if saveData.custom[key] ~= nil then
+            return saveData.custom[key]
+        end
+        return default
+    end
+
+    function Window:GetAllCustomData()
+        local copy = {}
+        for k, v in pairs(saveData.custom) do
+            copy[k] = v
+        end
+        return copy
+    end
+
+    function Window:OnConfigLoaded(callback)
+        if type(callback) == "function" then
+            table.insert(Window._configCallbacks, callback)
+        end
+    end
+
+    function Window:ForceSave()
+        SaveConfig(activeConfigName)
+    end
+
+    function Window:ForceLoad(name)
+        name = name or activeConfigName
+        local data = LoadConfig(name)
+        if data then
+            loadedConfig = data
+            Window._loadedConfig = data
+            activeConfigName = name
+            ApplyConfig(data)
+            return true
+        end
+        return false
+    end
+    -- ==================== /EXTERNAL SCRIPT SAVE API ====================
+
     return Window
 end
 return XELIB
