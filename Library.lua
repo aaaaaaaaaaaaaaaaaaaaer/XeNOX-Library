@@ -352,6 +352,7 @@ function XELIB:MakeWindow(config)
     end
 
     local closeBtn = Instance.new("TextButton")
+    closeBtn.Name = "MinimizeBtn"
     closeBtn.Size = UDim2.new(0, 30, 0, 30)
     closeBtn.Position = UDim2.new(1, -40, 0, 8)
     closeBtn.BackgroundTransparency = 1
@@ -360,11 +361,11 @@ function XELIB:MakeWindow(config)
     closeBtn.TextSize = 28
     closeBtn.Font = Enum.Font.SourceSansBold
     closeBtn.ZIndex = 20
+    closeBtn.Active = true
     closeBtn.Parent = titleBar
 
-
-
     local destroyBtn = Instance.new("TextButton")
+    destroyBtn.Name = "CloseBtn"
     destroyBtn.Size = UDim2.new(0, 30, 0, 30)
     destroyBtn.Position = UDim2.new(1, -70, 0, 8)
     destroyBtn.BackgroundTransparency = 1
@@ -373,6 +374,7 @@ function XELIB:MakeWindow(config)
     destroyBtn.TextSize = 20
     destroyBtn.Font = Enum.Font.SourceSansBold
     destroyBtn.ZIndex = 20
+    destroyBtn.Active = true
     destroyBtn.Parent = titleBar
 
     destroyBtn.MouseButton1Click:Connect(function()
@@ -386,9 +388,12 @@ function XELIB:MakeWindow(config)
         screenGui:Destroy()
     end)
 
-    MakeDraggable(mainFrame, titleBar)
+    MakeDraggable(mainFrame, titleBar, function()
+        return not isMinimized
+    end)
 
     local tabContainer = Instance.new("Frame")
+    tabContainer.Name = "TabContainer"
     tabContainer.Size = UDim2.new(0, 150, 1, -55)
     tabContainer.Position = UDim2.new(0, 10, 0, 50)
     tabContainer.BackgroundTransparency = 1
@@ -400,29 +405,28 @@ function XELIB:MakeWindow(config)
     tabList.Parent = tabContainer
 
     local contentFrame = Instance.new("Frame")
+    contentFrame.Name = "ContentFrame"
     contentFrame.Size = UDim2.new(1, -180, 1, -60)
     contentFrame.Position = UDim2.new(0, 170, 0, 50)
     contentFrame.BackgroundTransparency = 1
     contentFrame.Parent = mainFrame
 
-    closeBtn.MouseButton1Click:Connect(function()
+    closeBtn.MouseButton1Down:Connect(function()
         isMinimized = not isMinimized
         if isMinimized then
             savedPos = mainFrame.Position
             savedSize = mainFrame.Size
             tabContainer.Visible = false
             contentFrame.Visible = false
-            Tween(mainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-                Size = UDim2.new(0, 700, 0, 45),
-                Position = UDim2.new(0.5, -350, 0.5, -22)
-            })
+            closeBtn.Text = "+"
+            mainFrame.Size = UDim2.new(0, 700, 0, 45)
+            mainFrame.Position = UDim2.new(0.5, -350, 0.5, -22)
         else
             tabContainer.Visible = true
             contentFrame.Visible = true
-            Tween(mainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-                Size = savedSize,
-                Position = savedPos
-            })
+            closeBtn.Text = "-"
+            mainFrame.Size = savedSize
+            mainFrame.Position = savedPos
         end
     end)
 
