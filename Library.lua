@@ -90,6 +90,18 @@ local function RainbowStroke(stroke)
 end
 function XELIB:MakeWindow(config)
     config = config or {}
+    if getgenv().XELIB_ActiveGui and typeof(getgenv().XELIB_ActiveGui) == "Instance" then
+        pcall(function() getgenv().XELIB_ActiveGui:Destroy() end)
+        getgenv().XELIB_ActiveGui = nil
+    end
+    if getgenv().XELIB_ActiveIntro and typeof(getgenv().XELIB_ActiveIntro) == "Instance" then
+        pcall(function() getgenv().XELIB_ActiveIntro:Destroy() end)
+        getgenv().XELIB_ActiveIntro = nil
+    end
+    if getgenv().XELIB_ToggleBtn and typeof(getgenv().XELIB_ToggleBtn) == "Instance" then
+        pcall(function() getgenv().XELIB_ToggleBtn:Destroy() end)
+        getgenv().XELIB_ToggleBtn = nil
+    end
     local Window = {}
     setmetatable(Window, {__index = XELIB})
     local winName = config.Name or "XeNOX Library"
@@ -152,12 +164,14 @@ function XELIB:MakeWindow(config)
         screenGui.Parent = CoreGui
     end
     getgenv().XELIB_ActiveGui = screenGui
+    getgenv().XELIB_ActiveGui = screenGui
     if hasIntro then
         local introGui = Instance.new("ScreenGui")
         introGui.Name = RandomString(12)
         introGui.ResetOnSpawn = false
         introGui.IgnoreGuiInset = true
         introGui.Parent = screenGui.Parent
+        getgenv().XELIB_ActiveIntro = introGui
         getgenv().XELIB_ActiveIntro = introGui
         local introFrame = Instance.new("Frame")
         introFrame.Size = UDim2.new(1, 0, 1, 0)
@@ -357,6 +371,7 @@ function XELIB:MakeWindow(config)
         toggleBtn.ZIndex = 50
         toggleBtn.Parent = screenGui
         Instance.new("UICorner", toggleBtn).CornerRadius = UDim.new(0, 8)
+        getgenv().XELIB_ToggleBtn = toggleBtn
         getgenv().XELIB_ToggleBtn = toggleBtn
         local tStroke = Instance.new("UIStroke", toggleBtn)
         tStroke.Color = theme.Outline
