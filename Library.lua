@@ -1838,14 +1838,114 @@ function XELIB:MakeWindow(config)
         local newConfigName = ""
 
         settingsTab:AddLabel("SELECT EXISTING CONFIG")
-        settingsTab:AddDropdown("Saved Configs", configList, function(name)
-            selectedConfigName = name
+
+        local ddFrame = Instance.new("Frame")
+        ddFrame.Size = UDim2.new(1, -20, 0, 50)
+        ddFrame.BackgroundColor3 = Color3.new(0, 0, 0)
+        ddFrame.BackgroundTransparency = 0.5
+        ddFrame.Parent = settingsTab.Page
+        Instance.new("UICorner", ddFrame).CornerRadius = UDim.new(0, 8)
+
+        local ddLb = Instance.new("TextLabel")
+        ddLb.Size = UDim2.new(1, -160, 1, 0)
+        ddLb.Position = UDim2.new(0, 15, 0, 0)
+        ddLb.Text = "Saved Configs"
+        ddLb.TextColor3 = Color3.new(1, 1, 1)
+        ddLb.Font = theme.Font
+        ddLb.TextSize = 18
+        ddLb.BackgroundTransparency = 1
+        ddLb.TextXAlignment = Enum.TextXAlignment.Left
+        ddLb.Parent = ddFrame
+
+        local ddBtn = Instance.new("TextButton")
+        ddBtn.Size = UDim2.new(0, 120, 0, 30)
+        ddBtn.Position = UDim2.new(1, -135, 0.5, -15)
+        ddBtn.BackgroundColor3 = theme.Shade
+        ddBtn.Text = selectedConfigName
+        ddBtn.TextColor3 = Color3.new(1, 1, 1)
+        ddBtn.Font = theme.Font
+        ddBtn.TextSize = 14
+        ddBtn.AutoButtonColor = false
+        ddBtn.Parent = ddFrame
+        Instance.new("UICorner", ddBtn).CornerRadius = UDim.new(0, 6)
+
+        local ddArrow = Instance.new("TextLabel")
+        ddArrow.Size = UDim2.new(0, 20, 0, 20)
+        ddArrow.Position = UDim2.new(1, -22, 0, 5)
+        ddArrow.BackgroundTransparency = 1
+        ddArrow.Text = "▼"
+        ddArrow.TextColor3 = Color3.new(1, 1, 1)
+        ddArrow.TextSize = 12
+        ddArrow.Font = Enum.Font.SourceSansBold
+        ddArrow.Parent = ddBtn
+
+        local ddDrop = Instance.new("Frame")
+        ddDrop.Size = UDim2.new(0, 120, 0, 0)
+        ddDrop.Position = UDim2.new(1, -135, 0.5, 15)
+        ddDrop.BackgroundColor3 = theme.Shade
+        ddDrop.ClipsDescendants = true
+        ddDrop.ZIndex = 10
+        ddDrop.Parent = ddFrame
+        Instance.new("UICorner", ddDrop).CornerRadius = UDim.new(0, 6)
+
+        local ddList = Instance.new("UIListLayout", ddDrop)
+        ddList.Padding = UDim.new(0, 2)
+
+        local ddOpen = false
+        local ddOptBtns = {}
+
+        local function RebuildDropdown()
+            for _, b in ipairs(ddOptBtns) do if b then b:Destroy() end end
+            ddOptBtns = {}
+            local list = ListConfigs()
+            if #list == 0 then list = {"default"} end
+            for _, opt in ipairs(list) do
+                local ob = Instance.new("TextButton")
+                ob.Size = UDim2.new(1, 0, 0, 28)
+                ob.BackgroundTransparency = 1
+                ob.Text = opt
+                ob.TextColor3 = Color3.new(1, 1, 1)
+                ob.Font = theme.Font
+                ob.TextSize = 14
+                ob.ZIndex = 11
+                ob.Parent = ddDrop
+                ob.MouseEnter:Connect(function()
+                    Tween(ob, ANIM.Fast, {BackgroundTransparency = 0.8, BackgroundColor3 = theme.Button, TextColor3 = Color3.new(0, 0, 0)})
+                end)
+                ob.MouseLeave:Connect(function()
+                    Tween(ob, ANIM.Fast, {BackgroundTransparency = 1, TextColor3 = Color3.new(1, 1, 1)})
+                end)
+                ob.MouseButton1Click:Connect(function()
+                    selectedConfigName = opt
+                    ddBtn.Text = opt
+                    ddOpen = false
+                    Tween(ddDrop, ANIM.Normal, {Size = UDim2.new(0, 120, 0, 0)})
+                    Tween(ddArrow, ANIM.Fast, {Rotation = 0})
+                end)
+                table.insert(ddOptBtns, ob)
+            end
+        end
+
+        ddBtn.MouseButton1Click:Connect(function()
+            ddOpen = not ddOpen
+            if ddOpen then
+                RebuildDropdown()
+                local h = math.min(#ddOptBtns * 30, 150)
+                Tween(ddDrop, ANIM.Normal, {Size = UDim2.new(0, 120, 0, h)})
+                Tween(ddArrow, ANIM.Spring, {Rotation = 180})
+                for i, ob in ipairs(ddOptBtns) do
+                    Tween(ob, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, false, 0.03 * i), {TextTransparency = 0})
+                end
+            else
+                Tween(ddDrop, ANIM.Normal, {Size = UDim2.new(0, 120, 0, 0)})
+                Tween(ddArrow, ANIM.Spring, {Rotation = 0})
+            end
         end)
 
         settingsTab:AddButton("Refresh Config List", function()
-            configList = ListConfigs()
-            if #configList == 0 then configList = {"default"} end
-            Window:Notify("Refreshed", #configList .. " config(s) found.", 2)
+            RebuildDropdown()
+            local list = ListConfigs()
+            Window:Notify("Refreshed", (#list == 0 and 0 or #list) .. " config(s) found.", 2)
         end)
 
         settingsTab:AddLabel("CREATE / RENAME CONFIG")
