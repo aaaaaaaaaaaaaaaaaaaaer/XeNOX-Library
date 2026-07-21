@@ -1001,10 +1001,9 @@ function XELIB:MakeWindow(config)
                 star.Size = UDim2.new(0, 1, 0, math.random(30, 80))
                 star.Position = UDim2.new(math.random(0, 100)/100, 0, -0.2, 0)
                 star.BackgroundColor3 = effectColors.Rain
-                star.BackgroundTransparency = 1
+                star.BackgroundTransparency = 0
                 star.ZIndex = 1
                 star.Parent = mainFrame
-                Tween(star, TweenInfo.new(0.1), {BackgroundTransparency = 0})
                 Tween(star, TweenInfo.new(0.6, Enum.EasingStyle.Linear), {Position = UDim2.new(star.Position.X.Scale, 0, 1.2, 0), BackgroundTransparency = 1})
                 task.delay(0.6, function() ReturnToPool("Star", star) end)
             end
@@ -1030,10 +1029,9 @@ function XELIB:MakeWindow(config)
                 char.TextColor3 = effectColors.Matrix
                 char.Font = Enum.Font.Code
                 char.TextSize = 15
-                char.TextTransparency = 1
+                char.TextTransparency = 0
                 char.ZIndex = 1
                 char.Parent = mainFrame
-                Tween(char, TweenInfo.new(0.1), {TextTransparency = 0})
                 Tween(char, TweenInfo.new(math.random(1, 3), Enum.EasingStyle.Linear), {Position = UDim2.new(char.Position.X.Scale, 0, 1.1, 0), TextTransparency = 1})
                 task.delay(3, function() ReturnToPool("Matrix", char) end)
             end
@@ -1477,11 +1475,6 @@ function XELIB:MakeWindow(config)
             lb.Size = UDim2.new(1, -60, 1, 0)
             lb.Position = UDim2.new(0, 15, 0, 0)
             lb.Text = text
-            if stateLabels and type(stateLabels) == "table" and enabled then
-                lb.Text = stateLabels.On or text
-            elseif stateLabels and type(stateLabels) == "table" and not enabled then
-                lb.Text = stateLabels.Off or text
-            end
             lb.TextColor3 = Color3.new(1, 1, 1)
             lb.Font = theme.Font
             lb.TextSize = 18
@@ -1645,11 +1638,6 @@ function XELIB:MakeWindow(config)
             lb.Size = UDim2.new(1, -160, 1, 0)
             lb.Position = UDim2.new(0, 15, 0, 0)
             lb.Text = text
-            if stateLabels and type(stateLabels) == "table" and enabled then
-                lb.Text = stateLabels.On or text
-            elseif stateLabels and type(stateLabels) == "table" and not enabled then
-                lb.Text = stateLabels.Off or text
-            end
             lb.TextColor3 = Color3.new(1, 1, 1)
             lb.Font = theme.Font
             lb.TextSize = 18
@@ -1747,9 +1735,7 @@ function XELIB:MakeWindow(config)
                     Tween(arrow, ANIM.Spring, {Rotation = 180})
                     for _, ob in ipairs(optionButtons) do
                         ob.TextTransparency = 0
-                    end
-                    for i, ob in ipairs(optionButtons) do
-                        Tween(ob, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, false, 0.03 * i), {TextTransparency = 0})
+                        Tween(ob, ANIM.Fast, {TextTransparency = 0})
                     end
                 else
                     Tween(dropFrame, ANIM.Normal, {Size = UDim2.new(0, 120, 0, 0), BackgroundTransparency = 1})
@@ -1783,11 +1769,6 @@ function XELIB:MakeWindow(config)
             lb.Size = UDim2.new(1, -160, 1, 0)
             lb.Position = UDim2.new(0, 15, 0, 0)
             lb.Text = text
-            if stateLabels and type(stateLabels) == "table" and enabled then
-                lb.Text = stateLabels.On or text
-            elseif stateLabels and type(stateLabels) == "table" and not enabled then
-                lb.Text = stateLabels.Off or text
-            end
             lb.TextColor3 = Color3.new(1, 1, 1)
             lb.Font = theme.Font
             lb.TextSize = 18
@@ -1853,11 +1834,6 @@ function XELIB:MakeWindow(config)
             lb.Size = UDim2.new(1, -160, 1, 0)
             lb.Position = UDim2.new(0, 15, 0, 0)
             lb.Text = text
-            if stateLabels and type(stateLabels) == "table" and enabled then
-                lb.Text = stateLabels.On or text
-            elseif stateLabels and type(stateLabels) == "table" and not enabled then
-                lb.Text = stateLabels.Off or text
-            end
             lb.TextColor3 = Color3.new(1, 1, 1)
             lb.Font = theme.Font
             lb.TextSize = 18
@@ -1961,11 +1937,6 @@ function XELIB:MakeWindow(config)
             lb.Size = UDim2.new(1, -60, 1, 0)
             lb.Position = UDim2.new(0, 15, 0, 0)
             lb.Text = text
-            if stateLabels and type(stateLabels) == "table" and enabled then
-                lb.Text = stateLabels.On or text
-            elseif stateLabels and type(stateLabels) == "table" and not enabled then
-                lb.Text = stateLabels.Off or text
-            end
             lb.TextColor3 = Color3.new(1, 1, 1)
             lb.Font = theme.Font
             lb.TextSize = 18
