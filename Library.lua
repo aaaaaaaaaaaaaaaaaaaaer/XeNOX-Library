@@ -222,9 +222,9 @@ local function AttachTooltip(target, text, screenGui)
         tooltip.Size = UDim2.new(0, 220, 0, textHeight)
 
         -- Position above element, or below if too high
-        local yPos = abs.Y - textHeight - 8
+        local yPos = abs.Y - textHeight - 2
         if yPos < 40 then
-            yPos = abs.Y + size.Y + 8
+            yPos = abs.Y + size.Y + 2
         end
 
         tooltip.Position = UDim2.new(0, math.clamp(abs.X + size.X/2 - 110, 10, screenGui.AbsoluteSize.X - 230), 0, yPos)
