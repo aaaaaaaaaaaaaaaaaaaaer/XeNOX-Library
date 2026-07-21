@@ -1982,6 +1982,37 @@ function XELIB:MakeWindow(config)
         return Tab
     end
 
+    function Window:MakeTab(config)
+        config = config or {}
+        local name = config.Name or "Tab"
+        local icon = config.Icon or ""
+
+        local Tab = self:AddTab(name)
+        local tabID = tabCount
+
+        if icon ~= "" then
+            local tabData = tabs[tabID]
+            if tabData and tabData.Btn then
+                local tabBtn = tabData.Btn
+
+                local iconImg = Instance.new("ImageLabel")
+                iconImg.Name = "TabIcon"
+                iconImg.Size = UDim2.new(0, 20, 0, 20)
+                iconImg.Position = UDim2.new(0, 10, 0.5, -10)
+                iconImg.BackgroundTransparency = 1
+                iconImg.Image = icon
+                iconImg.ZIndex = tabBtn.ZIndex + 1
+                iconImg.Parent = tabBtn
+
+                tabBtn.TextXAlignment = Enum.TextXAlignment.Left
+                tabBtn.Text = "      " .. name
+            end
+        end
+
+        return Tab
+    end
+
+
     if hasSettings then
         local settingsTab = Window:AddTab("Settings")
         local settingsData = tabs[tabCount]
