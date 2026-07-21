@@ -767,6 +767,7 @@ function XELIB:MakeWindow(config)
     titleLbl.ZIndex = 5
     titleLbl.Parent = titleBar
     titleLbl.TextTransparency = 1
+    table.insert(uiCache.Text, titleLbl)
     Tween(titleLbl, ANIM.Smooth, {TextTransparency = 0})
 
     if rainbowTitle then
@@ -788,6 +789,7 @@ function XELIB:MakeWindow(config)
         subLbl.ZIndex = 5
         subLbl.Parent = titleBar
         subLbl.TextTransparency = 1
+        table.insert(uiCache.Text, subLbl)
         Tween(subLbl, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, false, 0.2), {TextTransparency = 0})
         if rainbowSub then
             local sStroke = Instance.new("UIStroke", subLbl)
@@ -820,6 +822,7 @@ function XELIB:MakeWindow(config)
     closeBtn.Active = true
     closeBtn.Parent = titleBar
     closeBtn.TextTransparency = 1
+    table.insert(uiCache.Text, closeBtn)
     Tween(closeBtn, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, false, 0.1), {TextTransparency = 0})
 
     local destroyBtn = Instance.new("TextButton")
@@ -835,6 +838,7 @@ function XELIB:MakeWindow(config)
     destroyBtn.Active = true
     destroyBtn.Parent = titleBar
     destroyBtn.TextTransparency = 1
+    table.insert(uiCache.Text, destroyBtn)
     Tween(destroyBtn, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, false, 0.15), {TextTransparency = 0})
 
     closeBtn.MouseEnter:Connect(function()
@@ -998,30 +1002,15 @@ function XELIB:MakeWindow(config)
             local mLoc = UserInputService:GetMouseLocation()
             if effects.Rain then
                 local star = GetFromPool("Star", "Frame")
-                local xScale = math.random(0, 100) / 100
-                local fallDuration = math.random(5, 10) / 10
-
-                star.Size = UDim2.new(0, 2, 0, math.random(30, 80))
-                star.Position = UDim2.new(xScale, 0, -0.2, 0)
+                star.Size = UDim2.new(0, 1, 0, math.random(30, 80))
+                star.Position = UDim2.new(math.random(0, 100)/100, 0, -0.2, 0)
                 star.BackgroundColor3 = effectColors.Rain
                 star.BackgroundTransparency = 1
-                star.BorderSizePixel = 0
                 star.ZIndex = 1
                 star.Parent = mainFrame
-
-                local fadeIn = Tween(star, TweenInfo.new(0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 0.2})
-                fadeIn.Completed:Connect(function()
-                    if star and star.Parent then
-                        Tween(star, TweenInfo.new(fallDuration, Enum.EasingStyle.Linear), {
-                            Position = UDim2.new(xScale, 0, 1.2, 0),
-                            BackgroundTransparency = 1
-                        })
-                    end
-                end)
-
-                task.delay(fallDuration + 0.12, function()
-                    ReturnToPool("Star", star)
-                end)
+                Tween(star, TweenInfo.new(0.1), {BackgroundTransparency = 0})
+                Tween(star, TweenInfo.new(0.6, Enum.EasingStyle.Linear), {Position = UDim2.new(star.Position.X.Scale, 0, 1.2, 0), BackgroundTransparency = 1})
+                task.delay(0.6, function() ReturnToPool("Star", star) end)
             end
             if effects.Trail then
                 local trail = GetFromPool("Trail", "Frame")
@@ -1183,6 +1172,7 @@ function XELIB:MakeWindow(config)
         tLbl.TextSize = 18
         tLbl.TextTransparency = 1
         tLbl.ZIndex = 106
+        table.insert(uiCache.Text, tLbl)
 
         local dLbl = Instance.new("TextLabel", notif)
         dLbl.Size = UDim2.new(1, -20, 0, 25)
@@ -1195,6 +1185,7 @@ function XELIB:MakeWindow(config)
         dLbl.TextSize = 14
         dLbl.TextTransparency = 1
         dLbl.ZIndex = 106
+        table.insert(uiCache.Text, dLbl)
 
         local progressBar = Instance.new("Frame")
         progressBar.Size = UDim2.new(1, 0, 0, 3)
@@ -1310,6 +1301,7 @@ function XELIB:MakeWindow(config)
         searchIcon.Font = Enum.Font.SourceSansBold
         searchIcon.TextColor3 = Color3.new(1, 1, 1)
         searchIcon.Parent = searchFrame
+        table.insert(uiCache.Text, searchIcon)
 
         local searchBox = Instance.new("TextBox")
         searchBox.Size = UDim2.new(1, -50, 0, 30)
@@ -1697,6 +1689,7 @@ function XELIB:MakeWindow(config)
             arrow.TextSize = 12
             arrow.Font = Enum.Font.SourceSansBold
             arrow.Parent = btn
+            table.insert(uiCache.Text, arrow)
 
             local dropFrame = Instance.new("Frame")
             dropFrame.Size = UDim2.new(0, 120, 0, 0)
