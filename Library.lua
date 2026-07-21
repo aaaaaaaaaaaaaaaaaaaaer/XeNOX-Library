@@ -12,7 +12,7 @@ local CoreGui = game:GetService("CoreGui")
 local LocalPlayer = Players.LocalPlayer
 local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 
--- Constants & Defaults
+-- Constants & Default Theme State
 local DEFAULT_THEME = Color3.fromRGB(0, 255, 255)
 local DEFAULT_SHADE = Color3.fromRGB(20, 25, 35)
 local DEFAULT_OUTLINE = Color3.fromRGB(0, 255, 255)
@@ -26,12 +26,8 @@ local ANIM = {
     Bounce = TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
     Spring = TweenInfo.new(0.5, Enum.EasingStyle.Elastic, Enum.EasingDirection.Out),
     Slow = TweenInfo.new(0.6, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-    FadeIn = TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-    FadeOut = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
-    Slide = TweenInfo.new(0.35, Enum.EasingStyle.Cubic, Enum.EasingDirection.Out),
 }
 
--- Utility Helpers
 local CHARS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 local MATRIX_CHARS = "0123456789ABCDEFµΞXØ$#@&%"
 
@@ -84,16 +80,14 @@ local function Tween(obj, info, props)
     return tw
 end
 
--- Instance Pool System
+-- Instance Pooling
 local Pool = {}
 local function GetFromPool(poolName, className)
     if not Pool[poolName] then Pool[poolName] = {} end
     if #Pool[poolName] > 0 then
         local obj = table.remove(Pool[poolName])
         obj.Visible = true
-        if obj:IsA("Frame") or obj:IsA("ImageLabel") or obj:IsA("TextLabel") then
-            obj.BackgroundTransparency = 0
-        end
+        if obj:IsA("Frame") or obj:IsA("ImageLabel") or obj:IsA("TextLabel") then obj.BackgroundTransparency = 0 end
         if obj:IsA("TextLabel") then obj.TextTransparency = 0 end
         if obj:IsA("ImageLabel") then obj.ImageTransparency = 0 end
         return obj
@@ -137,11 +131,11 @@ local function CreateRipple(parent, pos)
     task.delay(0.5, function() if ripple then ripple:Destroy() end end)
 end
 
--- Main Library Window
+-- Main Window Factory
 function XELIB:MakeWindow(config)
     config = config or {}
 
-    -- Pre-execution Cleanup
+    -- Clean Previous Executions
     if getgenv then
         if getgenv().XELIB_ActiveGui then pcall(function() getgenv().XELIB_ActiveGui:Destroy() end) end
         if getgenv().XELIB_ActiveLoading then pcall(function() getgenv().XELIB_ActiveLoading:Destroy() end) end
@@ -150,6 +144,7 @@ function XELIB:MakeWindow(config)
     local Window = {}
     setmetatable(Window, {__index = XELIB})
     Window._connections = {}
+    Window._themeElements = { Labels = {}, Buttons = {}, Strokes = {}, Backgrounds = {} }
 
     local winName = config.Name or "XeNOX Library"
     local subTitle = config.SubTitle or ""
@@ -158,13 +153,14 @@ function XELIB:MakeWindow(config)
     local Loading_Text = config.IntroText or "LOADING"
     local Loading_Icon = config.IntroIcon or ""
     local Loading_Speed = config.IntroSpeed or 1
-    local iconAsset = config.Icon or ""
+    local hasToggleBtn = config.Toggle == true
+    local toggleIconAsset = config.ToggleIcon or ""
     local rainbowMain = config.RainbowMainFrame == true
     local rainbowTitle = config.RainbowTitle == true
     local rainbowSub = config.RainbowSubTitle == true
     local closeCallback = config.CloseCallback
 
-    -- Background Effects State
+    -- Visual FX States
     local effects = {
         Rain = config.Rain or false,
         Trail = config.Trail or false,
@@ -188,7 +184,6 @@ function XELIB:MakeWindow(config)
         Shade = DEFAULT_SHADE,
         Outline = DEFAULT_OUTLINE,
         Button = DEFAULT_BUTTON,
-        ButtonOutline = DEFAULT_BTN_OUTLINE,
         Font = Enum.Font.SourceSansBold
     }
 
@@ -196,17 +191,16 @@ function XELIB:MakeWindow(config)
     local menuOpen = true
     local isMinimized = false
 
-    -- Configuration Engine
-    local saveId = config.SaveId or config.Name or "XeNOX_Default"
+    -- Config Engine
+    local saveId = config.SaveId or winName:gsub("[^%w_]", "_")
     local autoSave = config.AutoSave ~= false
-    local autoLoad = config.AutoLoad == true
-    local configFolder = "XeNOX_Configs/" .. saveId:gsub("[^%w_]", "_")
+    local configFolder = "XeNOX_Configs/" .. saveId
     local activeConfigName = "default"
 
     local saveData = {
         toggles = {}, sliders = {}, dropdowns = {}, inputs = {},
         keybinds = {}, colors = {}, theme = {}, effects = effects,
-        effectColors = {}, menuKey = nil
+        effectColors = {}
     }
 
     local function EnsureFolder()
@@ -223,9 +217,7 @@ function XELIB:MakeWindow(config)
         if not writefile then return end
         EnsureFolder()
         local success, json = pcall(function() return HttpService:JSONEncode(saveData) end)
-        if success then
-            pcall(function() writefile(configFolder .. "/" .. name .. ".json", json) end)
-        end
+        if success then pcall(function() writefile(configFolder .. "/" .. name .. ".json", json) end) end
     end
 
     local function LoadConfig(name)
@@ -238,9 +230,6 @@ function XELIB:MakeWindow(config)
     end
 
     local loadedConfig = LoadConfig() or {}
-    if loadedConfig.effects then
-        for k, v in pairs(loadedConfig.effects) do if effects[k] ~= nil then effects[k] = v end end
-    end
 
     local function DebouncedSave()
         if not autoSave then return end
@@ -248,7 +237,7 @@ function XELIB:MakeWindow(config)
         Window._debounceSave = task.delay(0.5, function() SaveConfig(activeConfigName) end)
     end
 
-    -- Core GUI Instance Setup
+    -- Target ScreenGui Container
     local screenGui = Instance.new("ScreenGui")
     screenGui.Name = RandomString(16)
     screenGui.ResetOnSpawn = false
@@ -261,7 +250,7 @@ function XELIB:MakeWindow(config)
 
     if getgenv then getgenv().XELIB_ActiveGui = screenGui end
 
-    -- Animated Intro Screen
+    -- Intro Screen Implementation
     if hasIntro then
         local Loading_Screen = Instance.new("ScreenGui")
         Loading_Screen.Name = RandomString(12)
@@ -291,19 +280,9 @@ function XELIB:MakeWindow(config)
         titleLbl.TextSize = 32
         titleLbl.TextTransparency = 1
 
-        local subLbl = Instance.new("TextLabel", Loading_Frame)
-        subLbl.Size = UDim2.new(1, 0, 0, 25)
-        subLbl.Position = UDim2.new(0, 0, 0.55, 0)
-        subLbl.BackgroundTransparency = 1
-        subLbl.Text = winName
-        subLbl.TextColor3 = Color3.fromRGB(200, 200, 200)
-        subLbl.Font = theme.Font
-        subLbl.TextSize = 18
-        subLbl.TextTransparency = 1
-
         local barBg = Instance.new("Frame", Loading_Frame)
         barBg.Size = UDim2.new(0, 200, 0, 6)
-        barBg.Position = UDim2.new(0.5, -100, 0.65, 0)
+        barBg.Position = UDim2.new(0.5, -100, 0.62, 0)
         barBg.BackgroundColor3 = Color3.fromRGB(30, 35, 45)
         barBg.BackgroundTransparency = 1
         Instance.new("UICorner", barBg).CornerRadius = UDim.new(1, 0)
@@ -316,7 +295,6 @@ function XELIB:MakeWindow(config)
         Tween(Loading_Frame, ANIM.Slow, {BackgroundTransparency = 0})
         Tween(iconImg, ANIM.Smooth, {ImageTransparency = 0})
         Tween(titleLbl, ANIM.Smooth, {TextTransparency = 0})
-        Tween(subLbl, ANIM.Smooth, {TextTransparency = 0})
         Tween(barBg, ANIM.Smooth, {BackgroundTransparency = 0})
         Tween(barFill, TweenInfo.new(Loading_Speed, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = UDim2.new(1, 0, 1, 0)})
         task.wait(Loading_Speed + 0.2)
@@ -324,19 +302,18 @@ function XELIB:MakeWindow(config)
         Tween(Loading_Frame, ANIM.Slow, {BackgroundTransparency = 1})
         Tween(iconImg, ANIM.Fast, {ImageTransparency = 1})
         Tween(titleLbl, ANIM.Fast, {TextTransparency = 1})
-        Tween(subLbl, ANIM.Fast, {TextTransparency = 1})
         Tween(barBg, ANIM.Fast, {BackgroundTransparency = 1})
-        task.wait(0.5)
+        task.wait(0.4)
         Loading_Screen:Destroy()
     end
 
-    -- Main UI Structure
+    -- Window Base UI
     local mainFrame = Instance.new("Frame", screenGui)
     mainFrame.Name = RandomString(16)
     mainFrame.Size = UDim2.new(0, 700, 0, 500)
     mainFrame.Position = UDim2.new(0.5, -350, 0.5, -250)
     mainFrame.BackgroundColor3 = theme.Shade
-    mainFrame.BackgroundTransparency = 0.2
+    mainFrame.BackgroundTransparency = 0.15
     mainFrame.Active = true
     mainFrame.ClipsDescendants = true
     Instance.new("UICorner", mainFrame).CornerRadius = UDim.new(0, 8)
@@ -346,7 +323,28 @@ function XELIB:MakeWindow(config)
     mainStroke.Color = theme.Outline
     if rainbowMain then RainbowStroke(mainStroke) end
 
-    -- FX Engine Canvas Layer
+    -- Floating Screen Toggle Button
+    if hasToggleBtn then
+        local toggleBtn = Instance.new("ImageButton", screenGui)
+        toggleBtn.Size = UDim2.new(0, 45, 0, 45)
+        toggleBtn.Position = UDim2.new(0.02, 0, 0.2, 0)
+        toggleBtn.BackgroundColor3 = theme.Shade
+        toggleBtn.Image = toggleIconAsset ~= "" and toggleIconAsset or "rbxassetid://6031097225"
+        toggleBtn.ZIndex = 1000
+        Instance.new("UICorner", toggleBtn).CornerRadius = UDim.new(0, 10)
+        local tStroke = Instance.new("UIStroke", toggleBtn)
+        tStroke.Color = theme.Outline
+        tStroke.Thickness = 2
+
+        MakeDraggable(toggleBtn, toggleBtn, Window._connections)
+
+        toggleBtn.MouseButton1Click:Connect(function()
+            menuOpen = not menuOpen
+            mainFrame.Visible = menuOpen
+        end)
+    end
+
+    -- Visual Effects Layer
     local fxCanvas = Instance.new("Frame", mainFrame)
     fxCanvas.Name = "FXCanvas"
     fxCanvas.Size = UDim2.new(1, 0, 1, 0)
@@ -354,7 +352,7 @@ function XELIB:MakeWindow(config)
     fxCanvas.ZIndex = 1
     fxCanvas.ClipsDescendants = true
 
-    -- Header / Title Bar
+    -- Title Bar
     local titleBar = Instance.new("Frame", mainFrame)
     titleBar.Size = UDim2.new(1, 0, 0, 45)
     titleBar.BackgroundTransparency = 1
@@ -418,7 +416,7 @@ function XELIB:MakeWindow(config)
 
     MakeDraggable(mainFrame, titleBar, Window._connections)
 
-    -- Tab & Content Frames
+    -- Tab Container
     local tabContainer = Instance.new("Frame", mainFrame)
     tabContainer.Size = UDim2.new(0, 150, 1, -55)
     tabContainer.Position = UDim2.new(0, 10, 0, 50)
@@ -434,7 +432,7 @@ function XELIB:MakeWindow(config)
     contentFrame.BackgroundTransparency = 1
     contentFrame.ZIndex = 5
 
-    -- Minimize Action Connection
+    -- Minimize Toggle Logic
     local savedSize = mainFrame.Size
     closeBtn.MouseButton1Click:Connect(function()
         isMinimized = not isMinimized
@@ -451,7 +449,7 @@ function XELIB:MakeWindow(config)
         end
     end)
 
-    -- Keybind Visibility Listener
+    -- Global Toggle Keybind Connection
     table.insert(Window._connections, UserInputService.InputBegan:Connect(function(input, gpe)
         if not gpe and input.KeyCode == menuKey then
             menuOpen = not menuOpen
@@ -459,7 +457,7 @@ function XELIB:MakeWindow(config)
         end
     end))
 
-    -- Notifications Engine
+    -- Notification System
     local notifContainer = Instance.new("Frame", screenGui)
     notifContainer.Size = UDim2.new(0, 280, 1, -20)
     notifContainer.Position = UDim2.new(1, -300, 0, 10)
@@ -526,7 +524,7 @@ function XELIB:MakeWindow(config)
         end)
     end
 
-    -- ==================== VISUAL EFFECTS ENGINE ====================
+    -- Visual Effects Render Loop
     local blobs = {}
     for i = 1, 4 do
         local b = Instance.new("Frame", fxCanvas)
@@ -552,7 +550,6 @@ function XELIB:MakeWindow(config)
             local relMouseX = mLoc.X - framePos.X
             local relMouseY = mLoc.Y - framePos.Y
 
-            -- 1. Rain
             if effects.Rain then
                 local drop = GetFromPool("RainDrop", "Frame")
                 drop.Size = UDim2.new(0, 2, 0, math.random(15, 35))
@@ -568,7 +565,6 @@ function XELIB:MakeWindow(config)
                 task.delay(0.5, function() ReturnToPool("RainDrop", drop) end)
             end
 
-            -- 2. Trail
             if effects.Trail and relMouseX >= 0 and relMouseX <= mainFrame.AbsoluteSize.X and relMouseY >= 0 and relMouseY <= mainFrame.AbsoluteSize.Y then
                 local trail = GetFromPool("TrailDot", "Frame")
                 trail.Size = UDim2.new(0, 12, 0, 12)
@@ -586,18 +582,14 @@ function XELIB:MakeWindow(config)
                 task.delay(0.4, function() ReturnToPool("TrailDot", trail) end)
             end
 
-            -- 3. Blob
             for i, b in ipairs(blobs) do
                 b.Visible = effects.Blob
                 if effects.Blob then
                     b.BackgroundColor3 = effectColors.Blob
-                    local offsetX = math.sin(step + i) * 0.15
-                    local offsetY = math.cos(step * 0.8 + i) * 0.15
-                    b.Position = UDim2.new(0.5 + offsetX, 0, 0.5 + offsetY, 0)
+                    b.Position = UDim2.new(0.5 + math.sin(step + i) * 0.15, 0, 0.5 + math.cos(step * 0.8 + i) * 0.15, 0)
                 end
             end
 
-            -- 4. Matrix
             if effects.Matrix and math.random(1, 2) == 1 then
                 local matChar = GetFromPool("MatrixChar", "TextLabel")
                 local rIndex = math.random(1, #MATRIX_CHARS)
@@ -617,7 +609,6 @@ function XELIB:MakeWindow(config)
                 task.delay(1.2, function() ReturnToPool("MatrixChar", matChar) end)
             end
 
-            -- 5. Hex
             if effects.Hex and math.random(1, 4) == 1 then
                 local hex = GetFromPool("HexParticle", "ImageLabel")
                 hex.Size = UDim2.new(0, 20, 0, 20)
@@ -636,7 +627,6 @@ function XELIB:MakeWindow(config)
                 task.delay(1.8, function() ReturnToPool("HexParticle", hex) end)
             end
 
-            -- 6. Glitch
             if effects.Glitch and math.random(1, 25) == 1 then
                 local gSlice = GetFromPool("GlitchSlice", "Frame")
                 gSlice.Size = UDim2.new(1, 0, 0, math.random(2, 12))
@@ -650,7 +640,7 @@ function XELIB:MakeWindow(config)
         end
     end)
 
-    -- Tab System
+    -- Dynamic UI Component Generator
     local tabs = {}
     local tabCount = 0
 
@@ -667,6 +657,7 @@ function XELIB:MakeWindow(config)
         tabBtn.TextSize = 16
         tabBtn.LayoutOrder = tabID
         Instance.new("UICorner", tabBtn).CornerRadius = UDim.new(0, 8)
+        table.insert(Window._themeElements.Buttons, tabBtn)
 
         local page = Instance.new("ScrollingFrame", contentFrame)
         page.Size = UDim2.new(1, 0, 1, 0)
@@ -691,7 +682,7 @@ function XELIB:MakeWindow(config)
 
         local Tab = {}
 
-        -- 1. Label
+        -- 1. AddLabel
         function Tab:AddLabel(text)
             local l = Instance.new("TextLabel", page)
             l.Size = UDim2.new(1, -10, 0, 35)
@@ -702,10 +693,11 @@ function XELIB:MakeWindow(config)
             l.TextSize = 16
             l.TextXAlignment = Enum.TextXAlignment.Left
             Instance.new("UICorner", l).CornerRadius = UDim.new(0, 6)
+            table.insert(Window._themeElements.Labels, l)
             return l
         end
 
-        -- 2. Paragraph
+        -- 2. AddParagraph
         function Tab:AddParagraph(title, content)
             local frame = Instance.new("Frame", page)
             frame.Size = UDim2.new(1, -10, 0, 75)
@@ -732,9 +724,12 @@ function XELIB:MakeWindow(config)
             c.TextSize = 13
             c.TextXAlignment = Enum.TextXAlignment.Left
             c.TextWrapped = true
+
+            table.insert(Window._themeElements.Labels, t)
+            table.insert(Window._themeElements.Labels, c)
         end
 
-        -- 3. Button
+        -- 3. AddButton
         function Tab:AddButton(text, callback)
             local btn = Instance.new("TextButton", page)
             btn.Size = UDim2.new(1, -10, 0, 40)
@@ -744,6 +739,7 @@ function XELIB:MakeWindow(config)
             btn.Font = theme.Font
             btn.TextSize = 16
             Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
+            table.insert(Window._themeElements.Buttons, btn)
 
             btn.MouseButton1Click:Connect(function()
                 CreateRipple(btn, Vector2.new(btn.AbsoluteSize.X / 2, btn.AbsoluteSize.Y / 2))
@@ -751,8 +747,9 @@ function XELIB:MakeWindow(config)
             end)
         end
 
-        -- 4. Toggle
+        -- 4. AddToggle
         function Tab:AddToggle(text, default, callback)
+            if type(default) == "function" then callback = default; default = false end
             local saved = loadedConfig.toggles and loadedConfig.toggles[text]
             local enabled = (saved ~= nil) and saved or (default or false)
 
@@ -792,10 +789,12 @@ function XELIB:MakeWindow(config)
                 Tween(ball, ANIM.Spring, {Position = enabled and UDim2.new(1, -18, 0.5, -8) or UDim2.new(0, 2, 0.5, -8)})
                 if callback then callback(enabled) end
             end)
+            if default then if callback then callback(enabled) end end
         end
 
-        -- 5. Slider
+        -- 5. AddSlider
         function Tab:AddSlider(text, min, max, default, callback)
+            if type(default) == "function" then callback = default; default = min end
             min, max = min or 0, max or 100
             local saved = loadedConfig.sliders and loadedConfig.sliders[text]
             local val = saved or default or min
@@ -864,8 +863,9 @@ function XELIB:MakeWindow(config)
             end)
         end
 
-        -- 6. Input
+        -- 6. AddInput
         function Tab:AddInput(text, default, callback)
+            if type(default) == "function" then callback = default; default = "" end
             local saved = loadedConfig.inputs and loadedConfig.inputs[text]
             local val = saved or default or ""
 
@@ -902,8 +902,9 @@ function XELIB:MakeWindow(config)
             end)
         end
 
-        -- 7. Dropdown
+        -- 7. AddDropdown (Handles omitted default argument)
         function Tab:AddDropdown(text, options, default, callback)
+            if type(default) == "function" then callback = default; default = options[1] end
             options = options or {}
             local saved = loadedConfig.dropdowns and loadedConfig.dropdowns[text]
             local selected = saved or default or options[1] or "None"
@@ -918,7 +919,7 @@ function XELIB:MakeWindow(config)
             local btn = Instance.new("TextButton", frame)
             btn.Size = UDim2.new(1, 0, 0, 45)
             btn.BackgroundTransparency = 1
-            btn.Text = "  " .. text .. ": " .. selected
+            btn.Text = "  " .. text .. ": " .. tostring(selected)
             btn.TextColor3 = Color3.new(1, 1, 1)
             btn.Font = theme.Font
             btn.TextSize = 16
@@ -936,7 +937,7 @@ function XELIB:MakeWindow(config)
                 local oBtn = Instance.new("TextButton", holder)
                 oBtn.Size = UDim2.new(1, 0, 0, 28)
                 oBtn.BackgroundColor3 = Color3.fromRGB(30, 35, 45)
-                oBtn.Text = opt
+                oBtn.Text = tostring(opt)
                 oBtn.TextColor3 = Color3.new(1, 1, 1)
                 oBtn.Font = theme.Font
                 oBtn.TextSize = 14
@@ -944,7 +945,7 @@ function XELIB:MakeWindow(config)
 
                 oBtn.MouseButton1Click:Connect(function()
                     selected = opt
-                    btn.Text = "  " .. text .. ": " .. selected
+                    btn.Text = "  " .. text .. ": " .. tostring(selected)
                     expanded = false
                     Tween(frame, ANIM.Fast, {Size = UDim2.new(1, -10, 0, 45)})
                     saveData.dropdowns[text] = selected
@@ -960,8 +961,9 @@ function XELIB:MakeWindow(config)
             end)
         end
 
-        -- 8. Keybind
+        -- 8. AddKeybind
         function Tab:AddKeybind(text, defaultKey, callback)
+            if type(defaultKey) == "function" then callback = defaultKey; defaultKey = Enum.KeyCode.E end
             local saved = loadedConfig.keybinds and loadedConfig.keybinds[text]
             local currentKey = saved and Enum.KeyCode[saved] or defaultKey or Enum.KeyCode.E
             local binding = false
@@ -1011,8 +1013,9 @@ function XELIB:MakeWindow(config)
             end))
         end
 
-        -- 9. Color Picker
+        -- 9. AddColorPicker
         function Tab:AddColorPicker(text, defaultColor, callback)
+            if type(defaultColor) == "function" then callback = defaultColor; defaultColor = Color3.fromRGB(255, 255, 255) end
             local saved = loadedConfig.colors and loadedConfig.colors[text]
             local color = saved and Color3.fromRGB(saved.R, saved.G, saved.B) or defaultColor or Color3.fromRGB(255, 255, 255)
 
@@ -1051,22 +1054,47 @@ function XELIB:MakeWindow(config)
         return Tab
     end
 
-    -- ==================== SETTINGS & CONFIG TAB ====================
+    -- Dynamic Auto-Created Settings Tab
     if hasSettings then
         local settingsTab = Window:AddTab("Settings")
 
-        settingsTab:AddLabel("Background Visual Effects")
-        settingsTab:AddToggle("Rain Effect", effects.Rain, function(t) effects.Rain = t; saveData.effects.Rain = t; DebouncedSave() end)
-        settingsTab:AddToggle("Trail Effect", effects.Trail, function(t) effects.Trail = t; saveData.effects.Trail = t; DebouncedSave() end)
-        settingsTab:AddToggle("Blob Effect", effects.Blob, function(t) effects.Blob = t; saveData.effects.Blob = t; DebouncedSave() end)
-        settingsTab:AddToggle("Matrix Effect", effects.Matrix, function(t) effects.Matrix = t; saveData.effects.Matrix = t; DebouncedSave() end)
-        settingsTab:AddToggle("Hex Effect", effects.Hex, function(t) effects.Hex = t; saveData.effects.Hex = t; DebouncedSave() end)
-        settingsTab:AddToggle("Glitch Effect", effects.Glitch, function(t) effects.Glitch = t; saveData.effects.Glitch = t; DebouncedSave() end)
+        settingsTab:AddLabel("Visual Effects Toggles")
+        settingsTab:AddToggle("Rain Effect", effects.Rain, function(t) effects.Rain = t end)
+        settingsTab:AddToggle("Trail Effect", effects.Trail, function(t) effects.Trail = t end)
+        settingsTab:AddToggle("Blob Effect", effects.Blob, function(t) effects.Blob = t end)
+        settingsTab:AddToggle("Matrix Effect", effects.Matrix, function(t) effects.Matrix = t end)
+        settingsTab:AddToggle("Hex Effect", effects.Hex, function(t) effects.Hex = t end)
+        settingsTab:AddToggle("Glitch Effect", effects.Glitch, function(t) effects.Glitch = t end)
 
         settingsTab:AddLabel("Effect Colors")
         settingsTab:AddColorPicker("Rain Color", effectColors.Rain, function(c) effectColors.Rain = c end)
         settingsTab:AddColorPicker("Trail Color", effectColors.Trail, function(c) effectColors.Trail = c end)
         settingsTab:AddColorPicker("Matrix Color", effectColors.Matrix, function(c) effectColors.Matrix = c end)
+
+        settingsTab:AddLabel("UI Customization")
+        settingsTab:AddKeybind("Menu Toggle Key", menuKey, function(key) menuKey = key end)
+        settingsTab:AddDropdown("UI Font", {"SourceSansBold", "GothamBold", "FredokaOne", "LuckiestGuy", "Code"}, "SourceSansBold", function(fontName)
+            theme.Font = Enum.Font[fontName]
+            for _, l in ipairs(Window._themeElements.Labels) do l.Font = theme.Font end
+            for _, b in ipairs(Window._themeElements.Buttons) do b.Font = theme.Font end
+        end)
+
+        settingsTab:AddColorPicker("Main Color", theme.Main, function(c)
+            theme.Main = c
+            titleLbl.TextColor3 = c
+        end)
+        settingsTab:AddColorPicker("Outline Color", theme.Outline, function(c)
+            theme.Outline = c
+            mainStroke.Color = c
+        end)
+        settingsTab:AddColorPicker("Shade Color", theme.Shade, function(c)
+            theme.Shade = c
+            mainFrame.BackgroundColor3 = c
+        end)
+        settingsTab:AddColorPicker("Button Color", theme.Button, function(c)
+            theme.Button = c
+            for _, b in ipairs(Window._themeElements.Buttons) do b.BackgroundColor3 = c end
+        end)
 
         settingsTab:AddLabel("Config Engine")
         local newConfigName = ""
@@ -1077,12 +1105,10 @@ function XELIB:MakeWindow(config)
         settingsTab:AddButton("Save Config", function()
             local target = (newConfigName ~= "") and newConfigName or activeConfigName
             SaveConfig(target)
-            Window:Notify("Config Saved", "Saved data to '" .. target .. "'", 2)
+            Window:Notify("Config Saved", "Saved profile to '" .. target .. "'", 2)
         end)
 
-        settingsTab:AddToggle("Auto Save On Change", autoSave, function(t)
-            autoSave = t
-        end)
+        settingsTab:AddToggle("Auto Save On Change", autoSave, function(t) autoSave = t end)
     end
 
     function Window:Destroy()
