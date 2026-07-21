@@ -1289,7 +1289,10 @@ function XELIB:MakeWindow(config)
         layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
         layout.SortOrder = Enum.SortOrder.LayoutOrder
         layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-            page.CanvasSize = UDim2.new(0, 0, 0, layout.AbsoluteContentSize.Y + 20)
+            local needed = layout.AbsoluteContentSize.Y + 20
+            if page.CanvasSize.Y.Offset < needed then
+                page.CanvasSize = UDim2.new(0, 0, 0, needed)
+            end
         end)
 
         -- Search bar
@@ -2716,9 +2719,9 @@ function XELIB:MakeWindow(config)
             end
         end)
 
-        task.delay(0.1, function()
+        task.delay(0.5, function()
             if settingsData and settingsData.Page then
-                settingsData.Page.CanvasSize = UDim2.new(0, 0, 0, 3000)
+                settingsData.Page.CanvasSize = UDim2.new(0, 0, 0, 4000)
             end
         end)
     end
