@@ -1,0 +1,142 @@
+--Loads Library
+loadstring(game:HttpGet("https://raw.githubusercontent.com/aaaaaaaaaaaaaaaaaaaaer/XeNOX-Library/refs/heads/main/Library.lua"))()
+
+
+-- Creating Windows
+local Library = CreateXELIB({
+    Name         = "XeNOX Library",      -- Window title
+    SubTitle     = "by eer",              -- Small text under title
+    LoadIntro    = true,                  -- Show loading screen
+    IntroText    = "XeNOX Library Loading", -- Loading screen text
+    IntroIcon    = "rbxassetid://",       -- Loading screen icon
+    IntroSpeed   = 1,                     -- How long loading screen stays
+    Toggle       = true,                  -- Force mobile toggle button
+    Icon         = "rbxassetid://",       -- Window title bar icon
+    ToggleIcon   = "rbxassetid://",       -- Mobile toggle button icon
+    CloseCallback = function()
+        print("Window was closed!")
+    end,
+    SaveId       = "MyCoolScriptHub",        -- Config folder name
+    AutoSave     = true,                  -- Auto-save values
+    AutoLoad     = true,                  -- Auto-load last config
+})
+
+-- New way: with icon
+local MainTab   = Library:MakeTab({
+    Name = "Main",
+    Icon = "rbxassetid://"
+})
+
+local CombatTab = Library:MakeTab({
+    Name = "Combat",
+    Icon = "rbxassetid://"
+})
+
+-- Old way: name only (still works)
+local VisualTab = Library:AddTab("Visual")
+local MiscTab   = Library:AddTab("Misc")
+
+--Labels
+MainTab:AddLabel("Welcome to XeNOX")
+
+
+-- Paragraphs
+-- Title + body text
+MainTab:AddParagraph(
+    "Information",
+    "This is a description box that automatically wraps text."
+)
+
+
+-- buttons
+-- Click to run code
+MainTab:AddButton("Click Me", function()
+    Library:Notify("Success", "Button was pressed!", 3)
+end, "This button does something when clicked")
+
+
+-- toggles
+-- Normal toggle (no state text)
+CombatTab:AddToggle("Silent Aim", false, function(State)
+    print("Silent Aim:", State)
+end, "Locks onto enemy heads")
+
+-- toggle states
+CombatTab:AddToggle("Auto Farm", false, function(State)
+    print("Auto Farm:", State)
+end, "Farms nearest mob automatically", {
+    On  = "Auto Farm On",
+    Off = "Auto Farm Off"
+})
+
+-- toggle
+CombatTab:AddToggle("Kill Aura", false, function(State)
+    print("Kill Aura:", State)
+end, "Attacks enemies within 10 studs", "Kill Aura")
+
+
+-- Slider
+-- Drag to set a number value
+CombatTab:AddSlider("WalkSpeed", 16, 500, 16, function(Value)
+    game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = Value
+end, "Changes your character walk speed")
+
+
+-- Dropdowns
+-- Select from a list of options
+VisualTab:AddDropdown("ESP Mode", {
+    "Boxes",
+    "Skeleton",
+    "Chams",
+    "Off"
+}, function(Selected)
+    print("ESP set to:", Selected)
+end, "How player ESP is rendered")
+
+
+--Inputs
+-- Type custom text
+MiscTab:AddInput("Player Name", "", function(Text)
+    print("Target:", Text)
+end, "Type a player's exact username")
+
+
+-- keybinds
+-- Press a key to set it
+MiscTab:AddKeybind("Panic Key", Enum.KeyCode.F, function(Key)
+    print("Panic key set to:", Key.Name)
+end, "Press this key to hide the UI")
+
+
+-- COLOR PICKER
+-- Pick a color with HSV picker
+VisualTab:AddColorPicker("ESP Color", Color3.fromRGB(255, 0, 0), function(Color)
+    print("New ESP color:", Color)
+end, "Outline color for player ESP boxes")
+
+-- Show a notification popup
+Library:Notify("Hello", "This is a notification", 5)
+
+-- how to manage cfgs
+Library:SaveConfig("pvp")           -- Save current settings
+Library:ForceLoad("pvp")            -- Load and apply a config
+Library:DeleteConfig("old")         -- Delete a config file
+Library:ListConfigs()               -- Get table of all config names
+Library:SetActiveConfig("pvp")      -- Set which config auto-saves to
+Library:GetActiveConfig()           -- Returns current active config name
+Library:ResetConfig()               -- Wipe current config
+
+-- Custom data for your own script
+Library:SetCustomData("version", "1.2")
+Library:GetCustomData("version")        -- Returns "1.2"
+Library:GetCustomData("missing", "x") -- Returns "x" (fallback)
+Library:GetAllCustomData()              -- Returns table of all custom data
+
+-- notify when config is loaded
+Library:OnConfigLoaded(function(data)
+    print("Config loaded! Custom data:", data)
+end)
+
+-- Force save/load
+Library:ForceSave()
+Library:ForceLoad("pvp")
