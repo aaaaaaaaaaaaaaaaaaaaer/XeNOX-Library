@@ -2315,13 +2315,270 @@ function XELIB:MakeWindow(config)
             activeNameLbl.Text = activeConfigName
             Window:Notify("Config Created", "Saved as '" .. activeConfigName .. "'", 2)
             RefreshConfigList()
+        Tween(createFrame, ANIM.Bounce, {Size = UDim2.new(1, -20, 0, 54)})
+
+        -- Separator
+        local sep2 = Instance.new("Frame")
+        sep2.Size = UDim2.new(1, -40, 0, 1)
+        sep2.BackgroundColor3 = theme.Outline
+        sep2.BackgroundTransparency = 0.4
+        sep2.Parent = settingsData.Page
+
+        settingsTab:AddParagraph("Save Active", "Click below to overwrite the currently active config with your current settings.")
+
+        -- SAVE ACTIVE button (green)
+        local saveActiveFrame = Instance.new("Frame")
+        saveActiveFrame.Size = UDim2.new(1, -20, 0, 0)
+        saveActiveFrame.BackgroundColor3 = theme.Shade
+        saveActiveFrame.BackgroundTransparency = 0.5
+        saveActiveFrame.Parent = settingsData.Page
+        Instance.new("UICorner", saveActiveFrame).CornerRadius = UDim.new(0, 8)
+        table.insert(uiCache.Shade, saveActiveFrame)
+
+        local saveActiveBtn = Instance.new("TextButton")
+        saveActiveBtn.Size = UDim2.new(1, -16, 1, -16)
+        saveActiveBtn.Position = UDim2.new(0, 8, 0, 8)
+        saveActiveBtn.BackgroundColor3 = Color3.fromRGB(80, 220, 120)
+        saveActiveBtn.Text = "💾  SAVE ACTIVE CONFIG"
+        saveActiveBtn.TextColor3 = Color3.new(0, 0, 0)
+        saveActiveBtn.Font = theme.Font
+        saveActiveBtn.TextSize = 15
+        saveActiveBtn.Parent = saveActiveFrame
+        saveActiveBtn.AutoButtonColor = false
+
+        Instance.new("UICorner", saveActiveBtn).CornerRadius = UDim.new(0, 6)
+        local saveActiveStroke = Instance.new("UIStroke", saveActiveBtn)
+        saveActiveStroke.Color = Color3.fromRGB(100, 255, 150)
+        saveActiveStroke.Thickness = 1
+        saveActiveStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+        table.insert(uiCache.ButtonOutline, saveActiveStroke)
+
+        saveActiveBtn.MouseEnter:Connect(function()
+            Tween(saveActiveBtn, ANIM.Fast, {BackgroundTransparency = 0.2, Size = UDim2.new(1, -12, 1, -12), Position = UDim2.new(0, 6, 0, 6)})
+            Tween(saveActiveStroke, ANIM.Fast, {Thickness = 2})
+        end)
+        saveActiveBtn.MouseLeave:Connect(function()
+            Tween(saveActiveBtn, ANIM.Fast, {BackgroundTransparency = 0, Size = UDim2.new(1, -16, 1, -16), Position = UDim2.new(0, 8, 0, 8)})
+            Tween(saveActiveStroke, ANIM.Fast, {Thickness = 1})
+        end)
+        saveActiveBtn.MouseButton1Down:Connect(function()
+            Tween(saveActiveBtn, ANIM.Fast, {BackgroundColor3 = Color3.new(1, 1, 1), Size = UDim2.new(1, -20, 1, -20), Position = UDim2.new(0, 10, 0, 10)})
+            CreateRipple(saveActiveBtn, Vector2.new(saveActiveBtn.AbsoluteSize.X / 2, saveActiveBtn.AbsoluteSize.Y / 2))
+        end)
+        saveActiveBtn.MouseButton1Up:Connect(function()
+            Tween(saveActiveBtn, ANIM.Spring, {BackgroundColor3 = Color3.fromRGB(80, 220, 120), Size = UDim2.new(1, -16, 1, -16), Position = UDim2.new(0, 8, 0, 8)})
+        end)
+        saveActiveBtn.MouseButton1Click:Connect(function()
+            SaveConfig(activeConfigName)
+            Window:Notify("Config Saved", "Overwritten '" .. activeConfigName .. "' with current settings!", 3)
         end)
 
-        Tween(createFrame, ANIM.Bounce, {Size = UDim2.new(1, -20, 0, 50)})
+        Tween(saveActiveFrame, ANIM.Bounce, {Size = UDim2.new(1, -20, 0, 54)})
+
+        -- Populate list on first open
         RefreshConfigList()
+        -- ==================== BACKGROUND EFFECTS ====================
+        settingsTab:AddLabel("BACKGROUND EFFECTS")
+        settingsTab:AddToggle("Enable Rain", effects.Rain, function(t) effects.Rain = t saveData.effects.Rain = t DebouncedSave() end)
+        settingsTab:AddColorPicker("Rain Color", effectColors.Rain, function(c) effectColors.Rain = c saveData.effectColors.Rain = {R = math.floor(c.R * 255), G = math.floor(c.G * 255), B = math.floor(c.B * 255)} DebouncedSave() end)
+        settingsTab:AddToggle("Enable Mouse Trail", effects.Trail, function(t) effects.Trail = t saveData.effects.Trail = t DebouncedSave() end)
+        settingsTab:AddColorPicker("Trail Color", effectColors.Trail, function(c) effectColors.Trail = c saveData.effectColors.Trail = {R = math.floor(c.R * 255), G = math.floor(c.G * 255), B = math.floor(c.B * 255)} DebouncedSave() end)
+        settingsTab:AddToggle("Enable Interactive Blobs", effects.Blob, function(t) effects.Blob = t saveData.effects.Blob = t DebouncedSave() end)
+        settingsTab:AddColorPicker("Blob Color", effectColors.Blob, function(c) effectColors.Blob = c saveData.effectColors.Blob = {R = math.floor(c.R * 255), G = math.floor(c.G * 255), B = math.floor(c.B * 255)} DebouncedSave() end)
+        settingsTab:AddToggle("Enable Matrix Rain", effects.Matrix, function(t) effects.Matrix = t saveData.effects.Matrix = t DebouncedSave() end)
+        settingsTab:AddColorPicker("Matrix Color", effectColors.Matrix, function(c) effectColors.Matrix = c saveData.effectColors.Matrix = {R = math.floor(c.R * 255), G = math.floor(c.G * 255), B = math.floor(c.B * 255)} DebouncedSave() end)
+        settingsTab:AddToggle("Enable Floating Hexagons", effects.Hex, function(t) effects.Hex = t saveData.effects.Hex = t DebouncedSave() end)
+        settingsTab:AddColorPicker("Hex Color", effectColors.Hex, function(c) effectColors.Hex = c saveData.effectColors.Hex = {R = math.floor(c.R * 255), G = math.floor(c.G * 255), B = math.floor(c.B * 255)} DebouncedSave() end)
+        settingsTab:AddToggle("Enable Glitch Blocks", effects.Glitch, function(t) effects.Glitch = t saveData.effects.Glitch = t DebouncedSave() end)
+        settingsTab:AddColorPicker("Glitch Color", effectColors.Glitch, function(c) effectColors.Glitch = c saveData.effectColors.Glitch = {R = math.floor(c.R * 255), G = math.floor(c.G * 255), B = math.floor(c.B * 255)} DebouncedSave() end)
+
+        -- ==================== APPEARANCE ====================
+        settingsTab:AddLabel("APPEARANCE")
+        settingsTab:AddKeybind("Menu Toggle Key", menuKey, function(newKey) menuKey = newKey saveData.menuKey = newKey.Name DebouncedSave() end)
+
+        local fonts = {Enum.Font.SourceSansBold, Enum.Font.Roboto, Enum.Font.GothamBold, Enum.Font.Arcade, Enum.Font.Code, Enum.Font.SciFi}
+        local fontNames = {}
+        for _, f in ipairs(fonts) do table.insert(fontNames, f.Name) end
+
+        settingsTab:AddDropdown("Global Font", fontNames, function(selected)
+            for _, f in ipairs(fonts) do
+                if f.Name == selected then
+                    theme.Font = f
+                    saveData.theme.Font = f.Name
+                    DebouncedSave()
+                    for _, v in ipairs(uiCache.Text) do
+                        if v and v.Parent then
+                            Tween(v, ANIM.Fast, {TextTransparency = 1})
+                            task.delay(0.15, function()
+                                if v and v.Parent then
+                                    v.Font = f
+                                    Tween(v, ANIM.Fast, {TextTransparency = 0})
+                                end
+                            end)
+                        end
+                    end
+                    break
+                end
+            end
+        end)
+
+        settingsTab:AddColorPicker("Main Theme", theme.Main, function(c)
+            theme.Main = c
+            saveData.theme.Main = {R = math.floor(c.R * 255), G = math.floor(c.G * 255), B = math.floor(c.B * 255)}
+            DebouncedSave()
+            Tween(mainFrame, ANIM.Normal, {BackgroundColor3 = c})
+            Tween(titleLbl, ANIM.Normal, {TextColor3 = c})
+            Tween(mainStroke, ANIM.Normal, {Color = c})
+        end)
+
+        settingsTab:AddColorPicker("UI Outline Color", theme.Outline, function(c)
+            theme.Outline = c
+            saveData.theme.Outline = {R = math.floor(c.R * 255), G = math.floor(c.G * 255), B = math.floor(c.B * 255)}
+            DebouncedSave()
+            Tween(mainStroke, ANIM.Normal, {Color = c})
+            for _, v in ipairs(uiCache.ButtonOutline) do
+                if v and v.Parent then Tween(v, ANIM.Normal, {Color = c}) end
+            end
+        end)
+
+        settingsTab:AddColorPicker("Shade Color", theme.Shade, function(c)
+            theme.Shade = c
+            saveData.theme.Shade = {R = math.floor(c.R * 255), G = math.floor(c.G * 255), B = math.floor(c.B * 255)}
+            DebouncedSave()
+            for _, v in ipairs(uiCache.Shade) do
+                if v and v.Parent then Tween(v, ANIM.Normal, {BackgroundColor3 = c}) end
+            end
+        end)
+
+        settingsTab:AddColorPicker("Button Color", theme.Button, function(c)
+            theme.Button = c
+            saveData.theme.Button = {R = math.floor(c.R * 255), G = math.floor(c.G * 255), B = math.floor(c.B * 255)}
+            DebouncedSave()
+            for _, v in ipairs(uiCache.Button) do
+                if v and v.Parent then Tween(v, ANIM.Normal, {BackgroundColor3 = c}) end
+            end
+        end)
+
+        settingsTab:AddColorPicker("Button Outline Color", theme.ButtonOutline, function(c)
+            theme.ButtonOutline = c
+            saveData.theme.ButtonOutline = {R = math.floor(c.R * 255), G = math.floor(c.G * 255), B = math.floor(c.B * 255)}
+            DebouncedSave()
+            for _, v in ipairs(uiCache.ButtonOutline) do
+                if v and v.Parent then Tween(v, ANIM.Normal, {Color = c}) end
+            end
+        end)
+
+        task.delay(0.1, function()
+            if settingsData and settingsData.Page then
+                settingsData.Page.CanvasSize = UDim2.new(0, 0, 0, 3000)
+            end
+        end)
     end
+    function Window:SaveConfig(name)
+        SaveConfig(name)
+    end
+
+    function Window:LoadConfig(name)
+        return LoadConfig(name)
+    end
+
+    function Window:DeleteConfig(name)
+        return DeleteConfig(name)
+    end
+
+    function Window:ListConfigs()
+        return ListConfigs()
+    end
+
+    function Window:SetActiveConfig(name)
+        activeConfigName = name
+    end
+
+    function Window:GetActiveConfig()
+        return activeConfigName
+    end
+
+    function Window:ResetConfig()
+        local path = GetConfigPath(activeConfigName)
+        if isfile and isfile(path) then
+            pcall(function() delfile(path) end)
+        end
+        saveData.toggles = {}
+        saveData.sliders = {}
+        saveData.dropdowns = {}
+        saveData.inputs = {}
+        saveData.keybinds = {}
+        saveData.colors = {}
+        saveData.theme = {}
+        saveData.effects = {}
+        saveData.effectColors = {}
+        saveData.menuKey = nil
+    end
+
+    function Window:GetConfigPath(name)
+        return GetConfigPath(name or activeConfigName)
+    end
+
+
+    -- AUTO LOAD: If enabled, apply the active config after UI is fully built
+    if autoLoad then
+        local data = LoadConfig(activeConfigName)
+        if data then
+            loadedConfig = data
+            Window._loadedConfig = data
+            ApplyConfig(data)
+            Window:Notify("Auto Load", "Applied config '" .. activeConfigName .. "' automatically!", 3)
+        end
+    end
+
+    -- ==================== EXTERNAL SCRIPT SAVE API ====================
+    Window._configCallbacks = {}
+
+    function Window:SetCustomData(key, value)
+        if type(key) ~= "string" then return end
+        saveData.custom[key] = value
+        DebouncedSave()
+    end
+
+    function Window:GetCustomData(key, default)
+        if saveData.custom[key] ~= nil then
+            return saveData.custom[key]
+        end
+        return default
+    end
+
+    function Window:GetAllCustomData()
+        local copy = {}
+        for k, v in pairs(saveData.custom) do
+            copy[k] = v
+        end
+        return copy
+    end
+
+    function Window:OnConfigLoaded(callback)
+        if type(callback) == "function" then
+            table.insert(Window._configCallbacks, callback)
+        end
+    end
+
+    function Window:ForceSave()
+        SaveConfig(activeConfigName)
+    end
+
+    function Window:ForceLoad(name)
+        name = name or activeConfigName
+        local data = LoadConfig(name)
+        if data then
+            loadedConfig = data
+            Window._loadedConfig = data
+            activeConfigName = name
+            ApplyConfig(data)
+            return true
+        end
+        return false
+    end
+    -- ==================== /EXTERNAL SCRIPT SAVE API ====================
 
     return Window
 end
-
 return XELIB
