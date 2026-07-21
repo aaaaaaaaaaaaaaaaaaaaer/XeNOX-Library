@@ -1008,22 +1008,17 @@ function XELIB:MakeWindow(config)
                 star.Size = UDim2.new(0, 2, 0, math.random(30, 80))
                 star.Position = UDim2.new(xScale, 0, -0.2, 0)
                 star.BackgroundColor3 = effectColors.Rain
-                star.BackgroundTransparency = 1
+                star.BackgroundTransparency = 0.2
                 star.BorderSizePixel = 0
                 star.ZIndex = 1
                 star.Parent = mainFrame
 
-                local fadeIn = Tween(star, TweenInfo.new(0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 0.2})
-                fadeIn.Completed:Connect(function()
-                    if star and star.Parent then
-                        Tween(star, TweenInfo.new(fallDuration, Enum.EasingStyle.Linear), {
-                            Position = UDim2.new(xScale, 0, 1.2, 0),
-                            BackgroundTransparency = 1
-                        })
-                    end
-                end)
+                Tween(star, TweenInfo.new(fallDuration, Enum.EasingStyle.Linear), {
+                    Position = UDim2.new(xScale, 0, 1.2, 0),
+                    BackgroundTransparency = 1
+                })
 
-                task.delay(fallDuration + 0.12, function()
+                task.delay(fallDuration + 0.1, function()
                     ReturnToPool("Star", star)
                 end)
             end
