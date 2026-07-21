@@ -2315,6 +2315,7 @@ function XELIB:MakeWindow(config)
             activeNameLbl.Text = activeConfigName
             Window:Notify("Config Created", "Saved as '" .. activeConfigName .. "'", 2)
             RefreshConfigList()
+        end)
         Tween(createFrame, ANIM.Bounce, {Size = UDim2.new(1, -20, 0, 54)})
 
         -- Separator
@@ -2581,4 +2582,3 @@ function XELIB:MakeWindow(config)
 
     return Window
 end
-return XELIB
