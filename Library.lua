@@ -998,15 +998,30 @@ function XELIB:MakeWindow(config)
             local mLoc = UserInputService:GetMouseLocation()
             if effects.Rain then
                 local star = GetFromPool("Star", "Frame")
-                star.Size = UDim2.new(0, 1, 0, math.random(30, 80))
-                star.Position = UDim2.new(math.random(0, 100)/100, 0, -0.2, 0)
+                local xScale = math.random(0, 100) / 100
+                local fallDuration = math.random(5, 10) / 10
+
+                star.Size = UDim2.new(0, 2, 0, math.random(30, 80))
+                star.Position = UDim2.new(xScale, 0, -0.2, 0)
                 star.BackgroundColor3 = effectColors.Rain
                 star.BackgroundTransparency = 1
+                star.BorderSizePixel = 0
                 star.ZIndex = 1
                 star.Parent = mainFrame
-                Tween(star, TweenInfo.new(0.1), {BackgroundTransparency = 0})
-                Tween(star, TweenInfo.new(0.6, Enum.EasingStyle.Linear), {Position = UDim2.new(star.Position.X.Scale, 0, 1.2, 0), BackgroundTransparency = 1})
-                task.delay(0.6, function() ReturnToPool("Star", star) end)
+
+                local fadeIn = Tween(star, TweenInfo.new(0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 0.2})
+                fadeIn.Completed:Connect(function()
+                    if star and star.Parent then
+                        Tween(star, TweenInfo.new(fallDuration, Enum.EasingStyle.Linear), {
+                            Position = UDim2.new(xScale, 0, 1.2, 0),
+                            BackgroundTransparency = 1
+                        })
+                    end
+                end)
+
+                task.delay(fallDuration + 0.12, function()
+                    ReturnToPool("Star", star)
+                end)
             end
             if effects.Trail then
                 local trail = GetFromPool("Trail", "Frame")
