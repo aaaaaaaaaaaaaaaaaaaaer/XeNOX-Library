@@ -179,6 +179,10 @@ end
 
 function XELIB:MakeWindow(config)
     config = config or {}
+    -- Config aliases for compatibility
+    if config.LoadIntro ~= nil then config.Intro = config.LoadIntro end
+    if config.Toggle ~= nil then config._forceToggle = config.Toggle end
+    if config.CloseCallback == true then config.CloseCallback = nil end
     if getgenv and getgenv().XELIB_ActiveGui and typeof(getgenv().XELIB_ActiveGui) == "Instance" then
         pcall(function() getgenv().XELIB_ActiveGui:Destroy() end)
         getgenv().XELIB_ActiveGui = nil
@@ -846,7 +850,7 @@ function XELIB:MakeWindow(config)
     notifList.Padding = UDim.new(0, 10)
     notifList.Parent = notifContainer
 
-    if UserInputService.TouchEnabled or UserInputService.GamepadEnabled then
+    if UserInputService.TouchEnabled or UserInputService.GamepadEnabled or config._forceToggle then
         local toggleBtn = Instance.new("ImageButton")
         toggleBtn.Size = UDim2.new(0, 0, 0, 0)
         toggleBtn.Position = UDim2.new(0, 40, 0, 40)
@@ -2582,3 +2586,8 @@ function XELIB:MakeWindow(config)
 
     return Window
 end
+
+function CreateXELIB(config)
+    return XELIB:MakeWindow(config)
+end
+return XELIB
