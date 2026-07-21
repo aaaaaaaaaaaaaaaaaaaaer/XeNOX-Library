@@ -206,6 +206,7 @@ local function AttachTooltip(target, text, screenGui)
     tLabel.TextTransparency = 1
     tLabel.ZIndex = 10001
     tLabel.Parent = tooltip
+    table.insert(uiCache.Text, tLabel)
 
     local padding = Instance.new("UIPadding", tLabel)
     padding.PaddingBottom = UDim.new(0, 4)
@@ -560,7 +561,7 @@ function XELIB:MakeWindow(config)
         if data.theme then
             for k, v in pairs(data.theme) do
                 if k == "Font" and type(v) == "string" then
-                    for _, f in ipairs({Enum.Font.SourceSansBold, Enum.Font.Roboto, Enum.Font.GothamBold, Enum.Font.Arcade, Enum.Font.Code, Enum.Font.SciFi}) do
+                    for _, f in ipairs(Enum.Font:GetEnumItems()) do
                         if f.Name == v then
                             theme.Font = f
                             for _, lbl in ipairs(uiCache.Text) do if lbl and lbl.Parent then lbl.Font = f end end
@@ -767,7 +768,6 @@ function XELIB:MakeWindow(config)
     titleLbl.ZIndex = 5
     titleLbl.Parent = titleBar
     titleLbl.TextTransparency = 1
-    table.insert(uiCache.Text, titleLbl)
     Tween(titleLbl, ANIM.Smooth, {TextTransparency = 0})
 
     if rainbowTitle then
@@ -1002,15 +1002,30 @@ function XELIB:MakeWindow(config)
             local mLoc = UserInputService:GetMouseLocation()
             if effects.Rain then
                 local star = GetFromPool("Star", "Frame")
-                star.Size = UDim2.new(0, 1, 0, math.random(30, 80))
-                star.Position = UDim2.new(math.random(0, 100)/100, 0, -0.2, 0)
+                local xScale = math.random(0, 100) / 100
+                local fallDuration = math.random(5, 10) / 10
+
+                star.Size = UDim2.new(0, 2, 0, math.random(30, 80))
+                star.Position = UDim2.new(xScale, 0, -0.2, 0)
                 star.BackgroundColor3 = effectColors.Rain
                 star.BackgroundTransparency = 1
+                star.BorderSizePixel = 0
                 star.ZIndex = 1
                 star.Parent = mainFrame
-                Tween(star, TweenInfo.new(0.1), {BackgroundTransparency = 0})
-                Tween(star, TweenInfo.new(0.6, Enum.EasingStyle.Linear), {Position = UDim2.new(star.Position.X.Scale, 0, 1.2, 0), BackgroundTransparency = 1})
-                task.delay(0.6, function() ReturnToPool("Star", star) end)
+
+                local fadeIn = Tween(star, TweenInfo.new(0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 0.2})
+                fadeIn.Completed:Connect(function()
+                    if star and star.Parent then
+                        Tween(star, TweenInfo.new(fallDuration, Enum.EasingStyle.Linear), {
+                            Position = UDim2.new(xScale, 0, 1.2, 0),
+                            BackgroundTransparency = 1
+                        })
+                    end
+                end)
+
+                task.delay(fallDuration + 0.12, function()
+                    ReturnToPool("Star", star)
+                end)
             end
             if effects.Trail then
                 local trail = GetFromPool("Trail", "Frame")
@@ -1315,6 +1330,7 @@ function XELIB:MakeWindow(config)
         searchBox.TextSize = 16
         searchBox.ClearTextOnFocus = false
         searchBox.Parent = searchFrame
+        table.insert(uiCache.Text, searchBox)
 
         Tween(searchFrame, ANIM.Bounce, {Size = UDim2.new(1, -20, 0, 44)})
 
@@ -1718,6 +1734,7 @@ function XELIB:MakeWindow(config)
                 optBtn.Parent = dropFrame
                 optBtn.LayoutOrder = i
                 table.insert(optionButtons, optBtn)
+                table.insert(uiCache.Text, optBtn)
 
                 optBtn.MouseEnter:Connect(function()
                     Tween(optBtn, ANIM.Fast, {BackgroundTransparency = 0.8, BackgroundColor3 = theme.Button, TextColor3 = Color3.new(0, 0, 0)})
@@ -2361,6 +2378,7 @@ function XELIB:MakeWindow(config)
                 local selStroke = Instance.new("UIStroke", selBtn)
                 selStroke.Color = isActive and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(150, 150, 150)
                 selStroke.Thickness = 1
+                table.insert(uiCache.Text, selBtn)
 
                 local loadBtn = Instance.new("TextButton")
                 loadBtn.Size = UDim2.new(0, 52, 0, 28)
@@ -2376,6 +2394,7 @@ function XELIB:MakeWindow(config)
                 local loadStroke = Instance.new("UIStroke", loadBtn)
                 loadStroke.Color = Color3.fromRGB(80, 220, 120)
                 loadStroke.Thickness = 1
+                table.insert(uiCache.Text, loadBtn)
 
                 local delBtn = Instance.new("TextButton")
                 delBtn.Size = UDim2.new(0, 52, 0, 28)
@@ -2391,6 +2410,7 @@ function XELIB:MakeWindow(config)
                 local delStroke = Instance.new("UIStroke", delBtn)
                 delStroke.Color = Color3.fromRGB(255, 70, 70)
                 delStroke.Thickness = 1
+                table.insert(uiCache.Text, delBtn)
 
                 row.MouseEnter:Connect(function()
                     if not isActive then
@@ -2529,6 +2549,7 @@ function XELIB:MakeWindow(config)
         createStroke.Thickness = 1
         createStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
         table.insert(uiCache.ButtonOutline, createStroke)
+        table.insert(uiCache.Text, createBtn)
 
         createBtn.MouseEnter:Connect(function()
             Tween(createBtn, ANIM.Fast, {BackgroundColor3 = Color3.fromRGB(50, 200, 255)})
@@ -2589,6 +2610,7 @@ function XELIB:MakeWindow(config)
         saveActiveStroke.Thickness = 1
         saveActiveStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
         table.insert(uiCache.ButtonOutline, saveActiveStroke)
+        table.insert(uiCache.Text, saveActiveBtn)
 
         saveActiveBtn.MouseEnter:Connect(function()
             Tween(saveActiveBtn, ANIM.Fast, {BackgroundTransparency = 0.2, Size = UDim2.new(1, -12, 1, -12), Position = UDim2.new(0, 6, 0, 6)})
