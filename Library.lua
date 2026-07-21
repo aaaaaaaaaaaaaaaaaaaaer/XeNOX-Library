@@ -1042,7 +1042,7 @@ function XELIB:MakeWindow(config)
                 hex.Image = "rbxassetid://6073628820"
                 hex.ImageColor3 = effectColors.Hex
                 hex.BackgroundTransparency = 1
-                hex.ImageTransparency = 0.8
+                hex.ImageTransparency = 0
                 hex.Rotation = 0
                 hex.ZIndex = 1
                 hex.Parent = mainFrame
