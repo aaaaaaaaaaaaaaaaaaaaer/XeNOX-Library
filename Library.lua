@@ -1456,7 +1456,7 @@ function XELIB:MakeWindow(config)
             end)
         end
 
-        function Tab:AddToggle(text, default, callback, description)
+        function Tab:AddToggle(text, default, callback, description, stateLabels)
             local saved = loadedConfig.toggles and loadedConfig.toggles[text]
             local enabled
             if saved ~= nil then
@@ -1477,6 +1477,11 @@ function XELIB:MakeWindow(config)
             lb.Size = UDim2.new(1, -60, 1, 0)
             lb.Position = UDim2.new(0, 15, 0, 0)
             lb.Text = text
+            if stateLabels and type(stateLabels) == "table" and enabled then
+                lb.Text = stateLabels.On or text
+            elseif stateLabels and type(stateLabels) == "table" and not enabled then
+                lb.Text = stateLabels.Off or text
+            end
             lb.TextColor3 = Color3.new(1, 1, 1)
             lb.Font = theme.Font
             lb.TextSize = 18
@@ -1513,7 +1518,7 @@ function XELIB:MakeWindow(config)
             AttachTooltip(frame, description, screenGui)
             table.insert(tabElements, {frame = frame, searchText = text})
 
-            uiRegistry.toggles[text] = {enabled = enabled, bg = bg, ball = ball, ballGlow = ballGlow, callback = callback}
+            uiRegistry.toggles[text] = {enabled = enabled, bg = bg, ball = ball, ballGlow = ballGlow, callback = callback, lb = lb}
 
             bg.MouseButton1Click:Connect(function()
                 enabled = not enabled
@@ -1527,6 +1532,11 @@ function XELIB:MakeWindow(config)
                 task.delay(0.15, function()
                     Tween(ball, ANIM.Spring, {Size = UDim2.new(0, 17, 0, 17)})
                 end)
+                if stateLabels and type(stateLabels) == "table" then
+                    lb.Text = enabled and (stateLabels.On or text) or (stateLabels.Off or text)
+                elseif stateLabels and type(stateLabels) == "string" then
+                    lb.Text = enabled and (stateLabels .. " [ON]") or (stateLabels .. " [OFF]")
+                end
                 if callback then callback(enabled) end
             end)
         end
@@ -1635,6 +1645,11 @@ function XELIB:MakeWindow(config)
             lb.Size = UDim2.new(1, -160, 1, 0)
             lb.Position = UDim2.new(0, 15, 0, 0)
             lb.Text = text
+            if stateLabels and type(stateLabels) == "table" and enabled then
+                lb.Text = stateLabels.On or text
+            elseif stateLabels and type(stateLabels) == "table" and not enabled then
+                lb.Text = stateLabels.Off or text
+            end
             lb.TextColor3 = Color3.new(1, 1, 1)
             lb.Font = theme.Font
             lb.TextSize = 18
@@ -1768,6 +1783,11 @@ function XELIB:MakeWindow(config)
             lb.Size = UDim2.new(1, -160, 1, 0)
             lb.Position = UDim2.new(0, 15, 0, 0)
             lb.Text = text
+            if stateLabels and type(stateLabels) == "table" and enabled then
+                lb.Text = stateLabels.On or text
+            elseif stateLabels and type(stateLabels) == "table" and not enabled then
+                lb.Text = stateLabels.Off or text
+            end
             lb.TextColor3 = Color3.new(1, 1, 1)
             lb.Font = theme.Font
             lb.TextSize = 18
@@ -1833,6 +1853,11 @@ function XELIB:MakeWindow(config)
             lb.Size = UDim2.new(1, -160, 1, 0)
             lb.Position = UDim2.new(0, 15, 0, 0)
             lb.Text = text
+            if stateLabels and type(stateLabels) == "table" and enabled then
+                lb.Text = stateLabels.On or text
+            elseif stateLabels and type(stateLabels) == "table" and not enabled then
+                lb.Text = stateLabels.Off or text
+            end
             lb.TextColor3 = Color3.new(1, 1, 1)
             lb.Font = theme.Font
             lb.TextSize = 18
@@ -1936,6 +1961,11 @@ function XELIB:MakeWindow(config)
             lb.Size = UDim2.new(1, -60, 1, 0)
             lb.Position = UDim2.new(0, 15, 0, 0)
             lb.Text = text
+            if stateLabels and type(stateLabels) == "table" and enabled then
+                lb.Text = stateLabels.On or text
+            elseif stateLabels and type(stateLabels) == "table" and not enabled then
+                lb.Text = stateLabels.Off or text
+            end
             lb.TextColor3 = Color3.new(1, 1, 1)
             lb.Font = theme.Font
             lb.TextSize = 18
