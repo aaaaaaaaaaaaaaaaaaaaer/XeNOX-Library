@@ -319,6 +319,7 @@ function XELIB:MakeWindow(config)
     local configFolder = "XeNOX_Configs/" .. saveId:gsub("[^%w_]", "_")
     local defaultConfigPath = configFolder .. "/default.json"
     local activeConfigName = "default"
+    local autoSaveTarget = "default"
     local saveData = {
         toggles = {},
         sliders = {},
@@ -333,6 +334,7 @@ function XELIB:MakeWindow(config)
         _autoSave = nil,
         _autoLoad = nil,
         _activeConfigName = nil,
+        _autoSaveTarget = nil,
         custom = {}
     }
 
@@ -427,6 +429,9 @@ function XELIB:MakeWindow(config)
     if loadedConfig._activeConfigName and type(loadedConfig._activeConfigName) == "string" then
         activeConfigName = loadedConfig._activeConfigName
     end
+    if loadedConfig._autoSaveTarget and type(loadedConfig._autoSaveTarget) == "string" then
+        autoSaveTarget = loadedConfig._autoSaveTarget
+    end
     if loadedConfig.theme then
         for k, v in pairs(loadedConfig.theme) do
             if k == "Font" and type(v) == "string" then
@@ -461,11 +466,12 @@ function XELIB:MakeWindow(config)
     local function DebouncedSave()
         if not autoSave then return end
         saveData._activeConfigName = activeConfigName
+        saveData._autoSaveTarget = autoSaveTarget
         if Window._debounceSave then
             task.cancel(Window._debounceSave)
         end
         Window._debounceSave = task.delay(0.5, function()
-            SaveConfig(activeConfigName)
+            SaveConfig(autoSaveTarget)
             Window._debounceSave = nil
         end)
     end
@@ -578,6 +584,7 @@ function XELIB:MakeWindow(config)
         end
         if data._autoSave ~= nil then autoSave = data._autoSave end
         if data._activeConfigName and type(data._activeConfigName) == "string" then activeConfigName = data._activeConfigName end
+        if data._autoSaveTarget and type(data._autoSaveTarget) == "string" then autoSaveTarget = data._autoSaveTarget end
         if data.custom and type(data.custom) == "table" then
             saveData.custom = data.custom
             for _, cb in ipairs(Window._configCallbacks or {}) do
@@ -2122,6 +2129,14 @@ function XELIB:MakeWindow(config)
             saveData._activeConfigName = activeConfigName
             DebouncedSave()
         end)
+
+        local allConfigs = ListConfigs()
+        if #allConfigs == 0 then allConfigs = {"default"} end
+        settingsTab:AddDropdown("Auto Save Target", allConfigs, function(selected)
+            autoSaveTarget = selected
+            saveData._autoSaveTarget = selected
+            DebouncedSave()
+        end, "Which config file auto-save writes to")
 
         settingsTab:AddToggle("Auto Load", autoLoad, function(t)
             autoLoad = t
