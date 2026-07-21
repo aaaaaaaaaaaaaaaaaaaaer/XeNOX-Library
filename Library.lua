@@ -1,18 +1,22 @@
 local XELIB = {}
 XELIB.__index = XELIB
+
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 local HttpService = game:GetService("HttpService")
 local CoreGui = game:GetService("CoreGui")
+
 local LocalPlayer = Players.LocalPlayer
 local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+
 local DEFAULT_THEME = Color3.fromRGB(0, 255, 255)
 local DEFAULT_SHADE = Color3.fromRGB(25, 55, 95)
 local DEFAULT_OUTLINE = Color3.fromRGB(0, 255, 255)
 local DEFAULT_BUTTON = Color3.fromRGB(0, 200, 255)
 local DEFAULT_BTN_OUTLINE = Color3.fromRGB(0, 255, 255)
+
 local ANIM = {
     Fast = TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
     Normal = TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
@@ -26,6 +30,7 @@ local ANIM = {
     Pop = TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
     Pulse = TweenInfo.new(0.4, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
 }
+
 local function RandomString(len)
     len = len or 10
     local chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
@@ -35,6 +40,7 @@ local function RandomString(len)
     end
     return str
 end
+
 local function MakeDraggable(frame, handle)
     handle = handle or frame
     local dragging = false
@@ -68,16 +74,19 @@ local function MakeDraggable(frame, handle)
         end
     end)
 end
+
 local function Tween(obj, info, props)
     local tw = TweenService:Create(obj, info, props)
     tw:Play()
     return tw
 end
+
 local function TweenAsync(obj, info, props)
     local tw = TweenService:Create(obj, info, props)
     tw:Play()
     tw.Completed:Wait()
 end
+
 local Pool = {}
 local function GetFromPool(poolName, className)
     if not Pool[poolName] then Pool[poolName] = {} end
@@ -93,6 +102,7 @@ local function GetFromPool(poolName, className)
     end
     return Instance.new(className)
 end
+
 local function ReturnToPool(poolName, obj)
     local fadeOut = false
     if obj:IsA("Frame") then
@@ -121,6 +131,7 @@ local function ReturnToPool(poolName, obj)
         table.insert(Pool[poolName], obj)
     end
 end
+
 local function RainbowStroke(stroke)
     task.spawn(function()
         while stroke and stroke.Parent do
@@ -130,6 +141,7 @@ local function RainbowStroke(stroke)
         end
     end)
 end
+
 local function CreateRipple(parent, pos)
     local ripple = Instance.new("Frame")
     ripple.Size = UDim2.new(0, 0, 0, 0)
@@ -150,6 +162,7 @@ local function CreateRipple(parent, pos)
         if ripple then ripple:Destroy() end
     end)
 end
+
 local function AddGlow(frame, color)
     local glow = Instance.new("ImageLabel")
     glow.Name = "Glow"
@@ -163,6 +176,7 @@ local function AddGlow(frame, color)
     glow.Parent = frame
     return glow
 end
+
 function XELIB:MakeWindow(config)
     config = config or {}
     if getgenv and getgenv().XELIB_ActiveGui and typeof(getgenv().XELIB_ActiveGui) == "Instance" then
@@ -177,6 +191,7 @@ function XELIB:MakeWindow(config)
         pcall(function() getgenv().XELIB_ToggleBtn:Destroy() end)
         getgenv().XELIB_ToggleBtn = nil
     end
+
     local Window = {}
     setmetatable(Window, {__index = XELIB})
     local winName = config.Name or "XeNOX Library"
@@ -494,15 +509,18 @@ function XELIB:MakeWindow(config)
         end
     end
     Window._applyConfig = ApplyConfig
+
     local tabs = {}
     local tabCount = 0
     local activeNotifs = {}
     local uiCache = {Shade = {}, Button = {}, ButtonOutline = {}, Text = {}}
+
     local screenGui = Instance.new("ScreenGui")
     screenGui.Name = RandomString(16)
     screenGui.ResetOnSpawn = false
     screenGui.IgnoreGuiInset = true
     screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+
     if gethui then
         screenGui.Parent = gethui()
     elseif syn and syn.protect_gui then
@@ -511,7 +529,9 @@ function XELIB:MakeWindow(config)
     else
         screenGui.Parent = CoreGui
     end
+
     if getgenv then getgenv().XELIB_ActiveGui = screenGui end
+
     if hasIntro then
         local Loading_Screen = Instance.new("ScreenGui")
         Loading_Screen.Name = RandomString(12)
@@ -526,12 +546,14 @@ function XELIB:MakeWindow(config)
             Loading_Screen.Parent = CoreGui
         end
         if getgenv then getgenv().XELIB_ActiveLoading = Loading_Screen end
+
         local Loading_Frame = Instance.new("Frame")
         Loading_Frame.Size = UDim2.new(1, 0, 1, 0)
         Loading_Frame.BackgroundColor3 = Color3.fromRGB(10, 10, 15)
         Loading_Frame.BackgroundTransparency = 1
         Loading_Frame.Parent = Loading_Screen
         Instance.new("UICorner", Loading_Frame).CornerRadius = UDim.new(0, 0)
+
         local Loading_Stroke = Instance.new("UIStroke", Loading_Frame)
         Loading_Stroke.Thickness = 2
         Loading_Stroke.Color = theme.Main
@@ -539,6 +561,7 @@ function XELIB:MakeWindow(config)
         if rainbowMain then
             RainbowStroke(Loading_Stroke)
         end
+
         local iconImg = Instance.new("ImageLabel")
         iconImg.Size = UDim2.new(0, 0, 0, 0)
         iconImg.Position = UDim2.new(0.5, 0, 0.4, 0)
@@ -547,6 +570,7 @@ function XELIB:MakeWindow(config)
         iconImg.Image = Loading_Icon
         iconImg.ImageTransparency = 1
         iconImg.Parent = Loading_Frame
+
         local titleLbl = Instance.new("TextLabel")
         titleLbl.Size = UDim2.new(1, 0, 0, 40)
         titleLbl.Position = UDim2.new(0, 0, 0.55, 0)
@@ -557,6 +581,7 @@ function XELIB:MakeWindow(config)
         titleLbl.TextSize = 32
         titleLbl.TextTransparency = 1
         titleLbl.Parent = Loading_Frame
+
         local subLbl = Instance.new("TextLabel")
         subLbl.Size = UDim2.new(1, 0, 0, 25)
         subLbl.Position = UDim2.new(0, 0, 0.62, 0)
@@ -567,6 +592,7 @@ function XELIB:MakeWindow(config)
         subLbl.TextSize = 18
         subLbl.TextTransparency = 1
         subLbl.Parent = Loading_Frame
+
         local barBg = Instance.new("Frame")
         barBg.Size = UDim2.new(0, 0, 0, 6)
         barBg.Position = UDim2.new(0.5, 0, 0.7, 0)
@@ -575,12 +601,14 @@ function XELIB:MakeWindow(config)
         barBg.BackgroundTransparency = 1
         barBg.Parent = Loading_Frame
         Instance.new("UICorner", barBg).CornerRadius = UDim.new(1, 0)
+
         local barFill = Instance.new("Frame")
         barFill.Size = UDim2.new(0, 0, 1, 0)
         barFill.BackgroundColor3 = theme.Main
         barFill.BackgroundTransparency = 1
         barFill.Parent = barBg
         Instance.new("UICorner", barFill).CornerRadius = UDim.new(1, 0)
+
         Tween(Loading_Frame, ANIM.Slow, {BackgroundTransparency = 0})
         task.wait(0.1)
         Tween(iconImg, ANIM.Bounce, {Size = UDim2.new(0, 80, 0, 80), Position = UDim2.new(0.5, -40, 0.4, -40), ImageTransparency = 0})
@@ -604,6 +632,7 @@ function XELIB:MakeWindow(config)
         Loading_Screen:Destroy()
         if getgenv then getgenv().XELIB_ActiveLoading = nil end
     end
+
     local mainFrame = Instance.new("Frame")
     mainFrame.Name = RandomString(16)
     mainFrame.Size = UDim2.new(0, 700, 0, 500)
@@ -614,28 +643,34 @@ function XELIB:MakeWindow(config)
     mainFrame.ClipsDescendants = true
     mainFrame.Parent = screenGui
     Instance.new("UICorner", mainFrame).CornerRadius = UDim.new(0, 8)
+
     local savedPos = mainFrame.Position
     local savedSize = mainFrame.Size
     local uiScale = Instance.new("UIScale")
     uiScale.Parent = mainFrame
     uiScale.Scale = 0.7
+
     local mainStroke = Instance.new("UIStroke")
     mainStroke.Thickness = 0
     mainStroke.Color = theme.Outline
     mainStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
     mainStroke.Parent = mainFrame
+
     if rainbowMain then
         RainbowStroke(mainStroke)
     end
+
     Tween(mainFrame, ANIM.Smooth, {BackgroundTransparency = 0.4})
     Tween(mainStroke, ANIM.Smooth, {Thickness = 2})
     Tween(uiScale, ANIM.Bounce, {Scale = 1})
+
     local titleBar = Instance.new("Frame")
     titleBar.Size = UDim2.new(1, 0, 0, 45)
     titleBar.BackgroundTransparency = 1
     titleBar.ZIndex = 5
     titleBar.Active = true
     titleBar.Parent = mainFrame
+
     local titleLbl = Instance.new("TextLabel")
     titleLbl.Size = UDim2.new(1, -120, 0, 25)
     titleLbl.Position = UDim2.new(0, 15, 0, 5)
@@ -649,11 +684,13 @@ function XELIB:MakeWindow(config)
     titleLbl.Parent = titleBar
     titleLbl.TextTransparency = 1
     Tween(titleLbl, ANIM.Smooth, {TextTransparency = 0})
+
     if rainbowTitle then
         local tStroke = Instance.new("UIStroke", titleLbl)
         tStroke.Thickness = 1
         RainbowStroke(tStroke)
     end
+
     if subTitle ~= "" then
         local subLbl = Instance.new("TextLabel")
         subLbl.Size = UDim2.new(1, -120, 0, 18)
@@ -674,6 +711,7 @@ function XELIB:MakeWindow(config)
             RainbowStroke(sStroke)
         end
     end
+
     if iconAsset ~= "" then
         local winIcon = Instance.new("ImageLabel")
         winIcon.Size = UDim2.new(0, 0, 0, 0)
@@ -684,6 +722,7 @@ function XELIB:MakeWindow(config)
         winIcon.Parent = titleBar
         Tween(winIcon, ANIM.Bounce, {Size = UDim2.new(0, 24, 0, 24)})
     end
+
     local closeBtn = Instance.new("TextButton")
     closeBtn.Name = "MinimizeBtn"
     closeBtn.Size = UDim2.new(0, 30, 0, 30)
@@ -698,6 +737,7 @@ function XELIB:MakeWindow(config)
     closeBtn.Parent = titleBar
     closeBtn.TextTransparency = 1
     Tween(closeBtn, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, false, 0.1), {TextTransparency = 0})
+
     local destroyBtn = Instance.new("TextButton")
     destroyBtn.Name = "CloseBtn"
     destroyBtn.Size = UDim2.new(0, 30, 0, 30)
@@ -712,6 +752,7 @@ function XELIB:MakeWindow(config)
     destroyBtn.Parent = titleBar
     destroyBtn.TextTransparency = 1
     Tween(destroyBtn, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, false, 0.15), {TextTransparency = 0})
+
     closeBtn.MouseEnter:Connect(function()
         Tween(closeBtn, ANIM.Fast, {TextColor3 = Color3.fromRGB(0, 255, 255), TextSize = 32})
     end)
@@ -739,17 +780,21 @@ function XELIB:MakeWindow(config)
             screenGui:Destroy()
         end)
     end)
+
     MakeDraggable(mainFrame, titleBar)
+
     local tabContainer = Instance.new("Frame")
     tabContainer.Name = "TabContainer"
     tabContainer.Size = UDim2.new(0, 150, 1, -55)
     tabContainer.Position = UDim2.new(0, -160, 0, 50)
     tabContainer.BackgroundTransparency = 1
     tabContainer.Parent = mainFrame
+
     local tabList = Instance.new("UIListLayout")
     tabList.Padding = UDim.new(0, 8)
     tabList.SortOrder = Enum.SortOrder.LayoutOrder
     tabList.Parent = tabContainer
+
     local contentFrame = Instance.new("Frame")
     contentFrame.Name = "ContentFrame"
     contentFrame.Size = UDim2.new(1, -180, 1, -60)
@@ -757,7 +802,9 @@ function XELIB:MakeWindow(config)
     contentFrame.BackgroundTransparency = 1
     contentFrame.Parent = mainFrame
     contentFrame.ClipsDescendants = true
+
     Tween(tabContainer, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out, 0, false, 0.2), {Position = UDim2.new(0, 10, 0, 50)})
+
     closeBtn.MouseButton1Down:Connect(function()
         isMinimized = not isMinimized
         if isMinimized then
@@ -786,16 +833,19 @@ function XELIB:MakeWindow(config)
             Tween(contentFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, false, 0.25), {Position = UDim2.new(0, 170, 0, 50)})
         end
     end)
+
     local notifContainer = Instance.new("Frame")
     notifContainer.Size = UDim2.new(0, 280, 1, -20)
     notifContainer.Position = UDim2.new(1, -300, 0, 10)
     notifContainer.BackgroundTransparency = 1
     notifContainer.ZIndex = 100
     notifContainer.Parent = screenGui
+
     local notifList = Instance.new("UIListLayout")
     notifList.VerticalAlignment = Enum.VerticalAlignment.Bottom
     notifList.Padding = UDim.new(0, 10)
     notifList.Parent = notifContainer
+
     if UserInputService.TouchEnabled or UserInputService.GamepadEnabled then
         local toggleBtn = Instance.new("ImageButton")
         toggleBtn.Size = UDim2.new(0, 0, 0, 0)
@@ -807,10 +857,12 @@ function XELIB:MakeWindow(config)
         toggleBtn.ZIndex = 50
         toggleBtn.Parent = screenGui
         Instance.new("UICorner", toggleBtn).CornerRadius = UDim.new(0, 8)
+
         local tStroke = Instance.new("UIStroke", toggleBtn)
         tStroke.Color = theme.Outline
         tStroke.Thickness = 2
         Tween(toggleBtn, ANIM.Spring, {Size = UDim2.new(0, 40, 0, 40), Position = UDim2.new(0, 20, 0, 20)})
+
         toggleBtn.MouseButton1Click:Connect(function()
             menuOpen = not menuOpen
             if menuOpen then
@@ -836,6 +888,7 @@ function XELIB:MakeWindow(config)
         end)
         if getgenv then getgenv().XELIB_ToggleBtn = toggleBtn end
     end
+
     UserInputService.InputBegan:Connect(function(input, gpe)
         if not gpe and input.KeyCode == menuKey then
             menuOpen = not menuOpen
@@ -853,6 +906,7 @@ function XELIB:MakeWindow(config)
             end
         end
     end)
+
     task.spawn(function()
         while task.wait(0.03) do
             if not screenGui.Parent then break end
@@ -957,6 +1011,7 @@ function XELIB:MakeWindow(config)
             end
         end
     end)
+
     local function StyleButton(btn)
         btn.BackgroundColor3 = theme.Button
         btn.TextColor3 = Color3.new(0, 0, 0)
@@ -979,11 +1034,13 @@ function XELIB:MakeWindow(config)
             Tween(stroke, ANIM.Fast, {Thickness = 1})
         end)
     end
+
     local function ShadeFrame(frame)
         frame.BackgroundColor3 = theme.Shade
         Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 8)
         table.insert(uiCache.Shade, frame)
     end
+
     function Window:Notify(titleText, descText, duration)
         duration = duration or 3
         if #activeNotifs >= 4 then
@@ -1002,6 +1059,7 @@ function XELIB:MakeWindow(config)
                 end)
             end
         end
+
         local notif = Instance.new("Frame")
         notif.Size = UDim2.new(1, 0, 0, 0)
         notif.BackgroundColor3 = theme.Shade
@@ -1009,10 +1067,12 @@ function XELIB:MakeWindow(config)
         notif.Position = UDim2.new(1, 50, 0, 0)
         notif.ZIndex = 105
         Instance.new("UICorner", notif).CornerRadius = UDim.new(0, 8)
+
         local stroke = Instance.new("UIStroke", notif)
         stroke.Color = theme.Outline
         stroke.Thickness = 2
         stroke.Transparency = 1
+
         local tLbl = Instance.new("TextLabel", notif)
         tLbl.Size = UDim2.new(1, -20, 0, 25)
         tLbl.Position = UDim2.new(0, 10, 0, 5)
@@ -1024,6 +1084,7 @@ function XELIB:MakeWindow(config)
         tLbl.TextSize = 18
         tLbl.TextTransparency = 1
         tLbl.ZIndex = 106
+
         local dLbl = Instance.new("TextLabel", notif)
         dLbl.Size = UDim2.new(1, -20, 0, 25)
         dLbl.Position = UDim2.new(0, 10, 0, 30)
@@ -1035,6 +1096,7 @@ function XELIB:MakeWindow(config)
         dLbl.TextSize = 14
         dLbl.TextTransparency = 1
         dLbl.ZIndex = 106
+
         local progressBar = Instance.new("Frame")
         progressBar.Size = UDim2.new(1, 0, 0, 3)
         progressBar.Position = UDim2.new(0, 0, 1, -3)
@@ -1043,14 +1105,17 @@ function XELIB:MakeWindow(config)
         progressBar.ZIndex = 107
         progressBar.Parent = notif
         progressBar.BackgroundTransparency = 1
+
         notif.Parent = notifContainer
         table.insert(activeNotifs, notif)
+
         Tween(notif, ANIM.Bounce, {Position = UDim2.new(0, 0, 0, 0), Size = UDim2.new(1, 0, 0, 65), BackgroundTransparency = 0.1})
         Tween(stroke, ANIM.Smooth, {Transparency = 0})
         Tween(tLbl, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, false, 0.1), {TextTransparency = 0})
         Tween(dLbl, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, false, 0.15), {TextTransparency = 0})
         Tween(progressBar, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, false, 0.2), {BackgroundTransparency = 0})
         Tween(progressBar, TweenInfo.new(duration, Enum.EasingStyle.Linear), {Size = UDim2.new(0, 0, 0, 3)})
+
         task.delay(duration, function()
             if not notif or not notif.Parent then return end
             for i, v in ipairs(activeNotifs) do
@@ -1069,6 +1134,7 @@ function XELIB:MakeWindow(config)
             end)
         end)
     end
+
     function Window:AddTab(name)
         tabCount = tabCount + 1
         local tabID = tabCount
@@ -1086,11 +1152,14 @@ function XELIB:MakeWindow(config)
         Instance.new("UICorner", tabBtn).CornerRadius = UDim.new(0, 8)
         table.insert(uiCache.Button, tabBtn)
         table.insert(uiCache.Text, tabBtn)
+
         local btnStroke = Instance.new("UIStroke", tabBtn)
         btnStroke.Color = theme.ButtonOutline
         btnStroke.Thickness = 1
         table.insert(uiCache.ButtonOutline, btnStroke)
+
         Tween(tabBtn, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out, 0, false, 0.05 * tabID), {Size = UDim2.new(1, 0, 0, 40), TextTransparency = 0})
+
         tabBtn.MouseEnter:Connect(function()
             if tabs[tabID] and tabs[tabID].Page and not tabs[tabID].Page.Visible then
                 Tween(tabBtn, ANIM.Fast, {BackgroundTransparency = 0.15, Size = UDim2.new(1, 4, 0, 42)})
@@ -1103,6 +1172,7 @@ function XELIB:MakeWindow(config)
                 Tween(btnStroke, ANIM.Fast, {Thickness = 1})
             end
         end)
+
         local page = Instance.new("ScrollingFrame")
         page.Name = name .. "_Page"
         page.Size = UDim2.new(1, 0, 1, 0)
@@ -1113,6 +1183,7 @@ function XELIB:MakeWindow(config)
         page.Parent = contentFrame
         page.CanvasSize = UDim2.new(0, 0, 0, 2000)
         page.ScrollBarImageTransparency = 0
+
         local layout = Instance.new("UIListLayout", page)
         layout.Padding = UDim.new(0, 10)
         layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
@@ -1120,7 +1191,9 @@ function XELIB:MakeWindow(config)
         layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
             page.CanvasSize = UDim2.new(0, 0, 0, layout.AbsoluteContentSize.Y + 20)
         end)
+
         tabs[tabID] = {Page = page, Btn = tabBtn}
+
         tabBtn.MouseButton1Click:Connect(function()
             for _, v in pairs(tabs) do
                 if v.Page.Visible then
@@ -1138,10 +1211,13 @@ function XELIB:MakeWindow(config)
             Tween(page, ANIM.Smooth, {Position = UDim2.new(0, 0, 0, 0)})
             Tween(tabBtn, ANIM.Spring, {BackgroundColor3 = Color3.fromRGB(200, 200, 200), Size = UDim2.new(1, 4, 0, 40)})
         end)
+
         if tabID == 1 then
             tabBtn.BackgroundColor3 = Color3.fromRGB(200, 200, 200)
         end
+
         local Tab = {}
+
         function Tab:AddLabel(text)
             local l = Instance.new("TextLabel")
             l.Size = UDim2.new(1, -20, 0, 0)
@@ -1159,6 +1235,7 @@ function XELIB:MakeWindow(config)
             Tween(l, ANIM.Bounce, {Size = UDim2.new(1, -20, 0, 40), TextTransparency = 0, BackgroundTransparency = 0})
             return l
         end
+
         function Tab:AddParagraph(title, content)
             local frame = Instance.new("Frame")
             frame.Size = UDim2.new(1, -20, 0, 0)
@@ -1167,6 +1244,7 @@ function XELIB:MakeWindow(config)
             frame.Parent = page
             Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 8)
             table.insert(uiCache.Shade, frame)
+
             local t = Instance.new("TextLabel")
             t.Size = UDim2.new(1, -20, 0, 25)
             t.Position = UDim2.new(0, 10, 0, 5)
@@ -1179,6 +1257,7 @@ function XELIB:MakeWindow(config)
             t.TextTransparency = 1
             t.Parent = frame
             table.insert(uiCache.Text, t)
+
             local c = Instance.new("TextLabel")
             c.Size = UDim2.new(1, -20, 0, 40)
             c.Position = UDim2.new(0, 10, 0, 30)
@@ -1192,10 +1271,12 @@ function XELIB:MakeWindow(config)
             c.TextTransparency = 1
             c.Parent = frame
             table.insert(uiCache.Text, c)
+
             Tween(frame, ANIM.Bounce, {Size = UDim2.new(1, -20, 0, 80), BackgroundTransparency = 0})
             Tween(t, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, false, 0.1), {TextTransparency = 0})
             Tween(c, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, false, 0.15), {TextTransparency = 0})
         end
+
         function Tab:AddButton(text, callback)
             local frame = Instance.new("Frame")
             frame.Size = UDim2.new(1, -20, 0, 0)
@@ -1204,6 +1285,7 @@ function XELIB:MakeWindow(config)
             frame.Parent = page
             Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 8)
             table.insert(uiCache.Shade, frame)
+
             local btn = Instance.new("TextButton")
             btn.Size = UDim2.new(1, -16, 1, -16)
             btn.Position = UDim2.new(0, 8, 0, 8)
@@ -1215,7 +1297,9 @@ function XELIB:MakeWindow(config)
             btn.Parent = frame
             btn.AutoButtonColor = false
             StyleButton(btn)
+
             Tween(frame, ANIM.Bounce, {Size = UDim2.new(1, -20, 0, 50)})
+
             btn.MouseButton1Down:Connect(function()
                 Tween(btn, ANIM.Fast, {BackgroundColor3 = Color3.new(1, 1, 1), Size = UDim2.new(1, -20, 1, -20), Position = UDim2.new(0, 10, 0, 10)})
                 CreateRipple(btn, Vector2.new(btn.AbsoluteSize.X / 2, btn.AbsoluteSize.Y / 2))
@@ -1227,6 +1311,7 @@ function XELIB:MakeWindow(config)
                 if callback then callback() end
             end)
         end
+
         function Tab:AddToggle(text, default, callback)
             local saved = loadedConfig.toggles and loadedConfig.toggles[text]
             local enabled
@@ -1235,12 +1320,15 @@ function XELIB:MakeWindow(config)
             else
                 enabled = default or false
             end
+            saveData.toggles[text] = enabled
+
             local frame = Instance.new("Frame")
             frame.Size = UDim2.new(1, -20, 0, 0)
             frame.BackgroundColor3 = Color3.new(0, 0, 0)
             frame.BackgroundTransparency = 1
             frame.Parent = page
             Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 8)
+
             local lb = Instance.new("TextLabel")
             lb.Size = UDim2.new(1, -60, 1, 0)
             lb.Position = UDim2.new(0, 15, 0, 0)
@@ -1253,6 +1341,7 @@ function XELIB:MakeWindow(config)
             lb.TextTransparency = 1
             lb.Parent = frame
             table.insert(uiCache.Text, lb)
+
             local bg = Instance.new("TextButton")
             bg.Name = "ToggleBG"
             bg.Size = UDim2.new(0, 45, 0, 25)
@@ -1262,21 +1351,28 @@ function XELIB:MakeWindow(config)
             bg.AutoButtonColor = false
             bg.Parent = frame
             Instance.new("UICorner", bg).CornerRadius = UDim.new(1, 0)
+
             local ball = Instance.new("Frame")
             ball.Size = UDim2.new(0, 17, 0, 17)
             ball.Position = enabled and UDim2.new(1, -21, 0.5, -8) or UDim2.new(0, 4, 0.5, -8)
             ball.BackgroundColor3 = Color3.new(1, 1, 1)
             ball.Parent = bg
             Instance.new("UICorner", ball).CornerRadius = UDim.new(1, 0)
+
             local ballGlow = Instance.new("UIStroke", ball)
             ballGlow.Color = enabled and theme.Button or theme.Shade
             ballGlow.Thickness = 2
             ballGlow.Transparency = 0.5
+
             Tween(frame, ANIM.Bounce, {Size = UDim2.new(1, -20, 0, 50), BackgroundTransparency = 0.5})
             Tween(lb, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, false, 0.1), {TextTransparency = 0})
+
             uiRegistry.toggles[text] = {enabled = enabled, bg = bg, ball = ball, ballGlow = ballGlow, callback = callback}
+
             bg.MouseButton1Click:Connect(function()
                 enabled = not enabled
+                saveData.toggles[text] = enabled
+                DebouncedSave()
                 local targetColor = enabled and theme.Button or theme.Shade
                 Tween(bg, ANIM.Normal, {BackgroundColor3 = targetColor})
                 Tween(ball, ANIM.Spring, {Position = enabled and UDim2.new(1, -21, 0.5, -8) or UDim2.new(0, 4, 0.5, -8)})
@@ -1288,15 +1384,19 @@ function XELIB:MakeWindow(config)
                 if callback then callback(enabled) end
             end)
         end
+
         function Tab:AddSlider(text, min, max, default, callback)
             local saved = loadedConfig.sliders and loadedConfig.sliders[text]
             local value = saved or default or min
+            saveData.sliders[text] = value
+
             local frame = Instance.new("Frame")
             frame.Size = UDim2.new(1, -20, 0, 0)
             frame.BackgroundColor3 = Color3.new(0, 0, 0)
             frame.BackgroundTransparency = 1
             frame.Parent = page
             Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 8)
+
             local lb = Instance.new("TextLabel")
             lb.Size = UDim2.new(1, -20, 0, 25)
             lb.Position = UDim2.new(0, 15, 0, 5)
@@ -1309,29 +1409,36 @@ function XELIB:MakeWindow(config)
             lb.TextTransparency = 1
             lb.Parent = frame
             table.insert(uiCache.Text, lb)
+
             local track = Instance.new("Frame")
             track.Size = UDim2.new(1, -30, 0, 8)
             track.Position = UDim2.new(0, 15, 0, 35)
             track.BackgroundColor3 = theme.Shade
             track.Parent = frame
             Instance.new("UICorner", track).CornerRadius = UDim.new(1, 0)
+
             local fill = Instance.new("Frame")
             fill.Size = UDim2.new((value - min) / (max - min), 0, 1, 0)
             fill.BackgroundColor3 = theme.Button
             fill.Parent = track
             Instance.new("UICorner", fill).CornerRadius = UDim.new(1, 0)
+
             local knob = Instance.new("Frame")
             knob.Size = UDim2.new(0, 14, 0, 14)
             knob.Position = UDim2.new((value - min) / (max - min), -7, 0.5, -7)
             knob.BackgroundColor3 = Color3.new(1, 1, 1)
             knob.Parent = track
             Instance.new("UICorner", knob).CornerRadius = UDim.new(1, 0)
+
             local knobStroke = Instance.new("UIStroke", knob)
             knobStroke.Color = theme.Button
             knobStroke.Thickness = 2
+
             Tween(frame, ANIM.Bounce, {Size = UDim2.new(1, -20, 0, 60), BackgroundTransparency = 0.5})
             Tween(lb, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, false, 0.1), {TextTransparency = 0})
+
             uiRegistry.sliders[text] = {value = value, lb = lb, fill = fill, knob = knob, track = track, min = min, max = max, callback = callback}
+
             local dragging = false
             track.InputBegan:Connect(function(input)
                 if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
@@ -1361,10 +1468,13 @@ function XELIB:MakeWindow(config)
                 end
             end)
         end
+
         function Tab:AddDropdown(text, options, callback)
             local saved = loadedConfig.dropdowns and loadedConfig.dropdowns[text]
             local selected = saved or options[1] or ""
+            saveData.dropdowns[text] = selected
             local open = false
+
             local frame = Instance.new("Frame")
             frame.Size = UDim2.new(1, -20, 0, 0)
             frame.BackgroundColor3 = Color3.new(0, 0, 0)
@@ -1372,6 +1482,7 @@ function XELIB:MakeWindow(config)
             frame.Parent = page
             frame.ClipsDescendants = false
             Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 8)
+
             local lb = Instance.new("TextLabel")
             lb.Size = UDim2.new(1, -160, 1, 0)
             lb.Position = UDim2.new(0, 15, 0, 0)
@@ -1384,6 +1495,7 @@ function XELIB:MakeWindow(config)
             lb.TextTransparency = 1
             lb.Parent = frame
             table.insert(uiCache.Text, lb)
+
             local btn = Instance.new("TextButton")
             btn.Size = UDim2.new(0, 120, 0, 30)
             btn.Position = UDim2.new(1, -135, 0.5, -15)
@@ -1397,6 +1509,7 @@ function XELIB:MakeWindow(config)
             Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
             table.insert(uiCache.Shade, btn)
             table.insert(uiCache.Text, btn)
+
             local arrow = Instance.new("TextLabel")
             arrow.Size = UDim2.new(0, 20, 0, 20)
             arrow.Position = UDim2.new(1, -22, 0, 5)
@@ -1406,6 +1519,7 @@ function XELIB:MakeWindow(config)
             arrow.TextSize = 12
             arrow.Font = Enum.Font.SourceSansBold
             arrow.Parent = btn
+
             local dropFrame = Instance.new("Frame")
             dropFrame.Size = UDim2.new(0, 120, 0, 0)
             dropFrame.Position = UDim2.new(1, -135, 0.5, 15)
@@ -1415,8 +1529,10 @@ function XELIB:MakeWindow(config)
             dropFrame.ZIndex = 10
             dropFrame.Parent = frame
             Instance.new("UICorner", dropFrame).CornerRadius = UDim.new(0, 6)
+
             local dropList = Instance.new("UIListLayout", dropFrame)
             dropList.Padding = UDim.new(0, 2)
+
             local optionButtons = {}
             for i, opt in ipairs(options) do
                 local optBtn = Instance.new("TextButton")
@@ -1431,6 +1547,7 @@ function XELIB:MakeWindow(config)
                 optBtn.Parent = dropFrame
                 optBtn.LayoutOrder = i
                 table.insert(optionButtons, optBtn)
+
                 optBtn.MouseEnter:Connect(function()
                     Tween(optBtn, ANIM.Fast, {BackgroundTransparency = 0.8, BackgroundColor3 = theme.Button, TextColor3 = Color3.new(0, 0, 0)})
                 end)
@@ -1451,9 +1568,12 @@ function XELIB:MakeWindow(config)
                     if callback then callback(selected) end
                 end)
             end
+
             Tween(frame, ANIM.Bounce, {Size = UDim2.new(1, -20, 0, 50), BackgroundTransparency = 0.5})
             Tween(lb, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, false, 0.1), {TextTransparency = 0})
+
             uiRegistry.dropdowns[text] = {selected = selected, btn = btn, callback = callback}
+
             btn.MouseButton1Click:Connect(function()
                 open = not open
                 local h = math.min(#options * 30, 150)
@@ -1478,15 +1598,19 @@ function XELIB:MakeWindow(config)
                 Tween(btn, ANIM.Fast, {BackgroundColor3 = theme.Shade})
             end)
         end
+
         function Tab:AddInput(text, default, callback)
             local saved = loadedConfig.inputs and loadedConfig.inputs[text]
             local inputDefault = saved or default or ""
+            saveData.inputs[text] = inputDefault
+
             local frame = Instance.new("Frame")
             frame.Size = UDim2.new(1, -20, 0, 50)
             frame.BackgroundColor3 = Color3.new(0, 0, 0)
             frame.BackgroundTransparency = 0.5
             frame.Parent = page
             Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 8)
+
             local lb = Instance.new("TextLabel")
             lb.Size = UDim2.new(1, -160, 1, 0)
             lb.Position = UDim2.new(0, 15, 0, 0)
@@ -1499,6 +1623,7 @@ function XELIB:MakeWindow(config)
             lb.TextTransparency = 0
             lb.Parent = frame
             table.insert(uiCache.Text, lb)
+
             local box = Instance.new("TextBox")
             box.Size = UDim2.new(0, 120, 0, 30)
             box.Position = UDim2.new(1, -135, 0.5, -15)
@@ -1513,11 +1638,14 @@ function XELIB:MakeWindow(config)
             Instance.new("UICorner", box).CornerRadius = UDim.new(0, 6)
             table.insert(uiCache.Shade, box)
             table.insert(uiCache.Text, box)
+
             local boxStroke = Instance.new("UIStroke", box)
             boxStroke.Color = theme.Outline
             boxStroke.Thickness = 1
             boxStroke.Transparency = 0
+
             uiRegistry.inputs[text] = {box = box, callback = callback}
+
             box.Focused:Connect(function()
                 Tween(box, ANIM.Normal, {BackgroundColor3 = Color3.fromRGB(theme.Shade.R * 255 + 15, theme.Shade.G * 255 + 15, theme.Shade.B * 255 + 15)})
                 Tween(boxStroke, ANIM.Normal, {Thickness = 2, Color = theme.Main})
@@ -1532,16 +1660,20 @@ function XELIB:MakeWindow(config)
                 if callback then callback(box.Text) end
             end)
         end
+
         function Tab:AddKeybind(text, defaultKey, callback)
             local saved = loadedConfig.keybinds and loadedConfig.keybinds[text]
             local currentKey = saved and Enum.KeyCode[saved] or defaultKey or Enum.KeyCode.Unknown
+            saveData.keybinds[text] = currentKey.Name
             local listening = false
+
             local frame = Instance.new("Frame")
             frame.Size = UDim2.new(1, -20, 0, 0)
             frame.BackgroundColor3 = Color3.new(0, 0, 0)
             frame.BackgroundTransparency = 1
             frame.Parent = page
             Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 8)
+
             local lb = Instance.new("TextLabel")
             lb.Size = UDim2.new(1, -160, 1, 0)
             lb.Position = UDim2.new(0, 15, 0, 0)
@@ -1554,6 +1686,7 @@ function XELIB:MakeWindow(config)
             lb.TextTransparency = 1
             lb.Parent = frame
             table.insert(uiCache.Text, lb)
+
             local btn = Instance.new("TextButton")
             btn.Size = UDim2.new(0, 120, 0, 30)
             btn.Position = UDim2.new(1, -135, 0.5, -15)
@@ -1568,15 +1701,19 @@ function XELIB:MakeWindow(config)
             Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
             table.insert(uiCache.Shade, btn)
             table.insert(uiCache.Text, btn)
+
             local btnStroke = Instance.new("UIStroke", btn)
             btnStroke.Color = theme.Outline
             btnStroke.Thickness = 1
             btnStroke.Transparency = 1
+
             Tween(frame, ANIM.Bounce, {Size = UDim2.new(1, -20, 0, 50), BackgroundTransparency = 0.5})
             Tween(lb, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, false, 0.1), {TextTransparency = 0})
             Tween(btn, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, false, 0.15), {TextTransparency = 0})
             Tween(btnStroke, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, false, 0.2), {Transparency = 0})
+
             uiRegistry.keybinds[text] = {currentKey = currentKey, btn = btn, callback = callback}
+
             local pulseConn
             btn.MouseButton1Click:Connect(function()
                 if listening then return end
@@ -1609,6 +1746,7 @@ function XELIB:MakeWindow(config)
                     end
                 end)
             end)
+
             btn.MouseEnter:Connect(function()
                 if not listening then
                     Tween(btn, ANIM.Fast, {BackgroundColor3 = Color3.fromRGB(theme.Shade.R * 255 + 15, theme.Shade.G * 255 + 15, theme.Shade.B * 255 + 15)})
@@ -1620,6 +1758,7 @@ function XELIB:MakeWindow(config)
                 end
             end)
         end
+
         function Tab:AddColorPicker(text, defaultColor, callback)
             local saved = loadedConfig.colors and loadedConfig.colors[text]
             if saved and type(saved) == "table" and saved.R and saved.G and saved.B then
@@ -1627,6 +1766,7 @@ function XELIB:MakeWindow(config)
             end
             defaultColor = defaultColor or Color3.fromRGB(255, 255, 255)
             local curH, curS, curV = defaultColor:ToHSV()
+
             local frame = Instance.new("Frame")
             frame.Size = UDim2.new(1, -20, 0, 0)
             frame.BackgroundColor3 = theme.Shade
@@ -1634,6 +1774,7 @@ function XELIB:MakeWindow(config)
             frame.Parent = page
             Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 8)
             table.insert(uiCache.Shade, frame)
+
             local lb = Instance.new("TextLabel")
             lb.Size = UDim2.new(1, -60, 1, 0)
             lb.Position = UDim2.new(0, 15, 0, 0)
@@ -1646,6 +1787,7 @@ function XELIB:MakeWindow(config)
             lb.TextTransparency = 1
             lb.Parent = frame
             table.insert(uiCache.Text, lb)
+
             local preview = Instance.new("TextButton")
             preview.Size = UDim2.new(0, 0, 0, 0)
             preview.Position = UDim2.new(1, -40, 0.5, -15)
@@ -1654,13 +1796,17 @@ function XELIB:MakeWindow(config)
             preview.AutoButtonColor = false
             preview.Parent = frame
             Instance.new("UICorner", preview).CornerRadius = UDim.new(0, 6)
+
             local previewStroke = Instance.new("UIStroke", preview)
             previewStroke.Color = theme.Outline
             previewStroke.Thickness = 2
+
             Tween(frame, ANIM.Bounce, {Size = UDim2.new(1, -20, 0, 50), BackgroundTransparency = 0})
             Tween(lb, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, false, 0.1), {TextTransparency = 0})
             Tween(preview, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out, 0, false, 0.15), {Size = UDim2.new(0, 30, 0, 30)})
+
             uiRegistry.colors[text] = {preview = preview, callback = callback, curH = curH, curS = curS, curV = curV}
+
             local popup = Instance.new("Frame")
             popup.Size = UDim2.new(0, 0, 0, 0)
             popup.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
@@ -1670,10 +1816,12 @@ function XELIB:MakeWindow(config)
             popup.Parent = screenGui
             popup.AnchorPoint = Vector2.new(0.5, 0)
             Instance.new("UICorner", popup).CornerRadius = UDim.new(0, 6)
+
             local pStroke = Instance.new("UIStroke", popup)
             pStroke.Color = theme.Outline
             pStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
             pStroke.Thickness = 0
+
             local box = Instance.new("ImageButton")
             box.Size = UDim2.new(0, 150, 0, 150)
             box.Position = UDim2.new(0, 10, 0, 10)
@@ -1683,6 +1831,7 @@ function XELIB:MakeWindow(config)
             box.ZIndex = 1001
             box.Parent = popup
             box.ImageTransparency = 1
+
             local cursorSV = Instance.new("Frame")
             cursorSV.Size = UDim2.new(0, 6, 0, 6)
             cursorSV.BackgroundColor3 = Color3.new(1, 1, 1)
@@ -1693,6 +1842,7 @@ function XELIB:MakeWindow(config)
             local cStroke = Instance.new("UIStroke", cursorSV)
             cStroke.Color = Color3.new(0, 0, 0)
             cStroke.Thickness = 1
+
             local hue = Instance.new("TextButton")
             hue.Size = UDim2.new(0, 20, 0, 150)
             hue.Position = UDim2.new(0, 170, 0, 10)
@@ -1702,6 +1852,7 @@ function XELIB:MakeWindow(config)
             hue.ZIndex = 1001
             hue.Parent = popup
             hue.BackgroundTransparency = 1
+
             local grad = Instance.new("UIGradient", hue)
             grad.Rotation = 90
             grad.Color = ColorSequence.new({
@@ -1713,6 +1864,7 @@ function XELIB:MakeWindow(config)
                 ColorSequenceKeypoint.new(0.833, Color3.fromRGB(255, 0, 255)),
                 ColorSequenceKeypoint.new(1.000, Color3.fromRGB(255, 0, 0))
             })
+
             local cursorHue = Instance.new("Frame")
             cursorHue.Size = UDim2.new(1, 4, 0, 3)
             cursorHue.Position = UDim2.new(0, -2, 0, 0)
@@ -1723,6 +1875,7 @@ function XELIB:MakeWindow(config)
             local hStroke = Instance.new("UIStroke", cursorHue)
             hStroke.Color = Color3.new(0, 0, 0)
             hStroke.Thickness = 1
+
             local txt = Instance.new("TextLabel")
             txt.Size = UDim2.new(1, -20, 0, 30)
             txt.Position = UDim2.new(0, 10, 0, 165)
@@ -1735,6 +1888,7 @@ function XELIB:MakeWindow(config)
             txt.TextTransparency = 1
             txt.Parent = popup
             table.insert(uiCache.Text, txt)
+
             local function update()
                 local c = Color3.fromHSV(curH, curS, curV)
                 box.BackgroundColor3 = Color3.fromHSV(curH, 1, 1)
@@ -1748,6 +1902,7 @@ function XELIB:MakeWindow(config)
                 if callback then callback(c) end
             end
             update()
+
             preview.MouseButton1Click:Connect(function()
                 popup.Visible = not popup.Visible
                 if popup.Visible then
@@ -1769,6 +1924,7 @@ function XELIB:MakeWindow(config)
                     end)
                 end
             end)
+
             local dragHue, dragSV = false, false
             local dragLoop
             local function updateHSV()
@@ -1780,15 +1936,19 @@ function XELIB:MakeWindow(config)
                 end
                 update()
             end
+
             local function startDrag()
                 if dragLoop then dragLoop:Disconnect() end
                 dragLoop = RunService.RenderStepped:Connect(updateHSV)
             end
+
             local function stopDrag()
                 if dragLoop then dragLoop:Disconnect(); dragLoop = nil end
             end
+
             hue.MouseButton1Down:Connect(function() dragHue = true; startDrag() end)
             box.MouseButton1Down:Connect(function() dragSV = true; startDrag() end)
+
             UserInputService.InputEnded:Connect(function(input)
                 if input.UserInputType == Enum.UserInputType.MouseButton1 then
                     dragHue = false
@@ -1796,6 +1956,7 @@ function XELIB:MakeWindow(config)
                     stopDrag()
                 end
             end)
+
             UserInputService.InputBegan:Connect(function(input)
                 if input.UserInputType == Enum.UserInputType.MouseButton1 and popup.Visible then
                     local mx, my = LocalPlayer:GetMouse().X, LocalPlayer:GetMouse().Y
@@ -1813,8 +1974,10 @@ function XELIB:MakeWindow(config)
                 end
             end)
         end
+
         return Tab
     end
+
     if hasSettings then
         local settingsTab = Window:AddTab("Settings")
         local settingsData = tabs[tabCount]
@@ -2131,4 +2294,34 @@ function XELIB:MakeWindow(config)
         createStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
         table.insert(uiCache.ButtonOutline, createStroke)
 
-        createBtn.MouseEnterSorry, something went wrong. Please try your request again.
+        createBtn.MouseEnter:Connect(function()
+            Tween(createBtn, ANIM.Fast, {BackgroundColor3 = Color3.fromRGB(50, 200, 255)})
+            Tween(createStroke, ANIM.Fast, {Thickness = 2})
+        end)
+
+        createBtn.MouseLeave:Connect(function()
+            Tween(createBtn, ANIM.Fast, {BackgroundColor3 = Color3.fromRGB(0, 180, 255)})
+            Tween(createStroke, ANIM.Fast, {Thickness = 1})
+        end)
+
+        createBtn.MouseButton1Click:Connect(function()
+            if newConfigName == "" then
+                Window:Notify("Error", "Please enter a valid config name.", 2)
+                return
+            end
+            activeConfigName = newConfigName
+            saveData._activeConfigName = activeConfigName
+            SaveConfig(activeConfigName)
+            activeNameLbl.Text = activeConfigName
+            Window:Notify("Config Created", "Saved as '" .. activeConfigName .. "'", 2)
+            RefreshConfigList()
+        end)
+
+        Tween(createFrame, ANIM.Bounce, {Size = UDim2.new(1, -20, 0, 50)})
+        RefreshConfigList()
+    end
+
+    return Window
+end
+
+return XELIB
