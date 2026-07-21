@@ -435,7 +435,7 @@ function XELIB:MakeWindow(config)
     if loadedConfig.theme then
         for k, v in pairs(loadedConfig.theme) do
             if k == "Font" and type(v) == "string" then
-                for _, f in ipairs({Enum.Font.SourceSansBold, Enum.Font.Roboto, Enum.Font.GothamBold, Enum.Font.Arcade, Enum.Font.Code, Enum.Font.SciFi}) do
+                for _, f in ipairs(Enum.Font:GetEnumItems()) do
                     if f.Name == v then theme.Font = f; break end
                 end
             elseif theme[k] and type(v) == "table" and v.R and v.G and v.B then
@@ -1276,6 +1276,43 @@ function XELIB:MakeWindow(config)
             page.CanvasSize = UDim2.new(0, 0, 0, layout.AbsoluteContentSize.Y + 20)
         end)
 
+        -- Search bar
+        local searchFrame = Instance.new("Frame")
+        searchFrame.Size = UDim2.new(1, -20, 0, 0)
+        searchFrame.BackgroundColor3 = theme.Shade
+        searchFrame.BackgroundTransparency = 0.5
+        searchFrame.LayoutOrder = -9999
+        searchFrame.Parent = page
+        Instance.new("UICorner", searchFrame).CornerRadius = UDim.new(0, 8)
+        table.insert(uiCache.Shade, searchFrame)
+
+        local searchIcon = Instance.new("TextLabel")
+        searchIcon.Size = UDim2.new(0, 30, 0, 30)
+        searchIcon.Position = UDim2.new(0, 8, 0.5, -15)
+        searchIcon.BackgroundTransparency = 1
+        searchIcon.Text = "🔍"
+        searchIcon.TextSize = 18
+        searchIcon.Font = Enum.Font.SourceSansBold
+        searchIcon.TextColor3 = Color3.new(1, 1, 1)
+        searchIcon.Parent = searchFrame
+
+        local searchBox = Instance.new("TextBox")
+        searchBox.Size = UDim2.new(1, -50, 0, 30)
+        searchBox.Position = UDim2.new(0, 40, 0.5, -15)
+        searchBox.BackgroundTransparency = 1
+        searchBox.Text = ""
+        searchBox.PlaceholderText = "Search..."
+        searchBox.TextColor3 = Color3.new(1, 1, 1)
+        searchBox.PlaceholderColor3 = Color3.fromRGB(150, 150, 150)
+        searchBox.Font = theme.Font
+        searchBox.TextSize = 16
+        searchBox.ClearTextOnFocus = false
+        searchBox.Parent = searchFrame
+
+        Tween(searchFrame, ANIM.Bounce, {Size = UDim2.new(1, -20, 0, 44)})
+
+        local tabElements = {}
+
         tabs[tabID] = {Page = page, Btn = tabBtn}
 
         tabBtn.MouseButton1Click:Connect(function()
@@ -1302,6 +1339,25 @@ function XELIB:MakeWindow(config)
 
         local Tab = {}
 
+        searchBox:GetPropertyChangedSignal("Text"):Connect(function()
+            local query = searchBox.Text:lower()
+            if query == "" then
+                for _, entry in ipairs(tabElements) do
+                    if entry.frame and entry.frame.Parent then
+                        entry.frame.Visible = true
+                    end
+                end
+            else
+                for _, entry in ipairs(tabElements) do
+                    if entry.frame and entry.frame.Parent then
+                        local match = entry.searchText:lower():find(query, 1, true) ~= nil
+                        entry.frame.Visible = match
+                    end
+                end
+            end
+            page.CanvasSize = UDim2.new(0, 0, 0, layout.AbsoluteContentSize.Y + 20)
+        end)
+
         function Tab:AddLabel(text)
             local l = Instance.new("TextLabel")
             l.Size = UDim2.new(1, -20, 0, 0)
@@ -1317,6 +1373,7 @@ function XELIB:MakeWindow(config)
             table.insert(uiCache.Shade, l)
             table.insert(uiCache.Text, l)
             Tween(l, ANIM.Bounce, {Size = UDim2.new(1, -20, 0, 40), TextTransparency = 0, BackgroundTransparency = 0})
+            table.insert(tabElements, {frame = l, searchText = text})
             return l
         end
 
@@ -1359,6 +1416,7 @@ function XELIB:MakeWindow(config)
             Tween(frame, ANIM.Bounce, {Size = UDim2.new(1, -20, 0, 80), BackgroundTransparency = 0})
             Tween(t, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, false, 0.1), {TextTransparency = 0})
             Tween(c, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, false, 0.15), {TextTransparency = 0})
+            table.insert(tabElements, {frame = frame, searchText = title .. " " .. content})
         end
 
         function Tab:AddButton(text, callback, description)
@@ -1384,6 +1442,7 @@ function XELIB:MakeWindow(config)
             AttachTooltip(frame, description, screenGui)
 
             Tween(frame, ANIM.Bounce, {Size = UDim2.new(1, -20, 0, 50)})
+            table.insert(tabElements, {frame = frame, searchText = text})
 
             btn.MouseButton1Down:Connect(function()
                 Tween(btn, ANIM.Fast, {BackgroundColor3 = Color3.new(1, 1, 1), Size = UDim2.new(1, -20, 1, -20), Position = UDim2.new(0, 10, 0, 10)})
@@ -1452,6 +1511,7 @@ function XELIB:MakeWindow(config)
             Tween(frame, ANIM.Bounce, {Size = UDim2.new(1, -20, 0, 50), BackgroundTransparency = 0.5})
             Tween(lb, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, false, 0.1), {TextTransparency = 0})
             AttachTooltip(frame, description, screenGui)
+            table.insert(tabElements, {frame = frame, searchText = text})
 
             uiRegistry.toggles[text] = {enabled = enabled, bg = bg, ball = ball, ballGlow = ballGlow, callback = callback}
 
@@ -1523,6 +1583,7 @@ function XELIB:MakeWindow(config)
             Tween(frame, ANIM.Bounce, {Size = UDim2.new(1, -20, 0, 60), BackgroundTransparency = 0.5})
             Tween(lb, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, false, 0.1), {TextTransparency = 0})
             AttachTooltip(frame, description, screenGui)
+            table.insert(tabElements, {frame = frame, searchText = text})
 
             uiRegistry.sliders[text] = {value = value, lb = lb, fill = fill, knob = knob, track = track, min = min, max = max, callback = callback}
 
@@ -1659,6 +1720,7 @@ function XELIB:MakeWindow(config)
             Tween(frame, ANIM.Bounce, {Size = UDim2.new(1, -20, 0, 50), BackgroundTransparency = 0.5})
             Tween(lb, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, false, 0.1), {TextTransparency = 0})
             AttachTooltip(frame, description, screenGui)
+            table.insert(tabElements, {frame = frame, searchText = text})
 
             uiRegistry.dropdowns[text] = {selected = selected, btn = btn, callback = callback}
 
@@ -1668,6 +1730,9 @@ function XELIB:MakeWindow(config)
                 if open then
                     Tween(dropFrame, ANIM.Normal, {Size = UDim2.new(0, 120, 0, h), BackgroundTransparency = 0})
                     Tween(arrow, ANIM.Spring, {Rotation = 180})
+                    for _, ob in ipairs(optionButtons) do
+                        ob.TextTransparency = 0
+                    end
                     for i, ob in ipairs(optionButtons) do
                         Tween(ob, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, false, 0.03 * i), {TextTransparency = 0})
                     end
@@ -1732,6 +1797,7 @@ function XELIB:MakeWindow(config)
             boxStroke.Thickness = 1
             boxStroke.Transparency = 0
             AttachTooltip(frame, description, screenGui)
+            table.insert(tabElements, {frame = frame, searchText = text})
 
             uiRegistry.inputs[text] = {box = box, callback = callback}
 
@@ -1801,6 +1867,7 @@ function XELIB:MakeWindow(config)
             Tween(btn, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, false, 0.15), {TextTransparency = 0})
             Tween(btnStroke, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, false, 0.2), {Transparency = 0})
             AttachTooltip(frame, description, screenGui)
+            table.insert(tabElements, {frame = frame, searchText = text})
 
             uiRegistry.keybinds[text] = {currentKey = currentKey, btn = btn, callback = callback}
 
@@ -1895,6 +1962,7 @@ function XELIB:MakeWindow(config)
             Tween(lb, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, false, 0.1), {TextTransparency = 0})
             Tween(preview, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out, 0, false, 0.15), {Size = UDim2.new(0, 30, 0, 30)})
             AttachTooltip(frame, description, screenGui)
+            table.insert(tabElements, {frame = frame, searchText = text})
 
             uiRegistry.colors[text] = {preview = preview, callback = callback, curH = curH, curS = curS, curV = curV}
 
@@ -2527,31 +2595,25 @@ function XELIB:MakeWindow(config)
         settingsTab:AddLabel("APPEARANCE")
         settingsTab:AddKeybind("Menu Toggle Key", menuKey, function(newKey) menuKey = newKey saveData.menuKey = newKey.Name DebouncedSave() end)
 
-        local fonts = {Enum.Font.SourceSansBold, Enum.Font.Roboto, Enum.Font.GothamBold, Enum.Font.Arcade, Enum.Font.Code, Enum.Font.SciFi}
+        local allFonts = Enum.Font:GetEnumItems()
         local fontNames = {}
-        for _, f in ipairs(fonts) do table.insert(fontNames, f.Name) end
+        for _, f in ipairs(allFonts) do table.insert(fontNames, f.Name) end
 
         settingsTab:AddDropdown("Global Font", fontNames, function(selected)
-            for _, f in ipairs(fonts) do
+            for _, f in ipairs(allFonts) do
                 if f.Name == selected then
                     theme.Font = f
                     saveData.theme.Font = f.Name
                     DebouncedSave()
                     for _, v in ipairs(uiCache.Text) do
                         if v and v.Parent then
-                            Tween(v, ANIM.Fast, {TextTransparency = 1})
-                            task.delay(0.15, function()
-                                if v and v.Parent then
-                                    v.Font = f
-                                    Tween(v, ANIM.Fast, {TextTransparency = 0})
-                                end
-                            end)
+                            v.Font = f
                         end
                     end
                     break
                 end
             end
-        end)
+        end, "Changes the font used across the entire UI")
 
         settingsTab:AddColorPicker("Main Theme", theme.Main, function(c)
             theme.Main = c
