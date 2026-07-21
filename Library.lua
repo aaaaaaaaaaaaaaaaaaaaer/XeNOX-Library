@@ -176,6 +176,79 @@ local function AddGlow(frame, color)
     glow.Parent = frame
     return glow
 end
+local function AttachTooltip(target, text, screenGui)
+    if not text or text == "" then return end
+
+    local tooltip = Instance.new("Frame")
+    tooltip.Name = "Tooltip"
+    tooltip.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
+    tooltip.BackgroundTransparency = 1
+    tooltip.BorderSizePixel = 0
+    tooltip.ZIndex = 10000
+    tooltip.Visible = false
+    tooltip.Parent = screenGui
+    Instance.new("UICorner", tooltip).CornerRadius = UDim.new(0, 6)
+
+    local tStroke = Instance.new("UIStroke", tooltip)
+    tStroke.Color = DEFAULT_THEME
+    tStroke.Thickness = 1
+    tStroke.Transparency = 1
+
+    local tLabel = Instance.new("TextLabel")
+    tLabel.Size = UDim2.new(1, -16, 1, -10)
+    tLabel.Position = UDim2.new(0, 8, 0, 5)
+    tLabel.BackgroundTransparency = 1
+    tLabel.Text = text
+    tLabel.TextColor3 = Color3.new(1, 1, 1)
+    tLabel.Font = Enum.Font.SourceSansBold
+    tLabel.TextSize = 14
+    tLabel.TextWrapped = true
+    tLabel.TextTransparency = 1
+    tLabel.ZIndex = 10001
+    tLabel.Parent = tooltip
+
+    local padding = Instance.new("UIPadding", tLabel)
+    padding.PaddingBottom = UDim.new(0, 4)
+    padding.PaddingTop = UDim.new(0, 4)
+
+    local function show()
+        if not tooltip or not tooltip.Parent then return end
+        local abs = target.AbsolutePosition
+        local size = target.AbsoluteSize
+
+        -- Measure text
+        tLabel.Size = UDim2.new(0, 200, 0, 0)
+        local textHeight = math.max(tLabel.TextBounds.Y + 14, 28)
+        tooltip.Size = UDim2.new(0, 220, 0, textHeight)
+
+        -- Position above element, or below if too high
+        local yPos = abs.Y - textHeight - 8
+        if yPos < 40 then
+            yPos = abs.Y + size.Y + 8
+        end
+
+        tooltip.Position = UDim2.new(0, math.clamp(abs.X + size.X/2 - 110, 10, screenGui.AbsoluteSize.X - 230), 0, yPos)
+        tooltip.Visible = true
+
+        Tween(tooltip, ANIM.Fast, {BackgroundTransparency = 0.1})
+        Tween(tStroke, ANIM.Fast, {Transparency = 0})
+        Tween(tLabel, ANIM.Fast, {TextTransparency = 0})
+    end
+
+    local function hide()
+        if not tooltip or not tooltip.Parent then return end
+        Tween(tooltip, ANIM.FadeOut, {BackgroundTransparency = 1})
+        Tween(tStroke, ANIM.Fast, {Transparency = 1})
+        Tween(tLabel, ANIM.Fast, {TextTransparency = 1})
+        task.delay(0.2, function()
+            if tooltip and tooltip.Parent then tooltip.Visible = false end
+        end)
+    end
+
+    target.MouseEnter:Connect(show)
+    target.MouseLeave:Connect(hide)
+end
+
 
 function XELIB:MakeWindow(config)
     config = config or {}
@@ -1281,7 +1354,7 @@ function XELIB:MakeWindow(config)
             Tween(c, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, false, 0.15), {TextTransparency = 0})
         end
 
-        function Tab:AddButton(text, callback)
+        function Tab:AddButton(text, callback, description)
             local frame = Instance.new("Frame")
             frame.Size = UDim2.new(1, -20, 0, 0)
             frame.BackgroundColor3 = theme.Shade
@@ -1301,6 +1374,7 @@ function XELIB:MakeWindow(config)
             btn.Parent = frame
             btn.AutoButtonColor = false
             StyleButton(btn)
+            AttachTooltip(frame, description, screenGui)
 
             Tween(frame, ANIM.Bounce, {Size = UDim2.new(1, -20, 0, 50)})
 
@@ -1316,7 +1390,7 @@ function XELIB:MakeWindow(config)
             end)
         end
 
-        function Tab:AddToggle(text, default, callback)
+        function Tab:AddToggle(text, default, callback, description)
             local saved = loadedConfig.toggles and loadedConfig.toggles[text]
             local enabled
             if saved ~= nil then
@@ -1370,6 +1444,7 @@ function XELIB:MakeWindow(config)
 
             Tween(frame, ANIM.Bounce, {Size = UDim2.new(1, -20, 0, 50), BackgroundTransparency = 0.5})
             Tween(lb, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, false, 0.1), {TextTransparency = 0})
+            AttachTooltip(frame, description, screenGui)
 
             uiRegistry.toggles[text] = {enabled = enabled, bg = bg, ball = ball, ballGlow = ballGlow, callback = callback}
 
@@ -1389,7 +1464,7 @@ function XELIB:MakeWindow(config)
             end)
         end
 
-        function Tab:AddSlider(text, min, max, default, callback)
+        function Tab:AddSlider(text, min, max, default, callback, description)
             local saved = loadedConfig.sliders and loadedConfig.sliders[text]
             local value = saved or default or min
             saveData.sliders[text] = value
@@ -1440,6 +1515,7 @@ function XELIB:MakeWindow(config)
 
             Tween(frame, ANIM.Bounce, {Size = UDim2.new(1, -20, 0, 60), BackgroundTransparency = 0.5})
             Tween(lb, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, false, 0.1), {TextTransparency = 0})
+            AttachTooltip(frame, description, screenGui)
 
             uiRegistry.sliders[text] = {value = value, lb = lb, fill = fill, knob = knob, track = track, min = min, max = max, callback = callback}
 
@@ -1473,7 +1549,7 @@ function XELIB:MakeWindow(config)
             end)
         end
 
-        function Tab:AddDropdown(text, options, callback)
+        function Tab:AddDropdown(text, options, callback, description)
             local saved = loadedConfig.dropdowns and loadedConfig.dropdowns[text]
             local selected = saved or options[1] or ""
             saveData.dropdowns[text] = selected
@@ -1575,6 +1651,7 @@ function XELIB:MakeWindow(config)
 
             Tween(frame, ANIM.Bounce, {Size = UDim2.new(1, -20, 0, 50), BackgroundTransparency = 0.5})
             Tween(lb, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, false, 0.1), {TextTransparency = 0})
+            AttachTooltip(frame, description, screenGui)
 
             uiRegistry.dropdowns[text] = {selected = selected, btn = btn, callback = callback}
 
@@ -1603,7 +1680,7 @@ function XELIB:MakeWindow(config)
             end)
         end
 
-        function Tab:AddInput(text, default, callback)
+        function Tab:AddInput(text, default, callback, description)
             local saved = loadedConfig.inputs and loadedConfig.inputs[text]
             local inputDefault = saved or default or ""
             saveData.inputs[text] = inputDefault
@@ -1647,6 +1724,7 @@ function XELIB:MakeWindow(config)
             boxStroke.Color = theme.Outline
             boxStroke.Thickness = 1
             boxStroke.Transparency = 0
+            AttachTooltip(frame, description, screenGui)
 
             uiRegistry.inputs[text] = {box = box, callback = callback}
 
@@ -1665,7 +1743,7 @@ function XELIB:MakeWindow(config)
             end)
         end
 
-        function Tab:AddKeybind(text, defaultKey, callback)
+        function Tab:AddKeybind(text, defaultKey, callback, description)
             local saved = loadedConfig.keybinds and loadedConfig.keybinds[text]
             local currentKey = saved and Enum.KeyCode[saved] or defaultKey or Enum.KeyCode.Unknown
             saveData.keybinds[text] = currentKey.Name
@@ -1715,6 +1793,7 @@ function XELIB:MakeWindow(config)
             Tween(lb, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, false, 0.1), {TextTransparency = 0})
             Tween(btn, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, false, 0.15), {TextTransparency = 0})
             Tween(btnStroke, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, false, 0.2), {Transparency = 0})
+            AttachTooltip(frame, description, screenGui)
 
             uiRegistry.keybinds[text] = {currentKey = currentKey, btn = btn, callback = callback}
 
@@ -1763,7 +1842,7 @@ function XELIB:MakeWindow(config)
             end)
         end
 
-        function Tab:AddColorPicker(text, defaultColor, callback)
+        function Tab:AddColorPicker(text, defaultColor, callback, description)
             local saved = loadedConfig.colors and loadedConfig.colors[text]
             if saved and type(saved) == "table" and saved.R and saved.G and saved.B then
                 defaultColor = Color3.fromRGB(saved.R, saved.G, saved.B)
@@ -1808,6 +1887,7 @@ function XELIB:MakeWindow(config)
             Tween(frame, ANIM.Bounce, {Size = UDim2.new(1, -20, 0, 50), BackgroundTransparency = 0})
             Tween(lb, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, false, 0.1), {TextTransparency = 0})
             Tween(preview, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out, 0, false, 0.15), {Size = UDim2.new(0, 30, 0, 30)})
+            AttachTooltip(frame, description, screenGui)
 
             uiRegistry.colors[text] = {preview = preview, callback = callback, curH = curH, curS = curS, curV = curV}
 
