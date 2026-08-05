@@ -313,6 +313,10 @@ function XELIB:MakeWindow(config)
     local menuOpen = true
     local isMinimized = false
 
+    local glowEnabled = (loadedConfig.glowEnabled == true)
+    local glowColor = (loadedConfig.glowColor and type(loadedConfig.glowColor) == "table" and loadedConfig.glowColor.R) and 
+        Color3.fromRGB(loadedConfig.glowColor.R, loadedConfig.glowColor.G, loadedConfig.glowColor.B) or theme.Main
+
     local saveId = config.SaveId or config.Name or "XeNOX_Default"
     local autoSave = config.AutoSave ~= false
     local autoLoad = config.AutoLoad == true
@@ -585,6 +589,18 @@ function XELIB:MakeWindow(config)
         if data._autoSave ~= nil then autoSave = data._autoSave end
         if data._activeConfigName and type(data._activeConfigName) == "string" then activeConfigName = data._activeConfigName end
         if data._autoSaveTarget and type(data._autoSaveTarget) == "string" then autoSaveTarget = data._autoSaveTarget end
+        if data.glowEnabled ~= nil then
+            glowEnabled = data.glowEnabled
+            if mainGlow and mainGlow.Parent then
+                Tween(mainGlow, ANIM.Normal, {ImageTransparency = glowEnabled and 0.4 or 1})
+            end
+        end
+        if data.glowColor and type(data.glowColor) == "table" and data.glowColor.R then
+            glowColor = Color3.fromRGB(data.glowColor.R, data.glowColor.G, data.glowColor.B)
+            if mainGlow and mainGlow.Parent then
+                Tween(mainGlow, ANIM.Normal, {ImageColor3 = glowColor})
+            end
+        end
         if data.custom and type(data.custom) == "table" then
             saveData.custom = data.custom
             for _, cb in ipairs(Window._configCallbacks or {}) do
@@ -726,6 +742,43 @@ function XELIB:MakeWindow(config)
     mainFrame.Active = true
     mainFrame.ClipsDescendants = true
     mainFrame.Parent = screenGui
+
+    local glowContainer = Instance.new("Frame")
+    glowContainer.Name = "GlowContainer"
+    glowContainer.Size = mainFrame.Size
+    glowContainer.Position = mainFrame.Position
+    glowContainer.BackgroundTransparency = 1
+    glowContainer.ZIndex = 0
+    glowContainer.Visible = mainFrame.Visible
+    glowContainer.Parent = screenGui
+
+    local mainGlow = Instance.new("ImageLabel")
+    mainGlow.Name = "WindowGlow"
+    mainGlow.Size = UDim2.new(1, 40, 1, 40)
+    mainGlow.Position = UDim2.new(0, -20, 0, -20)
+    mainGlow.BackgroundTransparency = 1
+    mainGlow.Image = "rbxassetid://5028857084"
+    mainGlow.ImageColor3 = glowColor
+    mainGlow.ImageTransparency = glowEnabled and 0.4 or 1
+    mainGlow.ZIndex = 0
+    mainGlow.Parent = glowContainer
+
+    mainFrame:GetPropertyChangedSignal("Position"):Connect(function()
+        if glowContainer and glowContainer.Parent then
+            glowContainer.Position = mainFrame.Position
+        end
+    end)
+    mainFrame:GetPropertyChangedSignal("Size"):Connect(function()
+        if glowContainer and glowContainer.Parent then
+            glowContainer.Size = mainFrame.Size
+        end
+    end)
+    mainFrame:GetPropertyChangedSignal("Visible"):Connect(function()
+        if glowContainer and glowContainer.Parent then
+            glowContainer.Visible = mainFrame.Visible
+        end
+    end)
+
     Instance.new("UICorner", mainFrame).CornerRadius = UDim.new(0, 8)
 
     local savedPos = mainFrame.Position
@@ -861,6 +914,9 @@ function XELIB:MakeWindow(config)
                 getgenv().XELIB_ActiveGui = nil
                 getgenv().XELIB_ToggleBtn = nil
             end
+            if glowContainer and glowContainer.Parent then
+                glowContainer:Destroy()
+            end
             screenGui:Destroy()
         end)
     end)
@@ -895,6 +951,7 @@ function XELIB:MakeWindow(config)
             savedPos = mainFrame.Position
             savedSize = mainFrame.Size
             closeBtn.Text = "+"
+            if glowContainer then glowContainer.Visible = false end
             Tween(tabContainer, ANIM.Slide, {Position = UDim2.new(0, -160, 0, 50)})
             Tween(contentFrame, ANIM.FadeOut, {Position = UDim2.new(0, 300, 0, 50), BackgroundTransparency = 1})
             task.delay(0.15, function()
@@ -909,6 +966,7 @@ function XELIB:MakeWindow(config)
             tabContainer.Visible = true
             contentFrame.Visible = true
             closeBtn.Text = "-"
+            if glowContainer then glowContainer.Visible = true end
             Tween(mainFrame, ANIM.Smooth, {
                 Size = savedSize,
                 Position = savedPos
@@ -951,6 +1009,7 @@ function XELIB:MakeWindow(config)
             menuOpen = not menuOpen
             if menuOpen then
                 mainFrame.Visible = true
+                if glowContainer then glowContainer.Visible = true end
                 uiScale.Scale = 0.8
                 Tween(uiScale, ANIM.Bounce, {Scale = 1})
                 Tween(mainFrame, ANIM.Smooth, {BackgroundTransparency = 0.4})
@@ -960,7 +1019,10 @@ function XELIB:MakeWindow(config)
                 Tween(mainFrame, ANIM.FadeOut, {BackgroundTransparency = 1})
                 Tween(toggleBtn, ANIM.Fast, {Rotation = 180})
                 task.delay(0.25, function()
-                    if not menuOpen then mainFrame.Visible = false end
+                    if not menuOpen then 
+                        mainFrame.Visible = false 
+                        if glowContainer then glowContainer.Visible = false end
+                    end
                 end)
             end
         end)
@@ -978,6 +1040,7 @@ function XELIB:MakeWindow(config)
             menuOpen = not menuOpen
             if menuOpen then
                 mainFrame.Visible = true
+                if glowContainer then glowContainer.Visible = true end
                 uiScale.Scale = 0.8
                 Tween(uiScale, ANIM.Bounce, {Scale = 1})
                 Tween(mainFrame, ANIM.Smooth, {BackgroundTransparency = 0.4})
@@ -985,7 +1048,10 @@ function XELIB:MakeWindow(config)
                 Tween(uiScale, ANIM.FadeOut, {Scale = 0.8})
                 Tween(mainFrame, ANIM.FadeOut, {BackgroundTransparency = 1})
                 task.delay(0.25, function()
-                    if not menuOpen then mainFrame.Visible = false end
+                    if not menuOpen then 
+                        mainFrame.Visible = false 
+                        if glowContainer then glowContainer.Visible = false end
+                    end
                 end)
             end
         end
@@ -2594,6 +2660,22 @@ function XELIB:MakeWindow(config)
 
         -- ==================== APPEARANCE ====================
         settingsTab:AddLabel("APPEARANCE")
+        settingsTab:AddToggle("Enable Window Glow", glowEnabled, function(t)
+            glowEnabled = t
+            saveData.glowEnabled = t
+            DebouncedSave()
+            if mainGlow and mainGlow.Parent then
+                Tween(mainGlow, ANIM.Normal, {ImageTransparency = t and 0.4 or 1})
+            end
+        end, "Toggles a soft glow around the main window frame")
+        settingsTab:AddColorPicker("Glow Color", glowColor, function(c)
+            glowColor = c
+            saveData.glowColor = {R = math.floor(c.R * 255), G = math.floor(c.G * 255), B = math.floor(c.B * 255)}
+            DebouncedSave()
+            if mainGlow and mainGlow.Parent then
+                Tween(mainGlow, ANIM.Normal, {ImageColor3 = c})
+            end
+        end, "Changes the color of the window outline glow")
         settingsTab:AddKeybind("Menu Toggle Key", menuKey, function(newKey) menuKey = newKey saveData.menuKey = newKey.Name DebouncedSave() end)
 
         local allFonts = Enum.Font:GetEnumItems()
