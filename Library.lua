@@ -316,6 +316,7 @@ function XELIB:MakeWindow(config)
     local glowEnabled = (loadedConfig.glowEnabled == true)
     local glowColor = (loadedConfig.glowColor and type(loadedConfig.glowColor) == "table" and loadedConfig.glowColor.R) and 
         Color3.fromRGB(loadedConfig.glowColor.R, loadedConfig.glowColor.G, loadedConfig.glowColor.B) or theme.Main
+    local glowOpacity = (loadedConfig.glowOpacity and type(loadedConfig.glowOpacity) == "number") and loadedConfig.glowOpacity or 0.4
 
     local saveId = config.SaveId or config.Name or "XeNOX_Default"
     local autoSave = config.AutoSave ~= false
@@ -601,6 +602,12 @@ function XELIB:MakeWindow(config)
                 Tween(mainGlow, ANIM.Normal, {ImageColor3 = glowColor})
             end
         end
+        if data.glowOpacity ~= nil and type(data.glowOpacity) == "number" then
+            glowOpacity = data.glowOpacity
+            if mainGlow and mainGlow.Parent then
+                Tween(mainGlow, ANIM.Normal, {ImageTransparency = glowEnabled and (1 - glowOpacity) or 1})
+            end
+        end
         if data.custom and type(data.custom) == "table" then
             saveData.custom = data.custom
             for _, cb in ipairs(Window._configCallbacks or {}) do
@@ -759,7 +766,7 @@ function XELIB:MakeWindow(config)
     mainGlow.BackgroundTransparency = 1
     mainGlow.Image = "rbxassetid://5028857084"
     mainGlow.ImageColor3 = glowColor
-    mainGlow.ImageTransparency = glowEnabled and 0.4 or 1
+    mainGlow.ImageTransparency = glowEnabled and (1 - glowOpacity) or 1
     mainGlow.ZIndex = 0
     mainGlow.Parent = glowContainer
 
@@ -2665,7 +2672,7 @@ function XELIB:MakeWindow(config)
             saveData.glowEnabled = t
             DebouncedSave()
             if mainGlow and mainGlow.Parent then
-                Tween(mainGlow, ANIM.Normal, {ImageTransparency = t and 0.4 or 1})
+                Tween(mainGlow, ANIM.Normal, {ImageTransparency = t and (1 - glowOpacity) or 1})
             end
         end, "Toggles a soft glow around the main window frame")
         settingsTab:AddColorPicker("Glow Color", glowColor, function(c)
@@ -2676,6 +2683,14 @@ function XELIB:MakeWindow(config)
                 Tween(mainGlow, ANIM.Normal, {ImageColor3 = c})
             end
         end, "Changes the color of the window outline glow")
+        settingsTab:AddSlider("Glow Opacity", 0, 100, math.floor(glowOpacity * 100), function(val)
+            glowOpacity = val / 100
+            saveData.glowOpacity = glowOpacity
+            DebouncedSave()
+            if mainGlow and mainGlow.Parent then
+                Tween(mainGlow, ANIM.Normal, {ImageTransparency = glowEnabled and (1 - glowOpacity) or 1})
+            end
+        end, "How strong the window glow appears (0 = invisible, 100 = solid)")
         settingsTab:AddKeybind("Menu Toggle Key", menuKey, function(newKey) menuKey = newKey saveData.menuKey = newKey.Name DebouncedSave() end)
 
         local allFonts = Enum.Font:GetEnumItems()
