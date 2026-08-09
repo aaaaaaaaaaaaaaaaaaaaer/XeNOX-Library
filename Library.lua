@@ -318,6 +318,8 @@ function XELIB:MakeWindow(config)
         ButtonOutline = DEFAULT_BTN_OUTLINE,
         Font = Enum.Font.SourceSansBold
     }
+    local introBackgroundColor = Color3.fromRGB(0, 0, 0)
+    local introTextColor = Color3.fromRGB(255, 255, 255)
     local menuKey = Enum.KeyCode.RightControl
     local menuOpen = true
     local isMinimized = false
@@ -344,6 +346,8 @@ function XELIB:MakeWindow(config)
         _autoLoad = nil,
         _activeConfigName = nil,
         _autoSaveTarget = nil,
+        introBackgroundColor = nil,
+        introTextColor = nil,
         custom = {}
     }
 
@@ -462,6 +466,14 @@ function XELIB:MakeWindow(config)
         if ok and key then menuKey = key end
     end
 
+    if loadedConfig.introBackgroundColor and type(loadedConfig.introBackgroundColor) == "table" and loadedConfig.introBackgroundColor.R then
+        introBackgroundColor = Color3.fromRGB(loadedConfig.introBackgroundColor.R, loadedConfig.introBackgroundColor.G, loadedConfig.introBackgroundColor.B)
+    end
+    if loadedConfig.introTextColor and type(loadedConfig.introTextColor) == "table" and loadedConfig.introTextColor.R then
+        introTextColor = Color3.fromRGB(loadedConfig.introTextColor.R, loadedConfig.introTextColor.G, loadedConfig.introTextColor.B)
+    end
+    saveData.introBackgroundColor = {R = math.floor(introBackgroundColor.R * 255), G = math.floor(introBackgroundColor.G * 255), B = math.floor(introBackgroundColor.B * 255)}
+    saveData.introTextColor = {R = math.floor(introTextColor.R * 255), G = math.floor(introTextColor.G * 255), B = math.floor(introTextColor.B * 255)}
     Window._loadedConfig = loadedConfig
     Window._saveData = saveData
     Window._saveConfigFunc = SaveConfig
@@ -588,7 +600,7 @@ function XELIB:MakeWindow(config)
                 end
             end
             mainFrame.BackgroundColor3 = theme.Main
-            titleLbl.TextColor3 = theme.Main
+            titleLbl.TextColor3 = introTextColor
             mainStroke.Color = theme.Outline
             for _, v in ipairs(uiCache.Shade) do if v and v.Parent then v.BackgroundColor3 = theme.Shade end end
             for _, v in ipairs(uiCache.Button) do if v and v.Parent then v.BackgroundColor3 = theme.Button end end
@@ -618,6 +630,14 @@ function XELIB:MakeWindow(config)
             if mainGlow and mainGlow.Parent then
                 Tween(mainGlow, ANIM.Normal, {ImageTransparency = glowEnabled and (1 - glowOpacity) or 1})
             end
+        end
+        if data.introBackgroundColor and type(data.introBackgroundColor) == "table" and data.introBackgroundColor.R then
+            introBackgroundColor = Color3.fromRGB(data.introBackgroundColor.R, data.introBackgroundColor.G, data.introBackgroundColor.B)
+            saveData.introBackgroundColor = data.introBackgroundColor
+        end
+        if data.introTextColor and type(data.introTextColor) == "table" and data.introTextColor.R then
+            introTextColor = Color3.fromRGB(data.introTextColor.R, data.introTextColor.G, data.introTextColor.B)
+            saveData.introTextColor = data.introTextColor
         end
         if data.custom and type(data.custom) == "table" then
             saveData.custom = data.custom
@@ -667,14 +687,14 @@ function XELIB:MakeWindow(config)
 
         local Loading_Frame = Instance.new("Frame")
         Loading_Frame.Size = UDim2.new(1, 0, 1, 0)
-        Loading_Frame.BackgroundColor3 = Color3.fromRGB(10, 10, 15)
+        Loading_Frame.BackgroundColor3 = introBackgroundColor
         Loading_Frame.BackgroundTransparency = 1
         Loading_Frame.Parent = Loading_Screen
         Instance.new("UICorner", Loading_Frame).CornerRadius = UDim.new(0, 0)
 
         local Loading_Stroke = Instance.new("UIStroke", Loading_Frame)
         Loading_Stroke.Thickness = 2
-        Loading_Stroke.Color = theme.Main
+        Loading_Stroke.Color = introTextColor
         Loading_Stroke.Transparency = 1
         if rainbowMain then
             RainbowStroke(Loading_Stroke)
@@ -694,22 +714,32 @@ function XELIB:MakeWindow(config)
         titleLbl.Position = UDim2.new(0, 0, 0.55, 0)
         titleLbl.BackgroundTransparency = 1
         titleLbl.Text = Loading_Text
-        titleLbl.TextColor3 = theme.Main
+        titleLbl.TextColor3 = introTextColor
         titleLbl.Font = Enum.Font.LuckiestGuy
         titleLbl.TextSize = 32
         titleLbl.TextTransparency = 1
         titleLbl.Parent = Loading_Frame
+
+        local titleShade = Instance.new("UIStroke", titleLbl)
+        titleShade.Color = Color3.fromRGB(0, 0, 0)
+        titleShade.Thickness = 2
+        titleShade.Transparency = 0.3
 
         local subLbl = Instance.new("TextLabel")
         subLbl.Size = UDim2.new(1, 0, 0, 25)
         subLbl.Position = UDim2.new(0, 0, 0.62, 0)
         subLbl.BackgroundTransparency = 1
         subLbl.Text = winName
-        subLbl.TextColor3 = Color3.fromRGB(200, 200, 200)
+        subLbl.TextColor3 = introTextColor
         subLbl.Font = theme.Font
         subLbl.TextSize = 18
         subLbl.TextTransparency = 1
         subLbl.Parent = Loading_Frame
+
+        local subShade = Instance.new("UIStroke", subLbl)
+        subShade.Color = Color3.fromRGB(0, 0, 0)
+        subShade.Thickness = 1
+        subShade.Transparency = 0.4
 
         local barBg = Instance.new("Frame")
         barBg.Size = UDim2.new(0, 0, 0, 6)
@@ -722,7 +752,7 @@ function XELIB:MakeWindow(config)
 
         local barFill = Instance.new("Frame")
         barFill.Size = UDim2.new(0, 0, 1, 0)
-        barFill.BackgroundColor3 = theme.Main
+        barFill.BackgroundColor3 = introTextColor
         barFill.BackgroundTransparency = 1
         barFill.Parent = barBg
         Instance.new("UICorner", barFill).CornerRadius = UDim.new(1, 0)
@@ -2580,7 +2610,7 @@ function XELIB:MakeWindow(config)
         createBtn.Size = UDim2.new(1, -16, 1, -16)
         createBtn.Position = UDim2.new(0, 8, 0, 8)
         createBtn.BackgroundColor3 = Color3.fromRGB(0, 180, 255)
-        createBtn.Text = "➕  CREATE NEW CONFIG"
+        createBtn.Text = "  CREATE NEW CONFIG  "
         createBtn.TextColor3 = Color3.new(0, 0, 0)
         createBtn.Font = theme.Font
         createBtn.TextSize = 15
@@ -2782,6 +2812,18 @@ function XELIB:MakeWindow(config)
             end
         end)
 
+
+        settingsTab:AddLabel("INTRO APPEARANCE")
+        settingsTab:AddColorPicker("Intro Background Color", introBackgroundColor, function(c)
+            introBackgroundColor = c
+            saveData.introBackgroundColor = {R = math.floor(c.R * 255), G = math.floor(c.G * 255), B = math.floor(c.B * 255)}
+            DebouncedSave()
+        end, "Background color of the loading intro screen")
+        settingsTab:AddColorPicker("Intro Text Color", introTextColor, function(c)
+            introTextColor = c
+            saveData.introTextColor = {R = math.floor(c.R * 255), G = math.floor(c.G * 255), B = math.floor(c.B * 255)}
+            DebouncedSave()
+        end, "Text and accent color of the loading intro screen")
     end
     function Window:SaveConfig(name)
         SaveConfig(name)
