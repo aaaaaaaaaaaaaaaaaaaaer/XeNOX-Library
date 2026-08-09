@@ -2618,7 +2618,6 @@ function XELIB:MakeWindow(config)
         end)
         Tween(createFrame, ANIM.Bounce, {Size = UDim2.new(1, -20, 0, 54)})
 
-        -- Separator
         local sep2 = Instance.new("Frame")
         sep2.Size = UDim2.new(1, -40, 0, 1)
         sep2.BackgroundColor3 = theme.Outline
@@ -2627,7 +2626,6 @@ function XELIB:MakeWindow(config)
 
         settingsTab:AddParagraph("Save Active", "Click below to overwrite the currently active config with your current settings.")
 
-        -- SAVE ACTIVE button (green)
         local saveActiveFrame = Instance.new("Frame")
         saveActiveFrame.Size = UDim2.new(1, -20, 0, 0)
         saveActiveFrame.BackgroundColor3 = theme.Shade
@@ -2640,7 +2638,7 @@ function XELIB:MakeWindow(config)
         saveActiveBtn.Size = UDim2.new(1, -16, 1, -16)
         saveActiveBtn.Position = UDim2.new(0, 8, 0, 8)
         saveActiveBtn.BackgroundColor3 = Color3.fromRGB(80, 220, 120)
-        saveActiveBtn.Text = "💾  SAVE ACTIVE CONFIG"
+        saveActiveBtn.Text = "  SAVE ACTIVE CONFIG  "
         saveActiveBtn.TextColor3 = Color3.new(0, 0, 0)
         saveActiveBtn.Font = theme.Font
         saveActiveBtn.TextSize = 15
@@ -2676,9 +2674,7 @@ function XELIB:MakeWindow(config)
 
         Tween(saveActiveFrame, ANIM.Bounce, {Size = UDim2.new(1, -20, 0, 54)})
 
-        -- Populate list on first open
         RefreshConfigList()
-        -- ==================== BACKGROUND EFFECTS ====================
         settingsTab:AddLabel("BACKGROUND EFFECTS")
         settingsTab:AddToggle("Enable Rain", effects.Rain, function(t) effects.Rain = t saveData.effects.Rain = t DebouncedSave() end)
         settingsTab:AddColorPicker("Rain Color", effectColors.Rain, function(c) effectColors.Rain = c saveData.effectColors.Rain = {R = math.floor(c.R * 255), G = math.floor(c.G * 255), B = math.floor(c.B * 255)} DebouncedSave() end)
@@ -2845,7 +2841,6 @@ function XELIB:MakeWindow(config)
     function Window:GetConfigPath(name)
         return GetConfigPath(name or activeConfigName)
     end
-
 
     if autoLoad then
         local data = LoadConfig(activeConfigName)
