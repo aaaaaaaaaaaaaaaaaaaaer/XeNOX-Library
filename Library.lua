@@ -41,14 +41,14 @@ local function RandomString(len)
     return str
 end
 
-local function MakeDraggable(frame, handle)
+local function MakeDraggable(frame, handle, connections)
     handle = handle or frame
     local dragging = false
     local dragStart = nil
     local startPos = nil
     local connection = nil
 
-    handle.InputBegan:Connect(function(input, gpe)
+    local con1 = handle.InputBegan:Connect(function(input, gpe)
         if gpe then return end
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             dragging = true
@@ -61,10 +61,12 @@ local function MakeDraggable(frame, handle)
                     frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
                 end
             end)
+            if connections then table.insert(connections, connection) end
         end
     end)
+    if connections then table.insert(connections, con1) end
 
-    UserInputService.InputEnded:Connect(function(input)
+    local con2 = UserInputService.InputEnded:Connect(function(input)
         if (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) and dragging then
             dragging = false
             if connection then
@@ -73,6 +75,7 @@ local function MakeDraggable(frame, handle)
             end
         end
     end)
+    if connections then table.insert(connections, con2) end
 end
 
 local function Tween(obj, info, props)
@@ -119,16 +122,22 @@ local function ReturnToPool(poolName, obj)
     end
     if fadeOut then
         task.delay(0.2, function()
+            pcall(function()
+                if obj and obj.Parent then
+                    obj.Visible = false
+                    obj.Parent = nil
+                    if not Pool[poolName] then Pool[poolName] = {} end
+                    table.insert(Pool[poolName], obj)
+                end
+            end)
+        end)
+    else
+        pcall(function()
             obj.Visible = false
             obj.Parent = nil
             if not Pool[poolName] then Pool[poolName] = {} end
             table.insert(Pool[poolName], obj)
         end)
-    else
-        obj.Visible = false
-        obj.Parent = nil
-        if not Pool[poolName] then Pool[poolName] = {} end
-        table.insert(Pool[poolName], obj)
     end
 end
 
@@ -227,7 +236,7 @@ local function AttachTooltip(target, text, screenGui)
             yPos = abs.Y + size.Y
         end
 
-        tooltip.Position = UDim2.new(0, math.clamp(abs.X + size.X/2 - 110, 10, screenGui.AbsoluteSize.X - 230), 0, yPos)
+        tooltip.Position = UDim2.new(0, math.clamp(abs.X + size.X/2 - 110, 10, screenGui.AbsoluteSize.X - 230), 0, math.clamp(yPos, 40, screenGui.AbsoluteSize.Y - textHeight - 10))
         tooltip.Visible = true
 
         Tween(tooltip, ANIM.Fast, {BackgroundTransparency = 0.1})
@@ -313,16 +322,10 @@ function XELIB:MakeWindow(config)
     local menuOpen = true
     local isMinimized = false
 
-    local glowEnabled = (loadedConfig.glowEnabled == true)
-    local glowColor = (loadedConfig.glowColor and type(loadedConfig.glowColor) == "table" and loadedConfig.glowColor.R) and 
-        Color3.fromRGB(loadedConfig.glowColor.R, loadedConfig.glowColor.G, loadedConfig.glowColor.B) or theme.Main
-    local glowOpacity = (loadedConfig.glowOpacity and type(loadedConfig.glowOpacity) == "number") and loadedConfig.glowOpacity or 0.4
-
     local saveId = config.SaveId or config.Name or "XeNOX_Default"
     local autoSave = config.AutoSave ~= false
     local autoLoad = config.AutoLoad == true
     local configFolder = "XeNOX_Configs/" .. saveId:gsub("[^%w_]", "_")
-    local defaultConfigPath = configFolder .. "/default.json"
     local activeConfigName = "default"
     local autoSaveTarget = "default"
     local saveData = {
@@ -410,6 +413,11 @@ function XELIB:MakeWindow(config)
 
     local loadedConfig = LoadConfig() or {}
 
+    local glowEnabled = (loadedConfig.glowEnabled == true)
+    local glowColor = (loadedConfig.glowColor and type(loadedConfig.glowColor) == "table" and loadedConfig.glowColor.R) and 
+        Color3.fromRGB(loadedConfig.glowColor.R, loadedConfig.glowColor.G, loadedConfig.glowColor.B) or theme.Main
+    local glowOpacity = (loadedConfig.glowOpacity and type(loadedConfig.glowOpacity) == "number") and loadedConfig.glowOpacity or 0.4
+
     if loadedConfig.effects then
         for k, v in pairs(loadedConfig.effects) do
             if effects[k] ~= nil then effects[k] = v end
@@ -467,6 +475,8 @@ function XELIB:MakeWindow(config)
         colors = {},
     }
     Window._uiRegistry = uiRegistry
+    Window._connections = {}
+    Window._effectsRunning = true
 
     local function DebouncedSave()
         if not autoSave then return end
@@ -593,7 +603,7 @@ function XELIB:MakeWindow(config)
         if data.glowEnabled ~= nil then
             glowEnabled = data.glowEnabled
             if mainGlow and mainGlow.Parent then
-                Tween(mainGlow, ANIM.Normal, {ImageTransparency = glowEnabled and 0.4 or 1})
+                Tween(mainGlow, ANIM.Normal, {ImageTransparency = glowEnabled and (1 - glowOpacity) or 1})
             end
         end
         if data.glowColor and type(data.glowColor) == "table" and data.glowColor.R then
@@ -867,20 +877,20 @@ function XELIB:MakeWindow(config)
         Tween(winIcon, ANIM.Bounce, {Size = UDim2.new(0, 24, 0, 24)})
     end
 
-    local closeBtn = Instance.new("TextButton")
-    closeBtn.Name = "MinimizeBtn"
-    closeBtn.Size = UDim2.new(0, 30, 0, 30)
-    closeBtn.Position = UDim2.new(1, -40, 0, 8)
-    closeBtn.BackgroundTransparency = 1
-    closeBtn.Text = "-"
-    closeBtn.TextColor3 = Color3.new(1, 1, 1)
-    closeBtn.TextSize = 28
-    closeBtn.Font = Enum.Font.SourceSansBold
-    closeBtn.ZIndex = 20
-    closeBtn.Active = true
-    closeBtn.Parent = titleBar
-    closeBtn.TextTransparency = 1
-    Tween(closeBtn, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, false, 0.1), {TextTransparency = 0})
+    local minimizeBtn = Instance.new("TextButton")
+    minimizeBtn.Name = "MinimizeBtn"
+    minimizeBtn.Size = UDim2.new(0, 30, 0, 30)
+    minimizeBtn.Position = UDim2.new(1, -40, 0, 8)
+    minimizeBtn.BackgroundTransparency = 1
+    minimizeBtn.Text = "-"
+    minimizeBtn.TextColor3 = Color3.new(1, 1, 1)
+    minimizeBtn.TextSize = 28
+    minimizeBtn.Font = Enum.Font.SourceSansBold
+    minimizeBtn.ZIndex = 20
+    minimizeBtn.Active = true
+    minimizeBtn.Parent = titleBar
+    minimizeBtn.TextTransparency = 1
+    Tween(minimizeBtn, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, false, 0.1), {TextTransparency = 0})
 
     local destroyBtn = Instance.new("TextButton")
     destroyBtn.Name = "CloseBtn"
@@ -897,11 +907,11 @@ function XELIB:MakeWindow(config)
     destroyBtn.TextTransparency = 1
     Tween(destroyBtn, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, false, 0.15), {TextTransparency = 0})
 
-    closeBtn.MouseEnter:Connect(function()
-        Tween(closeBtn, ANIM.Fast, {TextColor3 = Color3.fromRGB(0, 255, 255), TextSize = 32})
+    minimizeBtn.MouseEnter:Connect(function()
+        Tween(minimizeBtn, ANIM.Fast, {TextColor3 = Color3.fromRGB(0, 255, 255), TextSize = 32})
     end)
-    closeBtn.MouseLeave:Connect(function()
-        Tween(closeBtn, ANIM.Fast, {TextColor3 = Color3.new(1, 1, 1), TextSize = 28})
+    minimizeBtn.MouseLeave:Connect(function()
+        Tween(minimizeBtn, ANIM.Fast, {TextColor3 = Color3.new(1, 1, 1), TextSize = 28})
     end)
     destroyBtn.MouseEnter:Connect(function()
         Tween(destroyBtn, ANIM.Fast, {TextColor3 = Color3.fromRGB(255, 50, 50), TextSize = 24})
@@ -910,6 +920,10 @@ function XELIB:MakeWindow(config)
         Tween(destroyBtn, ANIM.Fast, {TextColor3 = Color3.fromRGB(255, 80, 80), TextSize = 20})
     end)
     destroyBtn.MouseButton1Click:Connect(function()
+        Window._effectsRunning = false
+        for _, conn in ipairs(Window._connections) do
+            pcall(function() conn:Disconnect() end)
+        end
         Tween(mainFrame, ANIM.Smooth, {BackgroundTransparency = 1})
         Tween(uiScale, ANIM.FadeOut, {Scale = 0.8})
         Tween(mainStroke, ANIM.FadeOut, {Transparency = 1})
@@ -928,7 +942,7 @@ function XELIB:MakeWindow(config)
         end)
     end)
 
-    MakeDraggable(mainFrame, titleBar)
+    MakeDraggable(mainFrame, titleBar, Window._connections)
 
     local tabContainer = Instance.new("Frame")
     tabContainer.Name = "TabContainer"
@@ -952,12 +966,12 @@ function XELIB:MakeWindow(config)
 
     Tween(tabContainer, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out, 0, false, 0.2), {Position = UDim2.new(0, 10, 0, 50)})
 
-    closeBtn.MouseButton1Down:Connect(function()
+    minimizeBtn.MouseButton1Down:Connect(function()
         isMinimized = not isMinimized
         if isMinimized then
             savedPos = mainFrame.Position
             savedSize = mainFrame.Size
-            closeBtn.Text = "+"
+            minimizeBtn.Text = "+"
             if glowContainer then glowContainer.Visible = false end
             Tween(tabContainer, ANIM.Slide, {Position = UDim2.new(0, -160, 0, 50)})
             Tween(contentFrame, ANIM.FadeOut, {Position = UDim2.new(0, 300, 0, 50), BackgroundTransparency = 1})
@@ -972,7 +986,7 @@ function XELIB:MakeWindow(config)
         else
             tabContainer.Visible = true
             contentFrame.Visible = true
-            closeBtn.Text = "-"
+            minimizeBtn.Text = "-"
             if glowContainer then glowContainer.Visible = true end
             Tween(mainFrame, ANIM.Smooth, {
                 Size = savedSize,
@@ -1042,7 +1056,7 @@ function XELIB:MakeWindow(config)
         if getgenv then getgenv().XELIB_ToggleBtn = toggleBtn end
     end
 
-    UserInputService.InputBegan:Connect(function(input, gpe)
+    local menuToggleConn = UserInputService.InputBegan:Connect(function(input, gpe)
         if not gpe and input.KeyCode == menuKey then
             menuOpen = not menuOpen
             if menuOpen then
@@ -1063,11 +1077,22 @@ function XELIB:MakeWindow(config)
             end
         end
     end)
+    table.insert(Window._connections, menuToggleConn)
 
     task.spawn(function()
         while task.wait(0.03) do
+            if not Window._effectsRunning then break end
             if not screenGui.Parent then break end
-            if not mainFrame.Visible then continue end
+            if not mainFrame.Visible then
+                task.wait(0.2)
+                continue
+            end
+            local anyEffect = false
+            for _, v in pairs(effects) do if v then anyEffect = true; break end end
+            if not anyEffect then
+                task.wait(0.2)
+                continue
+            end
             local mLoc = UserInputService:GetMouseLocation()
             if effects.Rain then
                 local star = GetFromPool("Star", "Frame")
@@ -1157,7 +1182,14 @@ function XELIB:MakeWindow(config)
                         local diff = (blob.AbsolutePosition + blob.AbsoluteSize/2) - currentMouse
                         if diff.Magnitude < 250 then
                             local push = diff.Unit * (1 - (diff.Magnitude / 250)) * 0.18
-                            blob.Position = blob.Position:Lerp(UDim2.new(blob.Position.X.Scale + push.X, 0, blob.Position.Y.Scale + push.Y, 0), 0.45)
+                            local sx = mainFrame.AbsoluteSize.X
+                            local sy = mainFrame.AbsoluteSize.Y
+                            if sx > 0 and sy > 0 then
+                                blob.Position = blob.Position:Lerp(UDim2.new(
+                                    blob.Position.X.Scale + push.X / sx, 0,
+                                    blob.Position.Y.Scale + push.Y / sy, 0
+                                ), 0.45)
+                            end
                         end
                         task.wait()
                     end
@@ -1459,1279 +1491,7 @@ function XELIB:MakeWindow(config)
 
             local t = Instance.new("TextLabel")
             t.Size = UDim2.new(1, -20, 0, 25)
-            t.Position = UDim2.new(0, 10, 0, 5)
-            t.BackgroundTransparency = 1
-            t.Text = title
-            t.TextColor3 = theme.Main
-            t.Font = theme.Font
-            t.TextSize = 18
-            t.TextXAlignment = Enum.TextXAlignment.Left
-            t.TextTransparency = 1
-            t.Parent = frame
-            table.insert(uiCache.Text, t)
-
-            local c = Instance.new("TextLabel")
-            c.Size = UDim2.new(1, -20, 0, 40)
-            c.Position = UDim2.new(0, 10, 0, 30)
-            c.BackgroundTransparency = 1
-            c.Text = content
-            c.TextColor3 = Color3.fromRGB(200, 200, 200)
-            c.Font = theme.Font
-            c.TextSize = 14
-            c.TextXAlignment = Enum.TextXAlignment.Left
-            c.TextWrapped = true
-            c.TextTransparency = 1
-            c.Parent = frame
-            table.insert(uiCache.Text, c)
-
-            Tween(frame, ANIM.Bounce, {Size = UDim2.new(1, -20, 0, 80), BackgroundTransparency = 0})
-            Tween(t, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, false, 0.1), {TextTransparency = 0})
-            Tween(c, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, false, 0.15), {TextTransparency = 0})
-            table.insert(tabElements, {frame = frame, searchText = title .. " " .. content})
-        end
-
-        function Tab:AddButton(text, callback, description)
-            local frame = Instance.new("Frame")
-            frame.Size = UDim2.new(1, -20, 0, 0)
-            frame.BackgroundColor3 = theme.Shade
-            frame.BackgroundTransparency = 0.5
-            frame.Parent = page
-            Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 8)
-            table.insert(uiCache.Shade, frame)
-
-            local btn = Instance.new("TextButton")
-            btn.Size = UDim2.new(1, -16, 1, -16)
-            btn.Position = UDim2.new(0, 8, 0, 8)
-            btn.BackgroundColor3 = theme.Button
-            btn.Text = text
-            btn.TextColor3 = Color3.new(0, 0, 0)
-            btn.Font = theme.Font
-            btn.TextSize = 16
-            btn.Parent = frame
-            btn.AutoButtonColor = false
-            StyleButton(btn)
-            AttachTooltip(frame, description, screenGui)
-
-            Tween(frame, ANIM.Bounce, {Size = UDim2.new(1, -20, 0, 50)})
-            table.insert(tabElements, {frame = frame, searchText = text})
-
-            btn.MouseButton1Down:Connect(function()
-                Tween(btn, ANIM.Fast, {BackgroundColor3 = Color3.new(1, 1, 1), Size = UDim2.new(1, -20, 1, -20), Position = UDim2.new(0, 10, 0, 10)})
-                CreateRipple(btn, Vector2.new(btn.AbsoluteSize.X / 2, btn.AbsoluteSize.Y / 2))
-            end)
-            btn.MouseButton1Up:Connect(function()
-                Tween(btn, ANIM.Spring, {BackgroundColor3 = theme.Button, Size = UDim2.new(1, -16, 1, -16), Position = UDim2.new(0, 8, 0, 8)})
-            end)
-            btn.MouseButton1Click:Connect(function()
-                if callback then callback() end
-            end)
-        end
-
-        function Tab:AddToggle(text, default, callback, description, stateLabels)
-            local saved = loadedConfig.toggles and loadedConfig.toggles[text]
-            local enabled
-            if saved ~= nil then
-                enabled = saved
-            else
-                enabled = default or false
-            end
-            saveData.toggles[text] = enabled
-
-            local frame = Instance.new("Frame")
-            frame.Size = UDim2.new(1, -20, 0, 0)
-            frame.BackgroundColor3 = Color3.new(0, 0, 0)
-            frame.BackgroundTransparency = 1
-            frame.Parent = page
-            Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 8)
-
-            local lb = Instance.new("TextLabel")
-            lb.Size = UDim2.new(1, -60, 1, 0)
-            lb.Position = UDim2.new(0, 15, 0, 0)
-            lb.Text = text
-            lb.TextColor3 = Color3.new(1, 1, 1)
-            lb.Font = theme.Font
-            lb.TextSize = 18
-            lb.BackgroundTransparency = 1
-            lb.TextXAlignment = Enum.TextXAlignment.Left
-            lb.TextTransparency = 1
-            lb.Parent = frame
-            table.insert(uiCache.Text, lb)
-
-            local bg = Instance.new("TextButton")
-            bg.Name = "ToggleBG"
-            bg.Size = UDim2.new(0, 45, 0, 25)
-            bg.Position = UDim2.new(1, -55, 0.5, -12)
-            bg.BackgroundColor3 = enabled and theme.Button or theme.Shade
-            bg.Text = ""
-            bg.AutoButtonColor = false
-            bg.Parent = frame
-            Instance.new("UICorner", bg).CornerRadius = UDim.new(1, 0)
-
-            local ball = Instance.new("Frame")
-            ball.Size = UDim2.new(0, 17, 0, 17)
-            ball.Position = enabled and UDim2.new(1, -21, 0.5, -8) or UDim2.new(0, 4, 0.5, -8)
-            ball.BackgroundColor3 = Color3.new(1, 1, 1)
-            ball.Parent = bg
-            Instance.new("UICorner", ball).CornerRadius = UDim.new(1, 0)
-
-            local ballGlow = Instance.new("UIStroke", ball)
-            ballGlow.Color = enabled and theme.Button or theme.Shade
-            ballGlow.Thickness = 2
-            ballGlow.Transparency = 0.5
-
-            Tween(frame, ANIM.Bounce, {Size = UDim2.new(1, -20, 0, 50), BackgroundTransparency = 0.5})
-            Tween(lb, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, false, 0.1), {TextTransparency = 0})
-            AttachTooltip(frame, description, screenGui)
-            table.insert(tabElements, {frame = frame, searchText = text})
-
-            uiRegistry.toggles[text] = {enabled = enabled, bg = bg, ball = ball, ballGlow = ballGlow, callback = callback, lb = lb}
-
-            bg.MouseButton1Click:Connect(function()
-                enabled = not enabled
-                saveData.toggles[text] = enabled
-                DebouncedSave()
-                local targetColor = enabled and theme.Button or theme.Shade
-                Tween(bg, ANIM.Normal, {BackgroundColor3 = targetColor})
-                Tween(ball, ANIM.Spring, {Position = enabled and UDim2.new(1, -21, 0.5, -8) or UDim2.new(0, 4, 0.5, -8)})
-                Tween(ballGlow, ANIM.Normal, {Color = targetColor})
-                Tween(ball, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = UDim2.new(0, 20, 0, 20)})
-                task.delay(0.15, function()
-                    Tween(ball, ANIM.Spring, {Size = UDim2.new(0, 17, 0, 17)})
-                end)
-                if stateLabels and type(stateLabels) == "table" then
-                    lb.Text = enabled and (stateLabels.On or text) or (stateLabels.Off or text)
-                elseif stateLabels and type(stateLabels) == "string" then
-                    lb.Text = enabled and (stateLabels .. " [ON]") or (stateLabels .. " [OFF]")
-                end
-                if callback then callback(enabled) end
-            end)
-        end
-
-        function Tab:AddSlider(text, min, max, default, callback, description)
-            local saved = loadedConfig.sliders and loadedConfig.sliders[text]
-            local value = saved or default or min
-            saveData.sliders[text] = value
-
-            local frame = Instance.new("Frame")
-            frame.Size = UDim2.new(1, -20, 0, 0)
-            frame.BackgroundColor3 = Color3.new(0, 0, 0)
-            frame.BackgroundTransparency = 1
-            frame.Parent = page
-            Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 8)
-
-            local lb = Instance.new("TextLabel")
-            lb.Size = UDim2.new(1, -20, 0, 25)
-            lb.Position = UDim2.new(0, 15, 0, 5)
-            lb.BackgroundTransparency = 1
-            lb.Text = text .. ": " .. tostring(value)
-            lb.TextColor3 = Color3.new(1, 1, 1)
-            lb.Font = theme.Font
-            lb.TextSize = 16
-            lb.TextXAlignment = Enum.TextXAlignment.Left
-            lb.TextTransparency = 1
-            lb.Parent = frame
-            table.insert(uiCache.Text, lb)
-
-            local track = Instance.new("Frame")
-            track.Size = UDim2.new(1, -30, 0, 8)
-            track.Position = UDim2.new(0, 15, 0, 35)
-            track.BackgroundColor3 = theme.Shade
-            track.Parent = frame
-            Instance.new("UICorner", track).CornerRadius = UDim.new(1, 0)
-
-            local fill = Instance.new("Frame")
-            fill.Size = UDim2.new((value - min) / (max - min), 0, 1, 0)
-            fill.BackgroundColor3 = theme.Button
-            fill.Parent = track
-            Instance.new("UICorner", fill).CornerRadius = UDim.new(1, 0)
-
-            local knob = Instance.new("Frame")
-            knob.Size = UDim2.new(0, 14, 0, 14)
-            knob.Position = UDim2.new((value - min) / (max - min), -7, 0.5, -7)
-            knob.BackgroundColor3 = Color3.new(1, 1, 1)
-            knob.Parent = track
-            Instance.new("UICorner", knob).CornerRadius = UDim.new(1, 0)
-
-            local knobStroke = Instance.new("UIStroke", knob)
-            knobStroke.Color = theme.Button
-            knobStroke.Thickness = 2
-
-            Tween(frame, ANIM.Bounce, {Size = UDim2.new(1, -20, 0, 60), BackgroundTransparency = 0.5})
-            Tween(lb, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, false, 0.1), {TextTransparency = 0})
-            AttachTooltip(frame, description, screenGui)
-            table.insert(tabElements, {frame = frame, searchText = text})
-
-            uiRegistry.sliders[text] = {value = value, lb = lb, fill = fill, knob = knob, track = track, min = min, max = max, callback = callback}
-
-            local dragging = false
-            track.InputBegan:Connect(function(input)
-                if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-                    dragging = true
-                    Tween(knob, ANIM.Fast, {Size = UDim2.new(0, 18, 0, 18)})
-                    Tween(knobStroke, ANIM.Fast, {Thickness = 3})
-                end
-            end)
-            UserInputService.InputEnded:Connect(function(input)
-                if (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) and dragging then
-                    dragging = false
-                    Tween(knob, ANIM.Spring, {Size = UDim2.new(0, 14, 0, 14)})
-                    Tween(knobStroke, ANIM.Fast, {Thickness = 2})
-                end
-            end)
-            UserInputService.InputChanged:Connect(function(input)
-                if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-                    local pos = math.clamp((input.Position.X - track.AbsolutePosition.X) / track.AbsoluteSize.X, 0, 1)
-                    value = math.floor(min + (pos * (max - min)))
-                    saveData.sliders[text] = value
-                    DebouncedSave()
-                    uiRegistry.sliders[text].value = value
-                    lb.Text = text .. ": " .. tostring(value)
-                    Tween(fill, ANIM.Fast, {Size = UDim2.new(pos, 0, 1, 0)})
-                    Tween(knob, ANIM.Fast, {Position = UDim2.new(pos, -7, 0.5, -7)})
-                    if callback then callback(value) end
-                end
-            end)
-        end
-
-        function Tab:AddDropdown(text, options, callback, description)
-            local saved = loadedConfig.dropdowns and loadedConfig.dropdowns[text]
-            local selected = saved or options[1] or ""
-            saveData.dropdowns[text] = selected
-            local open = false
-
-            local frame = Instance.new("Frame")
-            frame.Size = UDim2.new(1, -20, 0, 0)
-            frame.BackgroundColor3 = Color3.new(0, 0, 0)
-            frame.BackgroundTransparency = 1
-            frame.Parent = page
-            frame.ClipsDescendants = false
-            Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 8)
-
-            local lb = Instance.new("TextLabel")
-            lb.Size = UDim2.new(1, -160, 1, 0)
-            lb.Position = UDim2.new(0, 15, 0, 0)
-            lb.Text = text
-            lb.TextColor3 = Color3.new(1, 1, 1)
-            lb.Font = theme.Font
-            lb.TextSize = 18
-            lb.BackgroundTransparency = 1
-            lb.TextXAlignment = Enum.TextXAlignment.Left
-            lb.TextTransparency = 1
-            lb.Parent = frame
-            table.insert(uiCache.Text, lb)
-
-            local btn = Instance.new("TextButton")
-            btn.Size = UDim2.new(0, 120, 0, 30)
-            btn.Position = UDim2.new(1, -135, 0.5, -15)
-            btn.BackgroundColor3 = theme.Shade
-            btn.Text = selected
-            btn.TextColor3 = Color3.new(1, 1, 1)
-            btn.Font = theme.Font
-            btn.TextSize = 14
-            btn.AutoButtonColor = false
-            btn.Parent = frame
-            Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
-            table.insert(uiCache.Shade, btn)
-            table.insert(uiCache.Text, btn)
-
-            local arrow = Instance.new("TextLabel")
-            arrow.Size = UDim2.new(0, 20, 0, 20)
-            arrow.Position = UDim2.new(1, -22, 0, 5)
-            arrow.BackgroundTransparency = 1
-            arrow.Text = "▼"
-            arrow.TextColor3 = Color3.new(1, 1, 1)
-            arrow.TextSize = 12
-            arrow.Font = Enum.Font.SourceSansBold
-            arrow.Parent = btn
-
-            local dropFrame = Instance.new("Frame")
-            dropFrame.Size = UDim2.new(0, 120, 0, 0)
-            dropFrame.Position = UDim2.new(1, -135, 0.5, 15)
-            dropFrame.BackgroundColor3 = theme.Shade
-            dropFrame.BackgroundTransparency = 1
-            dropFrame.ClipsDescendants = true
-            dropFrame.ZIndex = 10
-            dropFrame.Parent = frame
-            Instance.new("UICorner", dropFrame).CornerRadius = UDim.new(0, 6)
-
-            local dropList = Instance.new("UIListLayout", dropFrame)
-            dropList.Padding = UDim.new(0, 2)
-
-            local optionButtons = {}
-            for i, opt in ipairs(options) do
-                local optBtn = Instance.new("TextButton")
-                optBtn.Size = UDim2.new(1, 0, 0, 28)
-                optBtn.BackgroundTransparency = 1
-                optBtn.Text = opt
-                optBtn.TextColor3 = Color3.new(1, 1, 1)
-                optBtn.Font = theme.Font
-                optBtn.TextSize = 14
-                optBtn.TextTransparency = 1
-                optBtn.ZIndex = 11
-                optBtn.Parent = dropFrame
-                optBtn.LayoutOrder = i
-                table.insert(optionButtons, optBtn)
-
-                optBtn.MouseEnter:Connect(function()
-                    Tween(optBtn, ANIM.Fast, {BackgroundTransparency = 0.8, BackgroundColor3 = theme.Button, TextColor3 = Color3.new(0, 0, 0)})
-                end)
-                optBtn.MouseLeave:Connect(function()
-                    Tween(optBtn, ANIM.Fast, {BackgroundTransparency = 1, TextColor3 = Color3.new(1, 1, 1)})
-                end)
-                optBtn.MouseButton1Click:Connect(function()
-                    selected = opt
-                    saveData.dropdowns[text] = selected
-                    DebouncedSave()
-                    btn.Text = selected
-                    open = false
-                    Tween(dropFrame, ANIM.Normal, {Size = UDim2.new(0, 120, 0, 0), BackgroundTransparency = 1})
-                    Tween(arrow, ANIM.Fast, {Rotation = 0})
-                    for _, ob in ipairs(optionButtons) do
-                        Tween(ob, ANIM.Fast, {TextTransparency = 1})
-                    end
-                    if callback then callback(selected) end
-                end)
-            end
-
-            Tween(frame, ANIM.Bounce, {Size = UDim2.new(1, -20, 0, 50), BackgroundTransparency = 0.5})
-            Tween(lb, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, false, 0.1), {TextTransparency = 0})
-            AttachTooltip(frame, description, screenGui)
-            table.insert(tabElements, {frame = frame, searchText = text})
-
-            uiRegistry.dropdowns[text] = {selected = selected, btn = btn, callback = callback}
-
-            btn.MouseButton1Click:Connect(function()
-                open = not open
-                local h = math.min(#options * 30, 150)
-                if open then
-                    Tween(dropFrame, ANIM.Normal, {Size = UDim2.new(0, 120, 0, h), BackgroundTransparency = 0})
-                    Tween(arrow, ANIM.Spring, {Rotation = 180})
-                    for _, ob in ipairs(optionButtons) do
-                        ob.TextTransparency = 0
-                        Tween(ob, ANIM.Fast, {TextTransparency = 0})
-                    end
-                else
-                    Tween(dropFrame, ANIM.Normal, {Size = UDim2.new(0, 120, 0, 0), BackgroundTransparency = 1})
-                    Tween(arrow, ANIM.Spring, {Rotation = 0})
-                    for _, ob in ipairs(optionButtons) do
-                        Tween(ob, ANIM.Fast, {TextTransparency = 1})
-                    end
-                end
-            end)
-            btn.MouseEnter:Connect(function()
-                Tween(btn, ANIM.Fast, {BackgroundColor3 = Color3.fromRGB(theme.Shade.R * 255 + 20, theme.Shade.G * 255 + 20, theme.Shade.B * 255 + 20)})
-            end)
-            btn.MouseLeave:Connect(function()
-                Tween(btn, ANIM.Fast, {BackgroundColor3 = theme.Shade})
-            end)
-        end
-
-        function Tab:AddInput(text, default, callback, description)
-            local saved = loadedConfig.inputs and loadedConfig.inputs[text]
-            local inputDefault = saved or default or ""
-            saveData.inputs[text] = inputDefault
-
-            local frame = Instance.new("Frame")
-            frame.Size = UDim2.new(1, -20, 0, 50)
-            frame.BackgroundColor3 = Color3.new(0, 0, 0)
-            frame.BackgroundTransparency = 0.5
-            frame.Parent = page
-            Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 8)
-
-            local lb = Instance.new("TextLabel")
-            lb.Size = UDim2.new(1, -160, 1, 0)
-            lb.Position = UDim2.new(0, 15, 0, 0)
-            lb.Text = text
-            lb.TextColor3 = Color3.new(1, 1, 1)
-            lb.Font = theme.Font
-            lb.TextSize = 18
-            lb.BackgroundTransparency = 1
-            lb.TextXAlignment = Enum.TextXAlignment.Left
-            lb.TextTransparency = 0
-            lb.Parent = frame
-            table.insert(uiCache.Text, lb)
-
-            local box = Instance.new("TextBox")
-            box.Size = UDim2.new(0, 120, 0, 30)
-            box.Position = UDim2.new(1, -135, 0.5, -15)
-            box.BackgroundColor3 = theme.Shade
-            box.Text = inputDefault
-            box.TextColor3 = Color3.new(1, 1, 1)
-            box.Font = theme.Font
-            box.TextSize = 14
-            box.ClearTextOnFocus = false
-            box.TextTransparency = 0
-            box.Parent = frame
-            Instance.new("UICorner", box).CornerRadius = UDim.new(0, 6)
-            table.insert(uiCache.Shade, box)
-            table.insert(uiCache.Text, box)
-
-            local boxStroke = Instance.new("UIStroke", box)
-            boxStroke.Color = theme.Outline
-            boxStroke.Thickness = 1
-            boxStroke.Transparency = 0
-            AttachTooltip(frame, description, screenGui)
-            table.insert(tabElements, {frame = frame, searchText = text})
-
-            uiRegistry.inputs[text] = {box = box, callback = callback}
-
-            box.Focused:Connect(function()
-                Tween(box, ANIM.Normal, {BackgroundColor3 = Color3.fromRGB(theme.Shade.R * 255 + 15, theme.Shade.G * 255 + 15, theme.Shade.B * 255 + 15)})
-                Tween(boxStroke, ANIM.Normal, {Thickness = 2, Color = theme.Main})
-                Tween(box, ANIM.Spring, {Size = UDim2.new(0, 130, 0, 34), Position = UDim2.new(1, -140, 0.5, -17)})
-            end)
-            box.FocusLost:Connect(function()
-                saveData.inputs[text] = box.Text
-                DebouncedSave()
-                Tween(box, ANIM.Normal, {BackgroundColor3 = theme.Shade})
-                Tween(boxStroke, ANIM.Normal, {Thickness = 1, Color = theme.Outline})
-                Tween(box, ANIM.Spring, {Size = UDim2.new(0, 120, 0, 30), Position = UDim2.new(1, -135, 0.5, -15)})
-                if callback then callback(box.Text) end
-            end)
-        end
-
-        function Tab:AddKeybind(text, defaultKey, callback, description)
-            local saved = loadedConfig.keybinds and loadedConfig.keybinds[text]
-            local currentKey = saved and Enum.KeyCode[saved] or defaultKey or Enum.KeyCode.Unknown
-            saveData.keybinds[text] = currentKey.Name
-            local listening = false
-
-            local frame = Instance.new("Frame")
-            frame.Size = UDim2.new(1, -20, 0, 0)
-            frame.BackgroundColor3 = Color3.new(0, 0, 0)
-            frame.BackgroundTransparency = 1
-            frame.Parent = page
-            Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 8)
-
-            local lb = Instance.new("TextLabel")
-            lb.Size = UDim2.new(1, -160, 1, 0)
-            lb.Position = UDim2.new(0, 15, 0, 0)
-            lb.Text = text
-            lb.TextColor3 = Color3.new(1, 1, 1)
-            lb.Font = theme.Font
-            lb.TextSize = 18
-            lb.BackgroundTransparency = 1
-            lb.TextXAlignment = Enum.TextXAlignment.Left
-            lb.TextTransparency = 1
-            lb.Parent = frame
-            table.insert(uiCache.Text, lb)
-
-            local btn = Instance.new("TextButton")
-            btn.Size = UDim2.new(0, 120, 0, 30)
-            btn.Position = UDim2.new(1, -135, 0.5, -15)
-            btn.BackgroundColor3 = theme.Shade
-            btn.Text = currentKey.Name
-            btn.TextColor3 = Color3.new(1, 1, 1)
-            btn.Font = theme.Font
-            btn.TextSize = 14
-            btn.AutoButtonColor = false
-            btn.TextTransparency = 1
-            btn.Parent = frame
-            Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
-            table.insert(uiCache.Shade, btn)
-            table.insert(uiCache.Text, btn)
-
-            local btnStroke = Instance.new("UIStroke", btn)
-            btnStroke.Color = theme.Outline
-            btnStroke.Thickness = 1
-            btnStroke.Transparency = 1
-
-            Tween(frame, ANIM.Bounce, {Size = UDim2.new(1, -20, 0, 50), BackgroundTransparency = 0.5})
-            Tween(lb, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, false, 0.1), {TextTransparency = 0})
-            Tween(btn, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, false, 0.15), {TextTransparency = 0})
-            Tween(btnStroke, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, false, 0.2), {Transparency = 0})
-            AttachTooltip(frame, description, screenGui)
-            table.insert(tabElements, {frame = frame, searchText = text})
-
-            uiRegistry.keybinds[text] = {currentKey = currentKey, btn = btn, callback = callback}
-
-            local pulseConn
-            btn.MouseButton1Click:Connect(function()
-                if listening then return end
-                listening = true
-                btn.Text = "..."
-                btn.TextColor3 = theme.Button
-                Tween(btn, ANIM.Spring, {Size = UDim2.new(0, 130, 0, 34), Position = UDim2.new(1, -140, 0.5, -17)})
-                Tween(btnStroke, ANIM.Normal, {Color = theme.Button, Thickness = 2})
-                local pulseDir = 1
-                pulseConn = task.spawn(function()
-                    while listening do
-                        Tween(btn, ANIM.Pulse, {BackgroundColor3 = pulseDir == 1 and theme.Button or theme.Shade})
-                        pulseDir = pulseDir * -1
-                        task.wait(0.4)
-                    end
-                end)
-                local conn
-                conn = UserInputService.InputBegan:Connect(function(input)
-                    if input.UserInputType == Enum.UserInputType.Keyboard then
-                        conn:Disconnect()
-                        listening = false
-                        currentKey = input.KeyCode
-                        saveData.keybinds[text] = currentKey.Name
-                        DebouncedSave()
-                        btn.Text = currentKey.Name
-                        btn.TextColor3 = Color3.new(1, 1, 1)
-                        Tween(btn, ANIM.Spring, {Size = UDim2.new(0, 120, 0, 30), Position = UDim2.new(1, -135, 0.5, -15)})
-                        Tween(btnStroke, ANIM.Normal, {Color = theme.Outline, Thickness = 1})
-                        if callback then callback(currentKey) end
-                    end
-                end)
-            end)
-
-            btn.MouseEnter:Connect(function()
-                if not listening then
-                    Tween(btn, ANIM.Fast, {BackgroundColor3 = Color3.fromRGB(theme.Shade.R * 255 + 15, theme.Shade.G * 255 + 15, theme.Shade.B * 255 + 15)})
-                end
-            end)
-            btn.MouseLeave:Connect(function()
-                if not listening then
-                    Tween(btn, ANIM.Fast, {BackgroundColor3 = theme.Shade})
-                end
-            end)
-        end
-
-        function Tab:AddColorPicker(text, defaultColor, callback, description)
-            local saved = loadedConfig.colors and loadedConfig.colors[text]
-            if saved and type(saved) == "table" and saved.R and saved.G and saved.B then
-                defaultColor = Color3.fromRGB(saved.R, saved.G, saved.B)
-            end
-            defaultColor = defaultColor or Color3.fromRGB(255, 255, 255)
-            local curH, curS, curV = defaultColor:ToHSV()
-
-            local frame = Instance.new("Frame")
-            frame.Size = UDim2.new(1, -20, 0, 0)
-            frame.BackgroundColor3 = theme.Shade
-            frame.BackgroundTransparency = 1
-            frame.Parent = page
-            Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 8)
-            table.insert(uiCache.Shade, frame)
-
-            local lb = Instance.new("TextLabel")
-            lb.Size = UDim2.new(1, -60, 1, 0)
-            lb.Position = UDim2.new(0, 15, 0, 0)
-            lb.Text = text
-            lb.TextColor3 = Color3.new(1, 1, 1)
-            lb.Font = theme.Font
-            lb.TextSize = 18
-            lb.BackgroundTransparency = 1
-            lb.TextXAlignment = Enum.TextXAlignment.Left
-            lb.TextTransparency = 1
-            lb.Parent = frame
-            table.insert(uiCache.Text, lb)
-
-            local preview = Instance.new("TextButton")
-            preview.Size = UDim2.new(0, 0, 0, 0)
-            preview.Position = UDim2.new(1, -40, 0.5, -15)
-            preview.BackgroundColor3 = defaultColor
-            preview.Text = ""
-            preview.AutoButtonColor = false
-            preview.Parent = frame
-            Instance.new("UICorner", preview).CornerRadius = UDim.new(0, 6)
-
-            local previewStroke = Instance.new("UIStroke", preview)
-            previewStroke.Color = theme.Outline
-            previewStroke.Thickness = 2
-
-            Tween(frame, ANIM.Bounce, {Size = UDim2.new(1, -20, 0, 50), BackgroundTransparency = 0})
-            Tween(lb, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, false, 0.1), {TextTransparency = 0})
-            Tween(preview, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out, 0, false, 0.15), {Size = UDim2.new(0, 30, 0, 30)})
-            AttachTooltip(frame, description, screenGui)
-            table.insert(tabElements, {frame = frame, searchText = text})
-
-            uiRegistry.colors[text] = {preview = preview, callback = callback, curH = curH, curS = curS, curV = curV}
-
-            local popup = Instance.new("Frame")
-            popup.Size = UDim2.new(0, 0, 0, 0)
-            popup.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
-            popup.ZIndex = 1000
-            popup.Visible = false
-            popup.Active = true
-            popup.Parent = screenGui
-            popup.AnchorPoint = Vector2.new(0.5, 0)
-            Instance.new("UICorner", popup).CornerRadius = UDim.new(0, 6)
-
-            local pStroke = Instance.new("UIStroke", popup)
-            pStroke.Color = theme.Outline
-            pStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-            pStroke.Thickness = 0
-
-            local box = Instance.new("ImageButton")
-            box.Size = UDim2.new(0, 150, 0, 150)
-            box.Position = UDim2.new(0, 10, 0, 10)
-            box.Image = "rbxassetid://4155801252"
-            box.ImageColor3 = Color3.new(1, 1, 1)
-            box.AutoButtonColor = false
-            box.ZIndex = 1001
-            box.Parent = popup
-            box.ImageTransparency = 1
-
-            local cursorSV = Instance.new("Frame")
-            cursorSV.Size = UDim2.new(0, 6, 0, 6)
-            cursorSV.BackgroundColor3 = Color3.new(1, 1, 1)
-            cursorSV.ZIndex = 1002
-            cursorSV.Parent = box
-            cursorSV.BackgroundTransparency = 1
-            Instance.new("UICorner", cursorSV).CornerRadius = UDim.new(1, 0)
-            local cStroke = Instance.new("UIStroke", cursorSV)
-            cStroke.Color = Color3.new(0, 0, 0)
-            cStroke.Thickness = 1
-
-            local hue = Instance.new("TextButton")
-            hue.Size = UDim2.new(0, 20, 0, 150)
-            hue.Position = UDim2.new(0, 170, 0, 10)
-            hue.BackgroundColor3 = Color3.new(1, 1, 1)
-            hue.Text = ""
-            hue.AutoButtonColor = false
-            hue.ZIndex = 1001
-            hue.Parent = popup
-            hue.BackgroundTransparency = 1
-
-            local grad = Instance.new("UIGradient", hue)
-            grad.Rotation = 90
-            grad.Color = ColorSequence.new({
-                ColorSequenceKeypoint.new(0.000, Color3.fromRGB(255, 0, 0)),
-                ColorSequenceKeypoint.new(0.167, Color3.fromRGB(255, 255, 0)),
-                ColorSequenceKeypoint.new(0.333, Color3.fromRGB(0, 255, 0)),
-                ColorSequenceKeypoint.new(0.500, Color3.fromRGB(0, 255, 255)),
-                ColorSequenceKeypoint.new(0.667, Color3.fromRGB(0, 0, 255)),
-                ColorSequenceKeypoint.new(0.833, Color3.fromRGB(255, 0, 255)),
-                ColorSequenceKeypoint.new(1.000, Color3.fromRGB(255, 0, 0))
-            })
-
-            local cursorHue = Instance.new("Frame")
-            cursorHue.Size = UDim2.new(1, 4, 0, 3)
-            cursorHue.Position = UDim2.new(0, -2, 0, 0)
-            cursorHue.BackgroundColor3 = Color3.new(1, 1, 1)
-            cursorHue.ZIndex = 1002
-            cursorHue.Parent = hue
-            cursorHue.BackgroundTransparency = 1
-            local hStroke = Instance.new("UIStroke", cursorHue)
-            hStroke.Color = Color3.new(0, 0, 0)
-            hStroke.Thickness = 1
-
-            local txt = Instance.new("TextLabel")
-            txt.Size = UDim2.new(1, -20, 0, 30)
-            txt.Position = UDim2.new(0, 10, 0, 165)
-            txt.BackgroundTransparency = 1
-            txt.TextColor3 = Color3.new(0.8, 0.8, 0.8)
-            txt.Font = Enum.Font.Code
-            txt.TextSize = 14
-            txt.TextXAlignment = Enum.TextXAlignment.Left
-            txt.ZIndex = 1001
-            txt.TextTransparency = 1
-            txt.Parent = popup
-            table.insert(uiCache.Text, txt)
-
-            local function update()
-                local c = Color3.fromHSV(curH, curS, curV)
-                box.BackgroundColor3 = Color3.fromHSV(curH, 1, 1)
-                preview.BackgroundColor3 = c
-                cursorSV.Position = UDim2.new(curS, -3, 1 - curV, -3)
-                cursorHue.Position = UDim2.new(0, -2, curH, -1)
-                local r, g, b = math.floor(c.R * 255), math.floor(c.G * 255), math.floor(c.B * 255)
-                txt.Text = string.format("#%02X%02X%02X   %d, %d, %d", r, g, b, r, g, b)
-                saveData.colors[text] = {R = r, G = g, B = b}
-                DebouncedSave()
-                if callback then callback(c) end
-            end
-            update()
-
-            preview.MouseButton1Click:Connect(function()
-                popup.Visible = not popup.Visible
-                if popup.Visible then
-                    local abs = preview.AbsolutePosition
-                    popup.Position = UDim2.new(0, abs.X + 15, 0, abs.Y + 40)
-                    popup.Size = UDim2.new(0, 0, 0, 0)
-                    Tween(popup, ANIM.Bounce, {Size = UDim2.new(0, 200, 0, 200)})
-                    Tween(pStroke, ANIM.Normal, {Thickness = 2})
-                    Tween(box, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, false, 0.1), {ImageTransparency = 0})
-                    Tween(cursorSV, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, false, 0.15), {BackgroundTransparency = 0})
-                    Tween(cursorHue, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, false, 0.15), {BackgroundTransparency = 0})
-                    Tween(hue, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, false, 0.1), {BackgroundTransparency = 0})
-                    Tween(txt, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, false, 0.2), {TextTransparency = 0})
-                else
-                    Tween(popup, ANIM.Fast, {Size = UDim2.new(0, 0, 0, 0)})
-                    Tween(pStroke, ANIM.Fast, {Thickness = 0})
-                    task.delay(0.2, function()
-                        if not popup.Visible then popup.Visible = false end
-                    end)
-                end
-            end)
-
-            local dragHue, dragSV = false, false
-            local dragLoop
-            local function updateHSV()
-                if dragHue then
-                    curH = math.clamp((LocalPlayer:GetMouse().Y - hue.AbsolutePosition.Y) / hue.AbsoluteSize.Y, 0, 1)
-                elseif dragSV then
-                    curS = math.clamp((LocalPlayer:GetMouse().X - box.AbsolutePosition.X) / box.AbsoluteSize.X, 0, 1)
-                    curV = 1 - math.clamp((LocalPlayer:GetMouse().Y - box.AbsolutePosition.Y) / box.AbsoluteSize.Y, 0, 1)
-                end
-                update()
-            end
-
-            local function startDrag()
-                if dragLoop then dragLoop:Disconnect() end
-                dragLoop = RunService.RenderStepped:Connect(updateHSV)
-            end
-
-            local function stopDrag()
-                if dragLoop then dragLoop:Disconnect(); dragLoop = nil end
-            end
-
-            hue.MouseButton1Down:Connect(function() dragHue = true; startDrag() end)
-            box.MouseButton1Down:Connect(function() dragSV = true; startDrag() end)
-
-            UserInputService.InputEnded:Connect(function(input)
-                if input.UserInputType == Enum.UserInputType.MouseButton1 then
-                    dragHue = false
-                    dragSV = false
-                    stopDrag()
-                end
-            end)
-
-            UserInputService.InputBegan:Connect(function(input)
-                if input.UserInputType == Enum.UserInputType.MouseButton1 and popup.Visible then
-                    local mx, my = LocalPlayer:GetMouse().X, LocalPlayer:GetMouse().Y
-                    local px, py = popup.AbsolutePosition.X, popup.AbsolutePosition.Y
-                    local bx, by = preview.AbsolutePosition.X, preview.AbsolutePosition.Y
-                    local inPopup = (mx >= px and mx <= px + popup.AbsoluteSize.X and my >= py and my <= py + popup.AbsoluteSize.Y)
-                    local inBtn = (mx >= bx and mx <= bx + preview.AbsoluteSize.X and my >= by and my <= by + preview.AbsoluteSize.Y)
-                    if not inPopup and not inBtn then
-                        Tween(popup, ANIM.Fast, {Size = UDim2.new(0, 0, 0, 0)})
-                        Tween(pStroke, ANIM.Fast, {Thickness = 0})
-                        task.delay(0.2, function()
-                            popup.Visible = false
-                        end)
-                    end
-                end
-            end)
-        end
-
-        return Tab
-    end
-
-    function Window:MakeTab(config)
-        config = config or {}
-        local name = config.Name or "Tab"
-        local icon = config.Icon or ""
-
-        local Tab = self:AddTab(name)
-        local tabID = tabCount
-
-        if icon ~= "" then
-            local tabData = tabs[tabID]
-            if tabData and tabData.Btn then
-                local tabBtn = tabData.Btn
-
-                local iconImg = Instance.new("ImageLabel")
-                iconImg.Name = "TabIcon"
-                iconImg.Size = UDim2.new(0, 20, 0, 20)
-                iconImg.Position = UDim2.new(0, 8, 0.5, -10)
-                iconImg.BackgroundTransparency = 1
-                iconImg.Image = icon
-                iconImg.ZIndex = tabBtn.ZIndex + 1
-                iconImg.Parent = tabBtn
-
-                tabBtn.TextXAlignment = Enum.TextXAlignment.Left
-                tabBtn.Text = "            " .. name
-            end
-        end
-
-        return Tab
-    end
-
-
-    if hasSettings then
-        local settingsTab = Window:AddTab("Settings")
-        local settingsData = tabs[tabCount]
-        settingsData.Btn.LayoutOrder = 999999
-
-        local sep = Instance.new("Frame")
-        sep.Size = UDim2.new(1, -10, 0, 1)
-        sep.Position = UDim2.new(0, 5, 0, 0)
-        sep.BackgroundColor3 = theme.Outline
-        sep.BackgroundTransparency = 0.6
-        sep.LayoutOrder = 999998
-        sep.Parent = tabContainer
-        Instance.new("UICorner", sep).CornerRadius = UDim.new(1, 0)
-
-        local sp = Instance.new("Frame")
-        sp.Size = UDim2.new(1, 0, 0, 4)
-        sp.BackgroundTransparency = 1
-        sp.LayoutOrder = 999997
-        sp.Parent = tabContainer
-
-        settingsTab:AddLabel("XeNOX v2.2 — Config Manager")
-        settingsTab:AddParagraph("Manage Configs", "All your saved configurations appear below. Click LOAD to apply instantly.")
-
-        settingsTab:AddToggle("Auto Save", autoSave, function(t)
-            autoSave = t
-            saveData._autoSave = t
-            saveData._activeConfigName = activeConfigName
-            DebouncedSave()
-        end)
-
-        local allConfigs = ListConfigs()
-        if #allConfigs == 0 then allConfigs = {"default"} end
-        settingsTab:AddDropdown("Auto Save Target", allConfigs, function(selected)
-            autoSaveTarget = selected
-            saveData._autoSaveTarget = selected
-            DebouncedSave()
-        end, "Which config file auto-save writes to")
-
-        settingsTab:AddToggle("Auto Load", autoLoad, function(t)
-            autoLoad = t
-            saveData._autoLoad = t
-            saveData._activeConfigName = activeConfigName
-            DebouncedSave()
-        end)
-
-        local activeCard = Instance.new("Frame")
-        activeCard.Size = UDim2.new(1, -20, 0, 0)
-        activeCard.BackgroundColor3 = theme.Shade
-        activeCard.BackgroundTransparency = 1
-        activeCard.Parent = settingsData.Page
-        Instance.new("UICorner", activeCard).CornerRadius = UDim.new(0, 8)
-        table.insert(uiCache.Shade, activeCard)
-
-        local activeStroke = Instance.new("UIStroke", activeCard)
-        activeStroke.Color = theme.Main
-        activeStroke.Thickness = 2
-        activeStroke.Transparency = 1
-
-        local activeHeader = Instance.new("TextLabel")
-        activeHeader.Size = UDim2.new(1, -20, 0, 18)
-        activeHeader.Position = UDim2.new(0, 10, 0, 6)
-        activeHeader.BackgroundTransparency = 1
-        activeHeader.Text = "CURRENTLY ACTIVE"
-        activeHeader.TextColor3 = theme.Main
-        activeHeader.Font = theme.Font
-        activeHeader.TextSize = 13
-        activeHeader.TextXAlignment = Enum.TextXAlignment.Left
-        activeHeader.TextTransparency = 1
-        activeHeader.Parent = activeCard
-        table.insert(uiCache.Text, activeHeader)
-
-        local activeNameLbl = Instance.new("TextLabel")
-        activeNameLbl.Size = UDim2.new(1, -20, 0, 28)
-        activeNameLbl.Position = UDim2.new(0, 10, 0, 24)
-        activeNameLbl.BackgroundTransparency = 1
-        activeNameLbl.Text = activeConfigName
-        activeNameLbl.TextColor3 = Color3.new(1, 1, 1)
-        activeNameLbl.Font = theme.Font
-        activeNameLbl.TextSize = 22
-        activeNameLbl.TextXAlignment = Enum.TextXAlignment.Left
-        activeNameLbl.TextTransparency = 1
-        activeNameLbl.Parent = activeCard
-        table.insert(uiCache.Text, activeNameLbl)
-
-        Tween(activeCard, ANIM.Bounce, {Size = UDim2.new(1, -20, 0, 58), BackgroundTransparency = 0})
-        Tween(activeStroke, ANIM.Smooth, {Transparency = 0})
-        Tween(activeHeader, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, false, 0.1), {TextTransparency = 0})
-        Tween(activeNameLbl, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, false, 0.15), {TextTransparency = 0})
-
-        settingsTab:AddLabel("Saved Configs")
-
-        local listContainer = Instance.new("Frame")
-        listContainer.Size = UDim2.new(1, -20, 0, 0)
-        listContainer.BackgroundTransparency = 1
-        listContainer.Parent = settingsData.Page
-
-        local listLayout = Instance.new("UIListLayout", listContainer)
-        listLayout.Padding = UDim.new(0, 6)
-        listLayout.SortOrder = Enum.SortOrder.LayoutOrder
-
-        local configRows = {}
-
-        local function RefreshConfigList()
-            for _, row in ipairs(configRows) do
-                if row and row.Parent then row:Destroy() end
-            end
-            configRows = {}
-
-            local list = ListConfigs()
-            if #list == 0 then list = {"default"} end
-
-            for i, name in ipairs(list) do
-                local isActive = (name == activeConfigName)
-
-                local row = Instance.new("Frame")
-                row.Size = UDim2.new(1, 0, 0, 46)
-                row.BackgroundColor3 = isActive and theme.Button or theme.Shade
-                row.BackgroundTransparency = 1
-                row.LayoutOrder = i
-                row.Parent = listContainer
-                Instance.new("UICorner", row).CornerRadius = UDim.new(0, 8)
-                if not isActive then table.insert(uiCache.Shade, row) end
-
-                local rowStroke = Instance.new("UIStroke", row)
-                rowStroke.Color = isActive and theme.ButtonOutline or theme.Outline
-                rowStroke.Thickness = isActive and 2 or 1
-                rowStroke.Transparency = 1
-
-                local nameLbl = Instance.new("TextLabel")
-                nameLbl.Size = UDim2.new(1, -200, 1, 0)
-                nameLbl.Position = UDim2.new(0, 14, 0, 0)
-                nameLbl.BackgroundTransparency = 1
-                nameLbl.Text = name .. (isActive and "  ●" or "")
-                nameLbl.TextColor3 = Color3.new(1, 1, 1)
-                nameLbl.Font = theme.Font
-                nameLbl.TextSize = 16
-                nameLbl.TextXAlignment = Enum.TextXAlignment.Left
-                nameLbl.TextTransparency = 1
-                nameLbl.Parent = row
-                table.insert(uiCache.Text, nameLbl)
-
-                local selBtn = Instance.new("TextButton")
-                selBtn.Size = UDim2.new(0, 46, 0, 28)
-                selBtn.Position = UDim2.new(1, -168, 0.5, -14)
-                selBtn.BackgroundColor3 = isActive and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(120, 120, 120)
-                selBtn.Text = "SEL"
-                selBtn.TextColor3 = Color3.new(0, 0, 0)
-                selBtn.Font = theme.Font
-                selBtn.TextSize = 11
-                selBtn.AutoButtonColor = false
-                selBtn.Parent = row
-                Instance.new("UICorner", selBtn).CornerRadius = UDim.new(0, 6)
-                local selStroke = Instance.new("UIStroke", selBtn)
-                selStroke.Color = isActive and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(150, 150, 150)
-                selStroke.Thickness = 1
-
-                local loadBtn = Instance.new("TextButton")
-                loadBtn.Size = UDim2.new(0, 52, 0, 28)
-                loadBtn.Position = UDim2.new(1, -114, 0.5, -14)
-                loadBtn.BackgroundColor3 = Color3.fromRGB(80, 220, 120)
-                loadBtn.Text = "LOAD"
-                loadBtn.TextColor3 = Color3.new(0, 0, 0)
-                loadBtn.Font = theme.Font
-                loadBtn.TextSize = 11
-                loadBtn.AutoButtonColor = false
-                loadBtn.Parent = row
-                Instance.new("UICorner", loadBtn).CornerRadius = UDim.new(0, 6)
-                local loadStroke = Instance.new("UIStroke", loadBtn)
-                loadStroke.Color = Color3.fromRGB(80, 220, 120)
-                loadStroke.Thickness = 1
-
-                local delBtn = Instance.new("TextButton")
-                delBtn.Size = UDim2.new(0, 52, 0, 28)
-                delBtn.Position = UDim2.new(1, -56, 0.5, -14)
-                delBtn.BackgroundColor3 = Color3.fromRGB(255, 70, 70)
-                delBtn.Text = "DEL"
-                delBtn.TextColor3 = Color3.new(0, 0, 0)
-                delBtn.Font = theme.Font
-                delBtn.TextSize = 11
-                delBtn.AutoButtonColor = false
-                delBtn.Parent = row
-                Instance.new("UICorner", delBtn).CornerRadius = UDim.new(0, 6)
-                local delStroke = Instance.new("UIStroke", delBtn)
-                delStroke.Color = Color3.fromRGB(255, 70, 70)
-                delStroke.Thickness = 1
-
-                row.MouseEnter:Connect(function()
-                    if not isActive then
-                        Tween(row, ANIM.Fast, {BackgroundColor3 = Color3.fromRGB(theme.Shade.R * 255 + 20, theme.Shade.G * 255 + 20, theme.Shade.B * 255 + 20)})
-                    end
-                    Tween(rowStroke, ANIM.Fast, {Thickness = 2})
-                end)
-                row.MouseLeave:Connect(function()
-                    if not isActive then
-                        Tween(row, ANIM.Fast, {BackgroundColor3 = theme.Shade})
-                    end
-                    Tween(rowStroke, ANIM.Fast, {Thickness = isActive and 2 or 1})
-                end)
-
-                selBtn.MouseEnter:Connect(function()
-                    Tween(selBtn, ANIM.Fast, {BackgroundTransparency = 0.2, Size = UDim2.new(0, 50, 0, 30), Position = UDim2.new(1, -170, 0.5, -15)})
-                    Tween(selStroke, ANIM.Fast, {Thickness = 2})
-                end)
-                selBtn.MouseLeave:Connect(function()
-                    Tween(selBtn, ANIM.Fast, {BackgroundTransparency = 0, Size = UDim2.new(0, 46, 0, 28), Position = UDim2.new(1, -168, 0.5, -14)})
-                    Tween(selStroke, ANIM.Fast, {Thickness = 1})
-                end)
-                selBtn.MouseButton1Down:Connect(function()
-                    Tween(selBtn, ANIM.Fast, {BackgroundColor3 = Color3.new(1, 1, 1), Size = UDim2.new(0, 44, 0, 26), Position = UDim2.new(1, -166, 0.5, -13)})
-                end)
-                selBtn.MouseButton1Up:Connect(function()
-                    Tween(selBtn, ANIM.Spring, {BackgroundColor3 = isActive and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(120, 120, 120), Size = UDim2.new(0, 46, 0, 28), Position = UDim2.new(1, -168, 0.5, -14)})
-                end)
-                selBtn.MouseButton1Click:Connect(function()
-                    activeConfigName = name
-                    activeNameLbl.Text = activeConfigName
-                    Window:Notify("Config Selected", "'" .. name .. "' is now the active target.", 2)
-                    RefreshConfigList()
-                end)
-
-                loadBtn.MouseEnter:Connect(function()
-                    Tween(loadBtn, ANIM.Fast, {BackgroundTransparency = 0.2, Size = UDim2.new(0, 56, 0, 30), Position = UDim2.new(1, -116, 0.5, -15)})
-                    Tween(loadStroke, ANIM.Fast, {Thickness = 2})
-                end)
-                loadBtn.MouseLeave:Connect(function()
-                    Tween(loadBtn, ANIM.Fast, {BackgroundTransparency = 0, Size = UDim2.new(0, 52, 0, 28), Position = UDim2.new(1, -114, 0.5, -14)})
-                    Tween(loadStroke, ANIM.Fast, {Thickness = 1})
-                end)
-                loadBtn.MouseButton1Down:Connect(function()
-                    Tween(loadBtn, ANIM.Fast, {BackgroundColor3 = Color3.new(1, 1, 1), Size = UDim2.new(0, 48, 0, 26), Position = UDim2.new(1, -112, 0.5, -13)})
-                end)
-                loadBtn.MouseButton1Up:Connect(function()
-                    Tween(loadBtn, ANIM.Spring, {BackgroundColor3 = Color3.fromRGB(80, 220, 120), Size = UDim2.new(0, 52, 0, 28), Position = UDim2.new(1, -114, 0.5, -14)})
-                end)
-                loadBtn.MouseButton1Click:Connect(function()
-                    local newData = LoadConfig(name)
-                    if newData then
-                        loadedConfig = newData
-                        Window._loadedConfig = newData
-                        activeConfigName = name
-                        ApplyConfig(newData)
-                        activeNameLbl.Text = activeConfigName
-                        Window:Notify("Config Loaded", "Applied '" .. name .. "' live!", 3)
-                        RefreshConfigList()
-                    else
-                        Window:Notify("Error", "Failed to load '" .. name .. "'", 2)
-                    end
-                end)
-
-                delBtn.MouseEnter:Connect(function()
-                    Tween(delBtn, ANIM.Fast, {BackgroundTransparency = 0.2, Size = UDim2.new(0, 56, 0, 30), Position = UDim2.new(1, -58, 0.5, -15)})
-                    Tween(delStroke, ANIM.Fast, {Thickness = 2})
-                end)
-                delBtn.MouseLeave:Connect(function()
-                    Tween(delBtn, ANIM.Fast, {BackgroundTransparency = 0, Size = UDim2.new(0, 52, 0, 28), Position = UDim2.new(1, -56, 0.5, -14)})
-                    Tween(delStroke, ANIM.Fast, {Thickness = 1})
-                end)
-                delBtn.MouseButton1Down:Connect(function()
-                    Tween(delBtn, ANIM.Fast, {BackgroundColor3 = Color3.new(1, 1, 1), Size = UDim2.new(0, 48, 0, 26), Position = UDim2.new(1, -54, 0.5, -13)})
-                end)
-                delBtn.MouseButton1Up:Connect(function()
-                    Tween(delBtn, ANIM.Spring, {BackgroundColor3 = Color3.fromRGB(255, 70, 70), Size = UDim2.new(0, 52, 0, 28), Position = UDim2.new(1, -56, 0.5, -14)})
-                end)
-                delBtn.MouseButton1Click:Connect(function()
-                    if name == "default" then
-                        Window:Notify("Error", "Cannot delete default config.", 2)
-                        return
-                    end
-                    if DeleteConfig(name) then
-                        Window:Notify("Deleted", "Config '" .. name .. "' removed.", 2)
-                        if activeConfigName == name then
-                            activeConfigName = "default"
-                            activeNameLbl.Text = "default"
-                        end
-                        RefreshConfigList()
-                    else
-                        Window:Notify("Error", "Config '" .. name .. "' not found.", 2)
-                    end
-                end)
-
-                Tween(row, ANIM.Bounce, {BackgroundTransparency = 0})
-                Tween(rowStroke, ANIM.Smooth, {Transparency = 0})
-                Tween(nameLbl, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, false, 0.05 * i), {TextTransparency = 0})
-
-                table.insert(configRows, row)
-            end
-
-            listContainer.Size = UDim2.new(1, -20, 0, math.max(#list * 52, 0))
-        end
-
-        settingsTab:AddLabel("Config Actions")
-        settingsTab:AddParagraph("Create New", "Type a name below, then click CREATE NEW to save current settings as a brand new config file.")
-
-        local newConfigName = ""
-        settingsTab:AddInput("New Config Name", "", function(txt)
-            newConfigName = txt:gsub("[^%w_]", "_")
-        end)
-
-        local createFrame = Instance.new("Frame")
-        createFrame.Size = UDim2.new(1, -20, 0, 0)
-        createFrame.BackgroundColor3 = theme.Shade
-        createFrame.BackgroundTransparency = 0.5
-        createFrame.Parent = settingsData.Page
-        Instance.new("UICorner", createFrame).CornerRadius = UDim.new(0, 8)
-        table.insert(uiCache.Shade, createFrame)
-
-        local createBtn = Instance.new("TextButton")
-        createBtn.Size = UDim2.new(1, -16, 1, -16)
-        createBtn.Position = UDim2.new(0, 8, 0, 8)
-        createBtn.BackgroundColor3 = Color3.fromRGB(0, 180, 255)
-        createBtn.Text = "➕  CREATE NEW CONFIG"
-        createBtn.TextColor3 = Color3.new(0, 0, 0)
-        createBtn.Font = theme.Font
-        createBtn.TextSize = 15
-        createBtn.Parent = createFrame
-        createBtn.AutoButtonColor = false
-
-        Instance.new("UICorner", createBtn).CornerRadius = UDim.new(0, 6)
-        local createStroke = Instance.new("UIStroke", createBtn)
-        createStroke.Color = Color3.fromRGB(0, 220, 255)
-        createStroke.Thickness = 1
-        createStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-        table.insert(uiCache.ButtonOutline, createStroke)
-
-        createBtn.MouseEnter:Connect(function()
-            Tween(createBtn, ANIM.Fast, {BackgroundColor3 = Color3.fromRGB(50, 200, 255)})
-            Tween(createStroke, ANIM.Fast, {Thickness = 2})
-        end)
-
-        createBtn.MouseLeave:Connect(function()
-            Tween(createBtn, ANIM.Fast, {BackgroundColor3 = Color3.fromRGB(0, 180, 255)})
-            Tween(createStroke, ANIM.Fast, {Thickness = 1})
-        end)
-
-        createBtn.MouseButton1Click:Connect(function()
-            if newConfigName == "" then
-                Window:Notify("Error", "Please enter a valid config name.", 2)
-                return
-            end
-            activeConfigName = newConfigName
-            saveData._activeConfigName = activeConfigName
-            SaveConfig(activeConfigName)
-            activeNameLbl.Text = activeConfigName
-            Window:Notify("Config Created", "Saved as '" .. activeConfigName .. "'", 2)
-            RefreshConfigList()
-        end)
-        Tween(createFrame, ANIM.Bounce, {Size = UDim2.new(1, -20, 0, 54)})
-
-        -- Separator
-        local sep2 = Instance.new("Frame")
-        sep2.Size = UDim2.new(1, -40, 0, 1)
-        sep2.BackgroundColor3 = theme.Outline
-        sep2.BackgroundTransparency = 0.4
-        sep2.Parent = settingsData.Page
-
-        settingsTab:AddParagraph("Save Active", "Click below to overwrite the currently active config with your current settings.")
-
-        -- SAVE ACTIVE button (green)
-        local saveActiveFrame = Instance.new("Frame")
-        saveActiveFrame.Size = UDim2.new(1, -20, 0, 0)
-        saveActiveFrame.BackgroundColor3 = theme.Shade
-        saveActiveFrame.BackgroundTransparency = 0.5
-        saveActiveFrame.Parent = settingsData.Page
-        Instance.new("UICorner", saveActiveFrame).CornerRadius = UDim.new(0, 8)
-        table.insert(uiCache.Shade, saveActiveFrame)
-
-        local saveActiveBtn = Instance.new("TextButton")
-        saveActiveBtn.Size = UDim2.new(1, -16, 1, -16)
-        saveActiveBtn.Position = UDim2.new(0, 8, 0, 8)
-        saveActiveBtn.BackgroundColor3 = Color3.fromRGB(80, 220, 120)
-        saveActiveBtn.Text = "💾  SAVE ACTIVE CONFIG"
-        saveActiveBtn.TextColor3 = Color3.new(0, 0, 0)
-        saveActiveBtn.Font = theme.Font
-        saveActiveBtn.TextSize = 15
-        saveActiveBtn.Parent = saveActiveFrame
-        saveActiveBtn.AutoButtonColor = false
-
-        Instance.new("UICorner", saveActiveBtn).CornerRadius = UDim.new(0, 6)
-        local saveActiveStroke = Instance.new("UIStroke", saveActiveBtn)
-        saveActiveStroke.Color = Color3.fromRGB(100, 255, 150)
-        saveActiveStroke.Thickness = 1
-        saveActiveStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-        table.insert(uiCache.ButtonOutline, saveActiveStroke)
-
-        saveActiveBtn.MouseEnter:Connect(function()
-            Tween(saveActiveBtn, ANIM.Fast, {BackgroundTransparency = 0.2, Size = UDim2.new(1, -12, 1, -12), Position = UDim2.new(0, 6, 0, 6)})
-            Tween(saveActiveStroke, ANIM.Fast, {Thickness = 2})
-        end)
-        saveActiveBtn.MouseLeave:Connect(function()
-            Tween(saveActiveBtn, ANIM.Fast, {BackgroundTransparency = 0, Size = UDim2.new(1, -16, 1, -16), Position = UDim2.new(0, 8, 0, 8)})
-            Tween(saveActiveStroke, ANIM.Fast, {Thickness = 1})
-        end)
-        saveActiveBtn.MouseButton1Down:Connect(function()
-            Tween(saveActiveBtn, ANIM.Fast, {BackgroundColor3 = Color3.new(1, 1, 1), Size = UDim2.new(1, -20, 1, -20), Position = UDim2.new(0, 10, 0, 10)})
-            CreateRipple(saveActiveBtn, Vector2.new(saveActiveBtn.AbsoluteSize.X / 2, saveActiveBtn.AbsoluteSize.Y / 2))
-        end)
-        saveActiveBtn.MouseButton1Up:Connect(function()
-            Tween(saveActiveBtn, ANIM.Spring, {BackgroundColor3 = Color3.fromRGB(80, 220, 120), Size = UDim2.new(1, -16, 1, -16), Position = UDim2.new(0, 8, 0, 8)})
-        end)
-        saveActiveBtn.MouseButton1Click:Connect(function()
-            SaveConfig(activeConfigName)
-            Window:Notify("Config Saved", "Overwritten '" .. activeConfigName .. "' with current settings!", 3)
-        end)
-
-        Tween(saveActiveFrame, ANIM.Bounce, {Size = UDim2.new(1, -20, 0, 54)})
-
-        -- Populate list on first open
-        RefreshConfigList()
-        -- ==================== BACKGROUND EFFECTS ====================
-        settingsTab:AddLabel("BACKGROUND EFFECTS")
-        settingsTab:AddToggle("Enable Rain", effects.Rain, function(t) effects.Rain = t saveData.effects.Rain = t DebouncedSave() end)
-        settingsTab:AddColorPicker("Rain Color", effectColors.Rain, function(c) effectColors.Rain = c saveData.effectColors.Rain = {R = math.floor(c.R * 255), G = math.floor(c.G * 255), B = math.floor(c.B * 255)} DebouncedSave() end)
-        settingsTab:AddToggle("Enable Mouse Trail", effects.Trail, function(t) effects.Trail = t saveData.effects.Trail = t DebouncedSave() end)
-        settingsTab:AddColorPicker("Trail Color", effectColors.Trail, function(c) effectColors.Trail = c saveData.effectColors.Trail = {R = math.floor(c.R * 255), G = math.floor(c.G * 255), B = math.floor(c.B * 255)} DebouncedSave() end)
-        settingsTab:AddToggle("Enable Interactive Blobs", effects.Blob, function(t) effects.Blob = t saveData.effects.Blob = t DebouncedSave() end)
-        settingsTab:AddColorPicker("Blob Color", effectColors.Blob, function(c) effectColors.Blob = c saveData.effectColors.Blob = {R = math.floor(c.R * 255), G = math.floor(c.G * 255), B = math.floor(c.B * 255)} DebouncedSave() end)
-        settingsTab:AddToggle("Enable Matrix Rain", effects.Matrix, function(t) effects.Matrix = t saveData.effects.Matrix = t DebouncedSave() end)
-        settingsTab:AddColorPicker("Matrix Color", effectColors.Matrix, function(c) effectColors.Matrix = c saveData.effectColors.Matrix = {R = math.floor(c.R * 255), G = math.floor(c.G * 255), B = math.floor(c.B * 255)} DebouncedSave() end)
-        settingsTab:AddToggle("Enable Floating Hexagons", effects.Hex, function(t) effects.Hex = t saveData.effects.Hex = t DebouncedSave() end)
-        settingsTab:AddColorPicker("Hex Color", effectColors.Hex, function(c) effectColors.Hex = c saveData.effectColors.Hex = {R = math.floor(c.R * 255), G = math.floor(c.G * 255), B = math.floor(c.B * 255)} DebouncedSave() end)
-        settingsTab:AddToggle("Enable Glitch Blocks", effects.Glitch, function(t) effects.Glitch = t saveData.effects.Glitch = t DebouncedSave() end)
-        settingsTab:AddColorPicker("Glitch Color", effectColors.Glitch, function(c) effectColors.Glitch = c saveData.effectColors.Glitch = {R = math.floor(c.R * 255), G = math.floor(c.G * 255), B = math.floor(c.B * 255)} DebouncedSave() end)
-
-        -- ==================== APPEARANCE ====================
-        settingsTab:AddLabel("APPEARANCE")
-        settingsTab:AddToggle("Enable Window Glow", glowEnabled, function(t)
-            glowEnabled = t
-            saveData.glowEnabled = t
-            DebouncedSave()
-            if mainGlow and mainGlow.Parent then
-                Tween(mainGlow, ANIM.Normal, {ImageTransparency = t and (1 - glowOpacity) or 1})
-            end
-        end, "Toggles a soft glow around the main window frame")
-        settingsTab:AddColorPicker("Glow Color", glowColor, function(c)
-            glowColor = c
-            saveData.glowColor = {R = math.floor(c.R * 255), G = math.floor(c.G * 255), B = math.floor(c.B * 255)}
-            DebouncedSave()
-            if mainGlow and mainGlow.Parent then
-                Tween(mainGlow, ANIM.Normal, {ImageColor3 = c})
-            end
-        end, "Changes the color of the window outline glow")
-        settingsTab:AddSlider("Glow Opacity", 0, 100, math.floor(glowOpacity * 100), function(val)
-            glowOpacity = val / 100
-            saveData.glowOpacity = glowOpacity
-            DebouncedSave()
-            if mainGlow and mainGlow.Parent then
-                Tween(mainGlow, ANIM.Normal, {ImageTransparency = glowEnabled and (1 - glowOpacity) or 1})
-            end
-        end, "How strong the window glow appears (0 = invisible, 100 = solid)")
-        settingsTab:AddKeybind("Menu Toggle Key", menuKey, function(newKey) menuKey = newKey saveData.menuKey = newKey.Name DebouncedSave() end)
-
-        local allFonts = Enum.Font:GetEnumItems()
-        local fontNames = {}
-        for _, f in ipairs(allFonts) do table.insert(fontNames, f.Name) end
-
-        settingsTab:AddDropdown("Global Font", fontNames, function(selected)
-            for _, f in ipairs(allFonts) do
-                if f.Name == selected then
-                    theme.Font = f
-                    saveData.theme.Font = f.Name
-                    DebouncedSave()
-                    for _, v in ipairs(uiCache.Text) do
-                        if v and v.Parent then
-                            v.Font = f
-                        end
-                    end
-                    break
-                end
-            end
-        end, "Changes the font used across the entire UI")
-
-        settingsTab:AddColorPicker("Main Theme", theme.Main, function(c)
-            theme.Main = c
-            saveData.theme.Main = {R = math.floor(c.R * 255), G = math.floor(c.G * 255), B = math.floor(c.B * 255)}
-            DebouncedSave()
-            Tween(mainFrame, ANIM.Normal, {BackgroundColor3 = c})
-            Tween(titleLbl, ANIM.Normal, {TextColor3 = c})
-            Tween(mainStroke, ANIM.Normal, {Color = c})
-        end)
-
-        settingsTab:AddColorPicker("UI Outline Color", theme.Outline, function(c)
-            theme.Outline = c
-            saveData.theme.Outline = {R = math.floor(c.R * 255), G = math.floor(c.G * 255), B = math.floor(c.B * 255)}
-            DebouncedSave()
-            Tween(mainStroke, ANIM.Normal, {Color = c})
-            for _, v in ipairs(uiCache.ButtonOutline) do
-                if v and v.Parent then Tween(v, ANIM.Normal, {Color = c}) end
-            end
-        end)
-
+            t.Position = UDim2.new(0, 10,
         settingsTab:AddColorPicker("Shade Color", theme.Shade, function(c)
             theme.Shade = c
             saveData.theme.Shade = {R = math.floor(c.R * 255), G = math.floor(c.G * 255), B = math.floor(c.B * 255)}
@@ -2759,11 +1519,7 @@ function XELIB:MakeWindow(config)
             end
         end)
 
-        task.delay(0.1, function()
-            if settingsData and settingsData.Page then
-                settingsData.Page.CanvasSize = UDim2.new(0, 0, 0, 3000)
-            end
-        end)
+        -- CanvasSize is managed automatically by UIListLayout listener
     end
     function Window:SaveConfig(name)
         SaveConfig(name)
@@ -2804,6 +1560,20 @@ function XELIB:MakeWindow(config)
         saveData.effects = {}
         saveData.effectColors = {}
         saveData.menuKey = nil
+        ApplyConfig({
+            toggles = {},
+            sliders = {},
+            dropdowns = {},
+            inputs = {},
+            keybinds = {},
+            colors = {},
+            effects = {},
+            effectColors = {},
+            theme = {},
+            glowEnabled = false,
+            glowOpacity = 0.4
+        })
+        Window:Notify("Config Reset", "Active config wiped and UI reset to defaults.", 3)
     end
 
     function Window:GetConfigPath(name)
