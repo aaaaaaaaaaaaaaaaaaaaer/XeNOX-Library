@@ -331,6 +331,7 @@ function XELIB:MakeWindow(config)
     local defaultConfigPath = configFolder .. "/default.json"
     local activeConfigName = "default"
     local autoSaveTarget = "default"
+    local autoLoadTarget = "default"
     local saveData = {
         toggles = {},
         sliders = {},
@@ -346,6 +347,7 @@ function XELIB:MakeWindow(config)
         _autoLoad = nil,
         _activeConfigName = nil,
         _autoSaveTarget = nil,
+        _autoLoadTarget = nil,
         introBackgroundColor = nil,
         introTextColor = nil,
         custom = {}
@@ -450,6 +452,9 @@ function XELIB:MakeWindow(config)
     if loadedConfig._autoSaveTarget and type(loadedConfig._autoSaveTarget) == "string" then
         autoSaveTarget = loadedConfig._autoSaveTarget
     end
+    if loadedConfig._autoLoadTarget and type(loadedConfig._autoLoadTarget) == "string" then
+        autoLoadTarget = loadedConfig._autoLoadTarget
+    end
     if loadedConfig.theme then
         for k, v in pairs(loadedConfig.theme) do
             if k == "Font" and type(v) == "string" then
@@ -495,6 +500,7 @@ function XELIB:MakeWindow(config)
         if not autoSave then return end
         saveData._activeConfigName = activeConfigName
         saveData._autoSaveTarget = autoSaveTarget
+        saveData._autoLoadTarget = autoLoadTarget
         if Window._debounceSave then
             task.cancel(Window._debounceSave)
         end
@@ -611,8 +617,10 @@ function XELIB:MakeWindow(config)
             if ok and key then menuKey = key end
         end
         if data._autoSave ~= nil then autoSave = data._autoSave end
+        if data._autoLoad ~= nil then autoLoad = data._autoLoad end
         if data._activeConfigName and type(data._activeConfigName) == "string" then activeConfigName = data._activeConfigName end
         if data._autoSaveTarget and type(data._autoSaveTarget) == "string" then autoSaveTarget = data._autoSaveTarget end
+        if data._autoLoadTarget and type(data._autoLoadTarget) == "string" then autoLoadTarget = data._autoLoadTarget end
         if data.glowEnabled ~= nil then
             glowEnabled = data.glowEnabled
             if mainGlow and mainGlow.Parent then
@@ -2299,7 +2307,6 @@ function XELIB:MakeWindow(config)
         return Tab
     end
 
-
     if hasSettings then
         local settingsTab = Window:AddTab("Settings")
         local settingsData = tabs[tabCount]
@@ -2344,6 +2351,12 @@ function XELIB:MakeWindow(config)
             saveData._activeConfigName = activeConfigName
             DebouncedSave()
         end)
+
+        settingsTab:AddDropdown("Auto Load Target", allConfigs, function(selected)
+            autoLoadTarget = selected
+            saveData._autoLoadTarget = selected
+            DebouncedSave()
+        end, "Which config file auto-load reads from on startup")
 
         local activeCard = Instance.new("Frame")
         activeCard.Size = UDim2.new(1, -20, 0, 0)
@@ -2885,12 +2898,13 @@ function XELIB:MakeWindow(config)
     end
 
     if autoLoad then
-        local data = LoadConfig(activeConfigName)
+        local data = LoadConfig(autoLoadTarget)
         if data then
             loadedConfig = data
             Window._loadedConfig = data
+            activeConfigName = autoLoadTarget
             ApplyConfig(data)
-            Window:Notify("Auto Load", "Applied config '" .. activeConfigName .. "' automatically!", 3)
+            Window:Notify("Auto Load", "Applied config '" .. autoLoadTarget .. "' automatically!", 3)
         end
     end
 
