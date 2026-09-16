@@ -423,7 +423,7 @@ function XELIB:MakeWindow(config)
     local mainFrame, titleLbl, mainStroke, mainGlow, glowContainer, uiScale, screenGui
     local uiCache = {Shade={}, Button={}, ButtonOutline={}, Text={}}
     local function CacheText(lbl)
-        CacheText( lbl)
+        table.insert(uiCache.Text, lbl)
         if theme.FontFace then pcall(function() lbl.FontFace = theme.FontFace end) end
         return lbl
     end
