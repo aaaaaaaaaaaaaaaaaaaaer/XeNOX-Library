@@ -60,50 +60,6 @@ local function GetContrastColor(bg)
     local lum = bg.R*0.299 + bg.G*0.587 + bg.B*0.114
     if lum > 0.6 then return Color3.fromRGB(15, 15, 18) else return Color3.fromRGB(255, 255, 255) end
 end
-local CUSTOM_FONTS = {
-    {Name="BuilderSans Bold", Family="BuilderSans", Weight=Enum.FontWeight.Bold},
-    {Name="BuilderSans Medium", Family="BuilderSans", Weight=Enum.FontWeight.Medium},
-    {Name="BuilderSans Regular", Family="BuilderSans", Weight=Enum.FontWeight.Regular},
-    {Name="Gotham Black", Family="GothamSSm", Weight=Enum.FontWeight.Black},
-    {Name="Gotham Bold", Family="GothamSSm", Weight=Enum.FontWeight.Bold},
-    {Name="Gotham Medium", Family="GothamSSm", Weight=Enum.FontWeight.Medium},
-    {Name="Montserrat Bold", Family="Montserrat", Weight=Enum.FontWeight.Bold},
-    {Name="Montserrat SemiBold", Family="Montserrat", Weight=Enum.FontWeight.SemiBold},
-    {Name="Montserrat Medium", Family="Montserrat", Weight=Enum.FontWeight.Medium},
-    {Name="Arimo Bold", Family="Arimo", Weight=Enum.FontWeight.Bold},
-    {Name="Arimo Regular", Family="Arimo", Weight=Enum.FontWeight.Regular},
-    {Name="RobotoMono Medium", Family="RobotoMono", Weight=Enum.FontWeight.Medium},
-    {Name="Ubuntu Bold", Family="Ubuntu", Weight=Enum.FontWeight.Bold},
-    {Name="Nunito Bold", Family="Nunito", Weight=Enum.FontWeight.Bold},
-}
-local function ResolveFont(fontName)
-    if type(fontName)~="string" then return Enum.Font.SourceSansBold, nil end
-    for _, f in ipairs(Enum.Font:GetEnumItems()) do
-        if f.Name==fontName then
-            local _, fo = pcall(function() return Font.fromEnum(f) end)
-            return f, fo
-        end
-    end
-    for _, c in ipairs(CUSTOM_FONTS) do
-        if c.Name==fontName then
-            local _, fo = pcall(function() return Font.fromName(c.Family, c.Weight, Enum.FontStyle.Normal) end)
-            local fb = Enum.Font.GothamBold
-            if c.Weight==Enum.FontWeight.Regular then fb=Enum.Font.Gotham
-            elseif c.Weight==Enum.FontWeight.Medium then fb=Enum.Font.GothamMedium
-            elseif c.Weight==Enum.FontWeight.SemiBold then fb=Enum.Font.GothamSemibold
-            elseif c.Weight==Enum.FontWeight.Black then fb=Enum.Font.GothamBlack end
-            if fo then return fb, fo else return fb, nil end
-        end
-    end
-    return Enum.Font.SourceSansBold, nil
-end
-local function BuildFontList()
-    local names, seen = {}, {}
-    for _, f in ipairs(Enum.Font:GetEnumItems()) do names[#names+1]=f.Name; seen[f.Name]=true end
-    table.sort(names)
-    for _, c in ipairs(CUSTOM_FONTS) do if not seen[c.Name] then names[#names+1]=c.Name end end
-    return names
-end
 local function TableToColor(t, fallback)
     if type(t) == "table" and type(t.R) == "number" and type(t.G) == "number" and type(t.B) == "number" then
         return Color3.fromRGB(ClampRGB(t.R), ClampRGB(t.G), ClampRGB(t.B))
@@ -395,9 +351,7 @@ function XELIB:MakeWindow(config)
         Outline = DEFAULT_OUTLINE,
         Button = DEFAULT_BUTTON,
         ButtonOutline = DEFAULT_BTN_OUTLINE,
-        Font = Enum.Font.SourceSansBold,
-        FontName = "SourceSansBold",
-        FontFace = nil,
+        Font = Enum.Font.SourceSansBold
     }
     local introBackgroundColor = Color3.fromRGB(0,0,0)
     local introTextColor = Color3.fromRGB(255,255,255)
@@ -422,27 +376,6 @@ function XELIB:MakeWindow(config)
     -- Forward declares for ApplyConfig closure (fix upvalue bug)
     local mainFrame, titleLbl, mainStroke, mainGlow, glowContainer, uiScale, screenGui
     local uiCache = {Shade={}, Button={}, ButtonOutline={}, Text={}}
-    local function CacheText(lbl)
-        table.insert(uiCache.Text, lbl)
-        if theme.FontFace then pcall(function() lbl.FontFace = theme.FontFace end) end
-        return lbl
-    end
-    local function SetGlobalFont(fontName)
-        local enumFb, face = ResolveFont(fontName)
-        theme.Font = enumFb
-        theme.FontFace = face
-        theme.FontName = fontName
-        saveData.theme.Font = fontName
-        for _, v in ipairs(uiCache.Text) do
-            if v and v.Parent then
-                pcall(function()
-                    v.Font = enumFb
-                    if face then v.FontFace = face end
-                end)
-            end
-        end
-    end
-    Window._setGlobalFont = SetGlobalFont
     local tabs = {}
     local tabCount = 0
     local activeNotifs = {}
@@ -513,7 +446,7 @@ function XELIB:MakeWindow(config)
     if type(loadedConfig.theme)=="table" then
         for k,v in pairs(loadedConfig.theme) do
             if k=="Font" and type(v)=="string" then
-                local ef, ff = ResolveFont(v); theme.Font=ef; theme.FontFace=ff; theme.FontName=v
+                for _, f in ipairs(Enum.Font:GetEnumItems()) do if f.Name==v then theme.Font=f break end end
             elseif theme[k] and type(v)=="table" then theme[k]=TableToColor(v, theme[k]) or theme[k] end
         end
     end
@@ -626,8 +559,7 @@ function XELIB:MakeWindow(config)
         if type(data.theme)=="table" then
             for k,v in pairs(data.theme) do
                 if k=="Font" and type(v)=="string" then
-                    local ef, ff = ResolveFont(v); theme.Font=ef; theme.FontFace=ff; theme.FontName=v
-                    for _,lbl in ipairs(uiCache.Text) do if lbl and lbl.Parent then pcall(function() lbl.Font=ef; if ff then lbl.FontFace=ff end end) end end
+                    for _, f in ipairs(Enum.Font:GetEnumItems()) do if f.Name==v then theme.Font=f; for _,lbl in ipairs(uiCache.Text) do if lbl and lbl.Parent then pcall(function() lbl.Font=f end) end end; break end end
                 elseif theme[k] and type(v)=="table" then theme[k]=TableToColor(v, theme[k]) or theme[k] end
             end
             if mainFrame and mainFrame.Parent then SafeTween(mainFrame, ANIM.Normal, {BackgroundColor3 = theme.Main}) end
@@ -1080,7 +1012,7 @@ function XELIB:MakeWindow(config)
         pcall(function() Instance.new("UICorner", btn).CornerRadius = UDim.new(0,6) end)
         local stroke = Instance.new("UIStroke")
         stroke.Color = theme.ButtonOutline; stroke.Thickness=1; stroke.ApplyStrokeMode=Enum.ApplyStrokeMode.Border; stroke.Parent=btn
-        table.insert(uiCache.ButtonOutline, stroke); table.insert(uiCache.Button, btn); CacheText( btn)
+        table.insert(uiCache.ButtonOutline, stroke); table.insert(uiCache.Button, btn); table.insert(uiCache.Text, btn)
         local baseSize = btn.Size
         btn.MouseEnter:Connect(function() SafeTween(btn, ANIM.Fast, {BackgroundTransparency=0.15}); SafeTween(stroke, ANIM.Fast, {Thickness=2}) end)
         btn.MouseLeave:Connect(function() SafeTween(btn, ANIM.Fast, {BackgroundTransparency=0}); SafeTween(stroke, ANIM.Fast, {Thickness=1}) end)
@@ -1134,7 +1066,7 @@ function XELIB:MakeWindow(config)
         tabBtn.TextTransparency=1
         tabBtn.AutoButtonColor=false
         Instance.new("UICorner", tabBtn).CornerRadius=UDim.new(0,8)
-        table.insert(uiCache.Button, tabBtn); CacheText( tabBtn)
+        table.insert(uiCache.Button, tabBtn); table.insert(uiCache.Text, tabBtn)
         local btnStroke=Instance.new("UIStroke", tabBtn); btnStroke.Color=theme.ButtonOutline; btnStroke.Thickness=1; table.insert(uiCache.ButtonOutline, btnStroke)
         SafeTween(tabBtn, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out, 0, false, 0.05*tabID), {Size=UDim2.new(1,0,0,40), TextTransparency=0})
         tabBtn.MouseEnter:Connect(function() if tabs[tabID] and tabs[tabID].Page and not tabs[tabID].Page.Visible then SafeTween(tabBtn, ANIM.Fast, {BackgroundTransparency=0.15}); SafeTween(btnStroke, ANIM.Fast, {Thickness=2}) end end)
@@ -1193,14 +1125,14 @@ function XELIB:MakeWindow(config)
         function Tab:AddLabel(text)
             local l=Instance.new("TextLabel")
             l.Size=UDim2.new(1,-20,0,0); l.BackgroundColor3=theme.Shade; l.Text=tostring(text); l.TextColor3=Color3.new(1,1,1); l.Font=theme.Font; l.TextSize=14; l.Parent=page; l.TextTransparency=1; l.BackgroundTransparency=1
-            Instance.new("UICorner", l).CornerRadius=UDim.new(0,8); table.insert(uiCache.Shade,l); CacheText(l)
+            Instance.new("UICorner", l).CornerRadius=UDim.new(0,8); table.insert(uiCache.Shade,l); table.insert(uiCache.Text,l)
             SafeTween(l, ANIM.Bounce, {Size=UDim2.new(1,-20,0,40), TextTransparency=0, BackgroundTransparency=0})
             table.insert(tabElements, {frame=l, searchText=tostring(text)}); return l
         end
         function Tab:AddParagraph(title, content)
             local frame=Instance.new("Frame"); frame.Size=UDim2.new(1,-20,0,0); frame.BackgroundColor3=theme.Shade; frame.BackgroundTransparency=1; frame.Parent=page; Instance.new("UICorner", frame).CornerRadius=UDim.new(0,8); table.insert(uiCache.Shade,frame)
-            local t=Instance.new("TextLabel"); t.Size=UDim2.new(1,-20,0,25); t.Position=UDim2.new(0,10,0,5); t.BackgroundTransparency=1; t.Text=tostring(title); t.TextColor3=theme.Main; t.Font=theme.Font; t.TextSize=14; t.TextXAlignment=Enum.TextXAlignment.Left; t.TextTransparency=1; t.Parent=frame; CacheText(t)
-            local c=Instance.new("TextLabel"); c.Size=UDim2.new(1,-20,0,40); c.Position=UDim2.new(0,10,0,30); c.BackgroundTransparency=1; c.Text=tostring(content); c.TextColor3=Color3.fromRGB(200,200,200); c.Font=theme.Font; c.TextSize=12; c.TextXAlignment=Enum.TextXAlignment.Left; c.TextWrapped=true; c.TextTransparency=1; c.Parent=frame; CacheText(c)
+            local t=Instance.new("TextLabel"); t.Size=UDim2.new(1,-20,0,25); t.Position=UDim2.new(0,10,0,5); t.BackgroundTransparency=1; t.Text=tostring(title); t.TextColor3=theme.Main; t.Font=theme.Font; t.TextSize=14; t.TextXAlignment=Enum.TextXAlignment.Left; t.TextTransparency=1; t.Parent=frame; table.insert(uiCache.Text,t)
+            local c=Instance.new("TextLabel"); c.Size=UDim2.new(1,-20,0,40); c.Position=UDim2.new(0,10,0,30); c.BackgroundTransparency=1; c.Text=tostring(content); c.TextColor3=Color3.fromRGB(200,200,200); c.Font=theme.Font; c.TextSize=12; c.TextXAlignment=Enum.TextXAlignment.Left; c.TextWrapped=true; c.TextTransparency=1; c.Parent=frame; table.insert(uiCache.Text,c)
             SafeTween(frame, ANIM.Bounce, {Size=UDim2.new(1,-20,0,80), BackgroundTransparency=0}); SafeTween(t, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out,0,false,0.1), {TextTransparency=0}); SafeTween(c, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out,0,false,0.15), {TextTransparency=0})
             table.insert(tabElements, {frame=frame, searchText=tostring(title).." "..tostring(content)})
         end
@@ -1220,7 +1152,7 @@ function XELIB:MakeWindow(config)
             local enabled=(saved~=nil) and not not saved or (default or false)
             saveData.toggles[key]=enabled
             local frame=Instance.new("Frame"); frame.Size=UDim2.new(1,-20,0,0); frame.BackgroundColor3=Color3.new(0,0,0); frame.BackgroundTransparency=1; frame.Parent=page; Instance.new("UICorner", frame).CornerRadius=UDim.new(0,8)
-            local lb=Instance.new("TextLabel"); lb.Size=UDim2.new(1,-60,1,0); lb.Position=UDim2.new(0,15,0,0); lb.Text=key; lb.TextColor3=Color3.new(1,1,1); lb.Font=theme.Font; lb.TextSize=14; lb.BackgroundTransparency=1; lb.TextXAlignment=Enum.TextXAlignment.Left; lb.TextTransparency=1; lb.Parent=frame; CacheText(lb)
+            local lb=Instance.new("TextLabel"); lb.Size=UDim2.new(1,-60,1,0); lb.Position=UDim2.new(0,15,0,0); lb.Text=key; lb.TextColor3=Color3.new(1,1,1); lb.Font=theme.Font; lb.TextSize=14; lb.BackgroundTransparency=1; lb.TextXAlignment=Enum.TextXAlignment.Left; lb.TextTransparency=1; lb.Parent=frame; table.insert(uiCache.Text,lb)
             local bg=Instance.new("TextButton"); bg.Name="ToggleBG"; bg.Size=UDim2.new(0,45,0,25); bg.Position=UDim2.new(1,-55,0.5,-12); bg.BackgroundColor3=enabled and theme.Button or theme.Shade; bg.Text=""; bg.AutoButtonColor=false; bg.Parent=frame; Instance.new("UICorner", bg).CornerRadius=UDim.new(1,0)
             local ball=Instance.new("Frame"); ball.Size=UDim2.new(0,17,0,17); ball.Position=enabled and UDim2.new(1,-21,0.5,-8) or UDim2.new(0,4,0.5,-8); ball.BackgroundColor3=Color3.new(1,1,1); ball.Parent=bg; Instance.new("UICorner", ball).CornerRadius=UDim.new(1,0)
             local ballGlow=Instance.new("UIStroke", ball); ballGlow.Color=enabled and theme.Button or theme.Shade; ballGlow.Thickness=2; ballGlow.Transparency=0.5
@@ -1246,7 +1178,7 @@ function XELIB:MakeWindow(config)
             local value = math.clamp(tonumber(saved) or tonumber(default) or min, min, max)
             saveData.sliders[key]=value
             local frame=Instance.new("Frame"); frame.Size=UDim2.new(1,-20,0,0); frame.BackgroundColor3=Color3.new(0,0,0); frame.BackgroundTransparency=1; frame.Parent=page; Instance.new("UICorner", frame).CornerRadius=UDim.new(0,8)
-            local lb=Instance.new("TextLabel"); lb.Size=UDim2.new(1,-20,0,25); lb.Position=UDim2.new(0,15,0,5); lb.BackgroundTransparency=1; lb.Text=key..": "..tostring(value); lb.TextColor3=Color3.new(1,1,1); lb.Font=theme.Font; lb.TextSize=13; lb.TextXAlignment=Enum.TextXAlignment.Left; lb.TextTransparency=1; lb.Parent=frame; CacheText(lb)
+            local lb=Instance.new("TextLabel"); lb.Size=UDim2.new(1,-20,0,25); lb.Position=UDim2.new(0,15,0,5); lb.BackgroundTransparency=1; lb.Text=key..": "..tostring(value); lb.TextColor3=Color3.new(1,1,1); lb.Font=theme.Font; lb.TextSize=13; lb.TextXAlignment=Enum.TextXAlignment.Left; lb.TextTransparency=1; lb.Parent=frame; table.insert(uiCache.Text,lb)
             local track=Instance.new("Frame"); track.Size=UDim2.new(1,-30,0,8); track.Position=UDim2.new(0,15,0,35); track.BackgroundColor3=theme.Shade; track.Parent=frame; Instance.new("UICorner", track).CornerRadius=UDim.new(1,0)
             local fill=Instance.new("Frame"); fill.Size=UDim2.new(max==min and 0 or (value-min)/(max-min),0,1,0); fill.BackgroundColor3=theme.Button; fill.BorderSizePixel=0; fill.Parent=track; Instance.new("UICorner", fill).CornerRadius=UDim.new(1,0)
             local knob=Instance.new("Frame"); knob.Size=UDim2.new(0,14,0,14); knob.Position=UDim2.new(max==min and 0 or (value-min)/(max-min), -7, 0.5,-7); knob.BackgroundColor3=Color3.new(1,1,1); knob.Parent=track; Instance.new("UICorner", knob).CornerRadius=UDim.new(1,0)
@@ -1280,8 +1212,8 @@ function XELIB:MakeWindow(config)
             saveData.dropdowns[key]=selected
             local open=false
             local frame=Instance.new("Frame"); frame.Size=UDim2.new(1,-20,0,0); frame.BackgroundColor3=Color3.new(0,0,0); frame.BackgroundTransparency=1; frame.Parent=page; frame.ClipsDescendants=false; Instance.new("UICorner", frame).CornerRadius=UDim.new(0,8)
-            local lb=Instance.new("TextLabel"); lb.Size=UDim2.new(1,-160,1,0); lb.Position=UDim2.new(0,15,0,0); lb.Text=key; lb.TextColor3=Color3.new(1,1,1); lb.Font=theme.Font; lb.TextSize=14; lb.BackgroundTransparency=1; lb.TextXAlignment=Enum.TextXAlignment.Left; lb.TextTransparency=1; lb.Parent=frame; CacheText(lb)
-            local btn=Instance.new("TextButton"); btn.Size=UDim2.new(0,120,0,30); btn.Position=UDim2.new(1,-135,0.5,-15); btn.BackgroundColor3=theme.Shade; btn.Text=selected; btn.TextColor3=Color3.new(1,1,1); btn.Font=theme.Font; btn.TextSize=12; btn.AutoButtonColor=false; btn.Parent=frame; Instance.new("UICorner", btn).CornerRadius=UDim.new(0,6); table.insert(uiCache.Shade, btn); CacheText( btn)
+            local lb=Instance.new("TextLabel"); lb.Size=UDim2.new(1,-160,1,0); lb.Position=UDim2.new(0,15,0,0); lb.Text=key; lb.TextColor3=Color3.new(1,1,1); lb.Font=theme.Font; lb.TextSize=14; lb.BackgroundTransparency=1; lb.TextXAlignment=Enum.TextXAlignment.Left; lb.TextTransparency=1; lb.Parent=frame; table.insert(uiCache.Text,lb)
+            local btn=Instance.new("TextButton"); btn.Size=UDim2.new(0,120,0,30); btn.Position=UDim2.new(1,-135,0.5,-15); btn.BackgroundColor3=theme.Shade; btn.Text=selected; btn.TextColor3=Color3.new(1,1,1); btn.Font=theme.Font; btn.TextSize=12; btn.AutoButtonColor=false; btn.Parent=frame; Instance.new("UICorner", btn).CornerRadius=UDim.new(0,6); table.insert(uiCache.Shade, btn); table.insert(uiCache.Text, btn)
             local arrow=Instance.new("TextLabel"); arrow.Size=UDim2.new(0,20,0,20); arrow.Position=UDim2.new(1,-22,0,5); arrow.BackgroundTransparency=1; arrow.Text="▼"; arrow.TextColor3=Color3.new(1,1,1); arrow.TextSize=10; arrow.Font=Enum.Font.SourceSansBold; arrow.Parent=btn
             -- dropdown popup parented to screenGui to avoid clipping
             local dropFrame=Instance.new("Frame"); dropFrame.Size=UDim2.new(0,120,0,0); dropFrame.BackgroundColor3=theme.Shade; dropFrame.BackgroundTransparency=1; dropFrame.ClipsDescendants=true; dropFrame.ZIndex=50; dropFrame.Visible=false; dropFrame.Parent=screenGui; Instance.new("UICorner", dropFrame).CornerRadius=UDim.new(0,6)
@@ -1345,8 +1277,8 @@ function XELIB:MakeWindow(config)
             local inputDefault=tostring(saved~=nil and saved or default or "")
             saveData.inputs[key]=inputDefault
             local frame=Instance.new("Frame"); frame.Size=UDim2.new(1,-20,0,50); frame.BackgroundColor3=Color3.new(0,0,0); frame.BackgroundTransparency=0.5; frame.Parent=page; Instance.new("UICorner", frame).CornerRadius=UDim.new(0,8)
-            local lb=Instance.new("TextLabel"); lb.Size=UDim2.new(1,-160,1,0); lb.Position=UDim2.new(0,15,0,0); lb.Text=key; lb.TextColor3=Color3.new(1,1,1); lb.Font=theme.Font; lb.TextSize=14; lb.BackgroundTransparency=1; lb.TextXAlignment=Enum.TextXAlignment.Left; lb.Parent=frame; CacheText( lb)
-            local box=Instance.new("TextBox"); box.Size=UDim2.new(0,120,0,30); box.Position=UDim2.new(1,-135,0.5,-15); box.BackgroundColor3=theme.Shade; box.Text=inputDefault; box.TextColor3=Color3.new(1,1,1); box.Font=theme.Font; box.TextSize=12; box.ClearTextOnFocus=false; box.Parent=frame; Instance.new("UICorner", box).CornerRadius=UDim.new(0,6); table.insert(uiCache.Shade, box); CacheText( box)
+            local lb=Instance.new("TextLabel"); lb.Size=UDim2.new(1,-160,1,0); lb.Position=UDim2.new(0,15,0,0); lb.Text=key; lb.TextColor3=Color3.new(1,1,1); lb.Font=theme.Font; lb.TextSize=14; lb.BackgroundTransparency=1; lb.TextXAlignment=Enum.TextXAlignment.Left; lb.Parent=frame; table.insert(uiCache.Text, lb)
+            local box=Instance.new("TextBox"); box.Size=UDim2.new(0,120,0,30); box.Position=UDim2.new(1,-135,0.5,-15); box.BackgroundColor3=theme.Shade; box.Text=inputDefault; box.TextColor3=Color3.new(1,1,1); box.Font=theme.Font; box.TextSize=12; box.ClearTextOnFocus=false; box.Parent=frame; Instance.new("UICorner", box).CornerRadius=UDim.new(0,6); table.insert(uiCache.Shade, box); table.insert(uiCache.Text, box)
             local boxStroke=Instance.new("UIStroke", box); boxStroke.Color=theme.Outline; boxStroke.Thickness=1; AttachTooltip(frame, description, screenGui, Window._connections); table.insert(tabElements, {frame=frame, searchText=key})
             uiRegistry.inputs[key]={box=box, callback=callback}
             box.Focused:Connect(function() SafeTween(box, ANIM.Normal, {BackgroundColor3=LightenColor(theme.Shade, 15)}); SafeTween(boxStroke, ANIM.Normal, {Thickness=2, Color=theme.Main}); SafeTween(box, ANIM.Spring, {Size=UDim2.new(0,130,0,34), Position=UDim2.new(1,-140,0.5,-17)}) end)
@@ -1366,8 +1298,8 @@ function XELIB:MakeWindow(config)
             saveData.keybinds[key]=currentKey.Name
             local listening=false
             local frame=Instance.new("Frame"); frame.Size=UDim2.new(1,-20,0,0); frame.BackgroundColor3=Color3.new(0,0,0); frame.BackgroundTransparency=1; frame.Parent=page; Instance.new("UICorner", frame).CornerRadius=UDim.new(0,8)
-            local lb=Instance.new("TextLabel"); lb.Size=UDim2.new(1,-160,1,0); lb.Position=UDim2.new(0,15,0,0); lb.Text=key; lb.TextColor3=Color3.new(1,1,1); lb.Font=theme.Font; lb.TextSize=14; lb.BackgroundTransparency=1; lb.TextXAlignment=Enum.TextXAlignment.Left; lb.TextTransparency=1; lb.Parent=frame; CacheText( lb)
-            local btn=Instance.new("TextButton"); btn.Size=UDim2.new(0,120,0,30); btn.Position=UDim2.new(1,-135,0.5,-15); btn.BackgroundColor3=theme.Shade; btn.Text=currentKey.Name; btn.TextColor3=Color3.new(1,1,1); btn.Font=theme.Font; btn.TextSize=12; btn.AutoButtonColor=false; btn.TextTransparency=1; btn.Parent=frame; Instance.new("UICorner", btn).CornerRadius=UDim.new(0,6); table.insert(uiCache.Shade, btn); CacheText( btn)
+            local lb=Instance.new("TextLabel"); lb.Size=UDim2.new(1,-160,1,0); lb.Position=UDim2.new(0,15,0,0); lb.Text=key; lb.TextColor3=Color3.new(1,1,1); lb.Font=theme.Font; lb.TextSize=14; lb.BackgroundTransparency=1; lb.TextXAlignment=Enum.TextXAlignment.Left; lb.TextTransparency=1; lb.Parent=frame; table.insert(uiCache.Text, lb)
+            local btn=Instance.new("TextButton"); btn.Size=UDim2.new(0,120,0,30); btn.Position=UDim2.new(1,-135,0.5,-15); btn.BackgroundColor3=theme.Shade; btn.Text=currentKey.Name; btn.TextColor3=Color3.new(1,1,1); btn.Font=theme.Font; btn.TextSize=12; btn.AutoButtonColor=false; btn.TextTransparency=1; btn.Parent=frame; Instance.new("UICorner", btn).CornerRadius=UDim.new(0,6); table.insert(uiCache.Shade, btn); table.insert(uiCache.Text, btn)
             local btnStroke=Instance.new("UIStroke", btn); btnStroke.Color=theme.Outline; btnStroke.Thickness=1; btnStroke.Transparency=1
             SafeTween(frame, ANIM.Bounce, {Size=UDim2.new(1,-20,0,50), BackgroundTransparency=0.5}); SafeTween(lb, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out,0,false,0.1), {TextTransparency=0}); SafeTween(btn, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out,0,false,0.15), {TextTransparency=0}); SafeTween(btnStroke, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out,0,false,0.2), {Transparency=0})
             AttachTooltip(frame, description, screenGui, Window._connections); table.insert(tabElements, {frame=frame, searchText=key})
@@ -1406,7 +1338,7 @@ function XELIB:MakeWindow(config)
             local curH,curS,curV = defaultColor:ToHSV()
             saveData.colors[key]=ColorToTable(defaultColor)
             local frame=Instance.new("Frame"); frame.Size=UDim2.new(1,-20,0,0); frame.BackgroundColor3=theme.Shade; frame.BackgroundTransparency=1; frame.Parent=page; Instance.new("UICorner", frame).CornerRadius=UDim.new(0,8); table.insert(uiCache.Shade, frame)
-            local lb=Instance.new("TextLabel"); lb.Size=UDim2.new(1,-60,1,0); lb.Position=UDim2.new(0,15,0,0); lb.Text=key; lb.TextColor3=Color3.new(1,1,1); lb.Font=theme.Font; lb.TextSize=14; lb.BackgroundTransparency=1; lb.TextXAlignment=Enum.TextXAlignment.Left; lb.TextTransparency=1; lb.Parent=frame; CacheText( lb)
+            local lb=Instance.new("TextLabel"); lb.Size=UDim2.new(1,-60,1,0); lb.Position=UDim2.new(0,15,0,0); lb.Text=key; lb.TextColor3=Color3.new(1,1,1); lb.Font=theme.Font; lb.TextSize=14; lb.BackgroundTransparency=1; lb.TextXAlignment=Enum.TextXAlignment.Left; lb.TextTransparency=1; lb.Parent=frame; table.insert(uiCache.Text, lb)
             local preview=Instance.new("TextButton"); preview.Size=UDim2.new(0,0,0,0); preview.Position=UDim2.new(1,-40,0.5,-15); preview.BackgroundColor3=defaultColor; preview.Text=""; preview.AutoButtonColor=false; preview.Parent=frame; Instance.new("UICorner", preview).CornerRadius=UDim.new(0,6)
             local previewStroke=Instance.new("UIStroke", preview); previewStroke.Color=theme.Outline; previewStroke.Thickness=2
             SafeTween(frame, ANIM.Bounce, {Size=UDim2.new(1,-20,0,50), BackgroundTransparency=0}); SafeTween(lb, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out,0,false,0.1), {TextTransparency=0}); SafeTween(preview, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out,0,false,0.15), {Size=UDim2.new(0,30,0,30)})
@@ -1420,7 +1352,7 @@ function XELIB:MakeWindow(config)
             local hue=Instance.new("TextButton"); hue.Size=UDim2.new(0,20,0,150); hue.Position=UDim2.new(0,170,0,10); hue.BackgroundColor3=Color3.new(1,1,1); hue.Text=""; hue.AutoButtonColor=false; hue.ZIndex=1001; hue.Parent=popup; hue.BackgroundTransparency=1
             local grad=Instance.new("UIGradient", hue); grad.Rotation=90; grad.Color=ColorSequence.new({ColorSequenceKeypoint.new(0,Color3.fromRGB(255,0,0)),ColorSequenceKeypoint.new(0.167,Color3.fromRGB(255,255,0)),ColorSequenceKeypoint.new(0.333,Color3.fromRGB(0,255,0)),ColorSequenceKeypoint.new(0.5,Color3.fromRGB(0,255,255)),ColorSequenceKeypoint.new(0.667,Color3.fromRGB(0,0,255)),ColorSequenceKeypoint.new(0.833,Color3.fromRGB(255,0,255)),ColorSequenceKeypoint.new(1,Color3.fromRGB(255,0,0))})
             local cursorHue=Instance.new("Frame"); cursorHue.Size=UDim2.new(1,4,0,3); cursorHue.Position=UDim2.new(0,-2,0,0); cursorHue.BackgroundColor3=Color3.new(1,1,1); cursorHue.ZIndex=1002; cursorHue.Parent=hue; cursorHue.BackgroundTransparency=1; local hStroke=Instance.new("UIStroke", cursorHue); hStroke.Color=Color3.new(0,0,0); hStroke.Thickness=1
-            local txt=Instance.new("TextLabel"); txt.Size=UDim2.new(1,-20,0,30); txt.Position=UDim2.new(0,10,0,165); txt.BackgroundTransparency=1; txt.TextColor3=Color3.new(0.8,0.8,0.8); txt.Font=Enum.Font.Code; txt.TextSize=12; txt.TextXAlignment=Enum.TextXAlignment.Left; txt.ZIndex=1001; txt.TextTransparency=1; txt.Parent=popup; CacheText( txt)
+            local txt=Instance.new("TextLabel"); txt.Size=UDim2.new(1,-20,0,30); txt.Position=UDim2.new(0,10,0,165); txt.BackgroundTransparency=1; txt.TextColor3=Color3.new(0.8,0.8,0.8); txt.Font=Enum.Font.Code; txt.TextSize=12; txt.TextXAlignment=Enum.TextXAlignment.Left; txt.ZIndex=1001; txt.TextTransparency=1; txt.Parent=popup; table.insert(uiCache.Text, txt)
             local function updateUI()
                 local c=Color3.fromHSV(entry.curH, entry.curS, entry.curV)
                 box.BackgroundColor3=Color3.fromHSV(entry.curH,1,1); preview.BackgroundColor3=c
@@ -1534,8 +1466,8 @@ function XELIB:MakeWindow(config)
         settingsTab:AddDropdown("Auto Load Target", allConfigs, function(s) autoLoadTarget=s; saveData._autoLoadTarget=s; DebouncedSave() end, "Which config auto-load reads on startup")
         local activeCard=Instance.new("Frame"); activeCard.Size=UDim2.new(1,-20,0,0); activeCard.BackgroundColor3=theme.Shade; activeCard.BackgroundTransparency=1; activeCard.Parent=settingsData.Page; Instance.new("UICorner", activeCard).CornerRadius=UDim.new(0,8); table.insert(uiCache.Shade, activeCard)
         local activeStroke=Instance.new("UIStroke", activeCard); activeStroke.Color=theme.Main; activeStroke.Thickness=2; activeStroke.Transparency=1
-        local activeHeader=Instance.new("TextLabel"); activeHeader.Size=UDim2.new(1,-20,0,18); activeHeader.Position=UDim2.new(0,10,0,6); activeHeader.BackgroundTransparency=1; activeHeader.Text="CURRENTLY ACTIVE"; activeHeader.TextColor3=theme.Main; activeHeader.Font=theme.Font; activeHeader.TextSize=11; activeHeader.TextXAlignment=Enum.TextXAlignment.Left; activeHeader.TextTransparency=1; activeHeader.Parent=activeCard; CacheText( activeHeader)
-        local activeNameLbl=Instance.new("TextLabel"); activeNameLbl.Size=UDim2.new(1,-20,0,28); activeNameLbl.Position=UDim2.new(0,10,0,24); activeNameLbl.BackgroundTransparency=1; activeNameLbl.Text=activeConfigName; activeNameLbl.TextColor3=Color3.new(1,1,1); activeNameLbl.Font=theme.Font; activeNameLbl.TextSize=16; activeNameLbl.TextXAlignment=Enum.TextXAlignment.Left; activeNameLbl.TextTransparency=1; activeNameLbl.Parent=activeCard; CacheText( activeNameLbl)
+        local activeHeader=Instance.new("TextLabel"); activeHeader.Size=UDim2.new(1,-20,0,18); activeHeader.Position=UDim2.new(0,10,0,6); activeHeader.BackgroundTransparency=1; activeHeader.Text="CURRENTLY ACTIVE"; activeHeader.TextColor3=theme.Main; activeHeader.Font=theme.Font; activeHeader.TextSize=11; activeHeader.TextXAlignment=Enum.TextXAlignment.Left; activeHeader.TextTransparency=1; activeHeader.Parent=activeCard; table.insert(uiCache.Text, activeHeader)
+        local activeNameLbl=Instance.new("TextLabel"); activeNameLbl.Size=UDim2.new(1,-20,0,28); activeNameLbl.Position=UDim2.new(0,10,0,24); activeNameLbl.BackgroundTransparency=1; activeNameLbl.Text=activeConfigName; activeNameLbl.TextColor3=Color3.new(1,1,1); activeNameLbl.Font=theme.Font; activeNameLbl.TextSize=16; activeNameLbl.TextXAlignment=Enum.TextXAlignment.Left; activeNameLbl.TextTransparency=1; activeNameLbl.Parent=activeCard; table.insert(uiCache.Text, activeNameLbl)
         SafeTween(activeCard, ANIM.Bounce, {Size=UDim2.new(1,-20,0,58), BackgroundTransparency=0}); SafeTween(activeStroke, ANIM.Smooth, {Transparency=0}); SafeTween(activeHeader, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out,0,false,0.1), {TextTransparency=0}); SafeTween(activeNameLbl, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out,0,false,0.15), {TextTransparency=0})
         settingsTab:AddLabel("Saved Configs")
         local listContainer=Instance.new("Frame"); listContainer.Size=UDim2.new(1,-20,0,0); listContainer.BackgroundTransparency=1; listContainer.Parent=settingsData.Page
@@ -1549,7 +1481,7 @@ function XELIB:MakeWindow(config)
                 local isActive=(cfgName==activeConfigName)
                 local row=Instance.new("Frame"); row.Size=UDim2.new(1,0,0,46); row.BackgroundColor3=isActive and theme.Button or theme.Shade; row.BackgroundTransparency=1; row.LayoutOrder=i; row.Parent=listContainer; Instance.new("UICorner", row).CornerRadius=UDim.new(0,8); if not isActive then table.insert(uiCache.Shade, row) end
                 local rowStroke=Instance.new("UIStroke", row); rowStroke.Color=isActive and theme.ButtonOutline or theme.Outline; rowStroke.Thickness=isActive and 2 or 1; rowStroke.Transparency=1
-                local nameLbl=Instance.new("TextLabel"); nameLbl.Size=UDim2.new(1,-200,1,0); nameLbl.Position=UDim2.new(0,14,0,0); nameLbl.BackgroundTransparency=1; nameLbl.Text=cfgName..(isActive and "  ●" or ""); nameLbl.TextColor3=Color3.new(1,1,1); nameLbl.Font=theme.Font; nameLbl.TextSize=13; nameLbl.TextXAlignment=Enum.TextXAlignment.Left; nameLbl.TextTransparency=1; nameLbl.Parent=row; CacheText( nameLbl)
+                local nameLbl=Instance.new("TextLabel"); nameLbl.Size=UDim2.new(1,-200,1,0); nameLbl.Position=UDim2.new(0,14,0,0); nameLbl.BackgroundTransparency=1; nameLbl.Text=cfgName..(isActive and "  ●" or ""); nameLbl.TextColor3=Color3.new(1,1,1); nameLbl.Font=theme.Font; nameLbl.TextSize=13; nameLbl.TextXAlignment=Enum.TextXAlignment.Left; nameLbl.TextTransparency=1; nameLbl.Parent=row; table.insert(uiCache.Text, nameLbl)
                 local selBtn=Instance.new("TextButton"); selBtn.Size=UDim2.new(0,46,0,28); selBtn.Position=UDim2.new(1,-168,0.5,-14); selBtn.BackgroundColor3=isActive and Color3.fromRGB(255,255,255) or Color3.fromRGB(120,120,120); selBtn.Text="SEL"; selBtn.TextColor3=Color3.new(0,0,0); selBtn.Font=theme.Font; selBtn.TextSize=10; selBtn.AutoButtonColor=false; selBtn.Parent=row; Instance.new("UICorner", selBtn).CornerRadius=UDim.new(0,6)
                 local loadBtn=Instance.new("TextButton"); loadBtn.Size=UDim2.new(0,52,0,28); loadBtn.Position=UDim2.new(1,-114,0.5,-14); loadBtn.BackgroundColor3=Color3.fromRGB(80,220,120); loadBtn.Text="LOAD"; loadBtn.TextColor3=Color3.new(0,0,0); loadBtn.Font=theme.Font; loadBtn.TextSize=10; loadBtn.AutoButtonColor=false; loadBtn.Parent=row; Instance.new("UICorner", loadBtn).CornerRadius=UDim.new(0,6)
                 local delBtn=Instance.new("TextButton"); delBtn.Size=UDim2.new(0,52,0,28); delBtn.Position=UDim2.new(1,-56,0.5,-14); delBtn.BackgroundColor3=Color3.fromRGB(255,70,70); delBtn.Text="DEL"; delBtn.TextColor3=Color3.new(0,0,0); delBtn.Font=theme.Font; delBtn.TextSize=10; delBtn.AutoButtonColor=false; delBtn.Parent=row; Instance.new("UICorner", delBtn).CornerRadius=UDim.new(0,6)
@@ -1594,8 +1526,8 @@ function XELIB:MakeWindow(config)
         settingsTab:AddColorPicker("Glow Color", glowColor, function(c) glowColor=c; saveData.glowColor=ColorToTable(c); DebouncedSave(); if mainGlow and mainGlow.Parent then SafeTween(mainGlow, ANIM.Normal, {ImageColor3=c}) end end, "Changes the color of the window glow")
         settingsTab:AddSlider("Glow Opacity", 0, 100, math.floor(glowOpacity*100), function(val) glowOpacity=val/100; saveData.glowOpacity=glowOpacity; DebouncedSave(); if mainGlow and mainGlow.Parent then SafeTween(mainGlow, ANIM.Normal, {ImageTransparency = glowEnabled and (1-glowOpacity) or 1}) end end, "0 = invisible, 100 = solid")
         settingsTab:AddKeybind("Menu Toggle Key", menuKey, function(newKey) menuKey=newKey; saveData.menuKey=newKey.Name; DebouncedSave() end)
-        local fontNames=BuildFontList()
-        settingsTab:AddDropdown("Global Font", fontNames, function(selected) SetGlobalFont(selected); DebouncedSave() end, "Changes font across the UI (incl. BuilderSans, GothamSSm, Montserrat, Arimo)")
+        local allFonts=Enum.Font:GetEnumItems(); local fontNames={}; for _,f in ipairs(allFonts) do table.insert(fontNames, f.Name) end
+        settingsTab:AddDropdown("Global Font", fontNames, function(selected) for _,f in ipairs(allFonts) do if f.Name==selected then theme.Font=f; saveData.theme.Font=f.Name; DebouncedSave(); for _,v in ipairs(uiCache.Text) do if v and v.Parent then pcall(function() v.Font=f end) end end; break end end end, "Changes font across the UI")
         settingsTab:AddColorPicker("Main Theme", theme.Main, function(c) theme.Main=c; saveData.theme.Main=ColorToTable(c); DebouncedSave(); SafeTween(mainFrame, ANIM.Normal, {BackgroundColor3=c}); if titleLbl then titleLbl.TextColor3=GetContrastColor(c) end; SafeTween(mainStroke, ANIM.Normal, {Color=c}) end)
         settingsTab:AddColorPicker("UI Outline Color", theme.Outline, function(c) theme.Outline=c; saveData.theme.Outline=ColorToTable(c); DebouncedSave(); SafeTween(mainStroke, ANIM.Normal, {Color=c}); for _,v in ipairs(uiCache.ButtonOutline) do if v and v.Parent then SafeTween(v, ANIM.Normal, {Color=c}) end end end)
         settingsTab:AddColorPicker("Shade Color", theme.Shade, function(c) theme.Shade=c; saveData.theme.Shade=ColorToTable(c); DebouncedSave(); for _,v in ipairs(uiCache.Shade) do if v and v.Parent then SafeTween(v, ANIM.Normal, {BackgroundColor3=c}) end end end)
