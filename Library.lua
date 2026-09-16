@@ -1,3 +1,5 @@
+-- XeNOX Library v2.3 - Fixed & Improved
+-- Fixes: LocalPlayer safety, upvalue order bug, color overflow, draggable leaks, pooling, rainbow leaks, tooltip/search, dropdown clipping, slider/keybind cleanup, file handling, task.cancel guard, window destroy, minimized position, effect loop
 local XELIB = {}
 XELIB.__index = XELIB
 
@@ -24,13 +26,13 @@ local ANIM = {
     Fast = TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
     Normal = TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
     Smooth = TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-    Bounce = TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
-    Spring = TweenInfo.new(0.5, Enum.EasingStyle.Elastic, Enum.EasingDirection.Out),
+    Bounce = TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+    Spring = TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
     Slow = TweenInfo.new(0.6, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
     FadeIn = TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
     FadeOut = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
     Slide = TweenInfo.new(0.35, Enum.EasingStyle.Cubic, Enum.EasingDirection.Out),
-    Pop = TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
+    Pop = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
     Pulse = TweenInfo.new(0.4, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
 }
 
@@ -786,7 +788,7 @@ function XELIB:MakeWindow(config)
     local cVis = mainFrame:GetPropertyChangedSignal("Visible"):Connect(syncGlow)
     table.insert(Window._connections, cPos); table.insert(Window._connections, cSize); table.insert(Window._connections, cVis)
 
-    Instance.new("UICorner", mainFrame).CornerRadius = UDim.new(0,8)
+    Instance.new("UICorner", mainFrame).CornerRadius = UDim.new(0,6)
     local savedPos = mainFrame.Position
     local savedSize = mainFrame.Size
     -- keep savedPos updated when dragged and not minimized
@@ -806,8 +808,8 @@ function XELIB:MakeWindow(config)
     local mainRainbowFlag = {stop=false}
     if rainbowMain then RainbowStroke(mainStroke, mainRainbowFlag); table.insert(Window._connections, {Disconnect=function() mainRainbowFlag.stop=true end}) end
     SafeTween(mainFrame, ANIM.Smooth, {BackgroundTransparency=0.04})
-    SafeTween(mainStroke, ANIM.Smooth, {Thickness=2})
-    SafeTween(uiScale, ANIM.Bounce, {Scale=1})
+    SafeTween(mainStroke, ANIM.Smooth, {Thickness=1})
+    SafeTween(uiScale, ANIM.Smooth, {Scale=1})
 
     local titleBar = Instance.new("Frame")
     titleBar.Size = UDim2.new(1,0,0,45)
