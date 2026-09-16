@@ -1,5 +1,3 @@
--- XeNOX Library v2.3 - Fixed & Improved
--- Fixes: LocalPlayer safety, upvalue order bug, color overflow, draggable leaks, pooling, rainbow leaks, tooltip/search, dropdown clipping, slider/keybind cleanup, file handling, task.cancel guard, window destroy, minimized position, effect loop
 local XELIB = {}
 XELIB.__index = XELIB
 
